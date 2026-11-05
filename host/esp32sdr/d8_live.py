@@ -188,6 +188,7 @@ class WebServer:
         self.loop = asyncio.new_event_loop()
         self.clients: set[asyncio.Queue] = set()
         self.latest: dict[str, str] = {}  # last message per type, sent to new clients
+        self.ws_routes: dict = {}  # path -> async handler(reader, writer, hdr, query), e.g. /wf
         self._ready = threading.Event()
         self._err: BaseException | None = None
         self.thread = threading.Thread(target=self._run, daemon=True, name="d8live-web")
@@ -244,9 +245,12 @@ class WebServer:
             lines = head.decode("latin-1").split("\r\n")
             method, path, *_ = lines[0].split(" ") + ["", ""]
             hdr = {k.strip().lower(): v.strip() for k, _, v in (l.partition(":") for l in lines[1:] if l)}
-            path = path.split("?")[0]
+            path, _, query = path.partition("?")
             if hdr.get("upgrade", "").lower() == "websocket" and "sec-websocket-key" in hdr:
-                await self._ws(reader, writer, hdr["sec-websocket-key"])
+                if path in self.ws_routes:
+                    await self.ws_routes[path](reader, writer, hdr, query)
+                else:
+                    await self._ws(reader, writer, hdr["sec-websocket-key"])
             else:
                 await self._static(writer, method, path)
         except (asyncio.IncompleteReadError, asyncio.TimeoutError, ConnectionError, asyncio.LimitOverrunError):
@@ -348,6 +352,7 @@ class LiveRun:
         self.cpu = 0.0
         self.t_start = time.monotonic()
         self.gain_index = None
+        self.tap = None  # optional callable(frame), e.g. Waterfall.tap
 
     def stats(self) -> dict:
         now = time.monotonic()
@@ -386,6 +391,8 @@ class LiveRun:
                     stopping = True
                     continue
                 self.gain_index = f.gain
+                if self.tap:
+                    self.tap(f)
                 t_rx = time.monotonic()
                 for r in self.ld.feed(f.index, iq):
                     # packet end -> publish: newer samples in this block + decode time
@@ -420,7 +427,8 @@ def cmd_d8live(args, out) -> int:
     url = f"http://{args.host}:{web.port}/"
     if not (WEB_DIR / "index.html").is_file():
         print("note: web UI not built; run: cd host/web/d8live && npm install && npm run build", file=out)
-    print(f"d8live: {args.center} MHz, 1-bit dec 64 mode 2, gain {args.gain}; UI {url} (ws {url}ws)",
+    what = "hop-follow (47 channels)" if args.follow else f"{args.center} MHz"
+    print(f"d8live: {what}, 1-bit dec 64 mode 2, gain {args.gain}; UI {url} (ws {url}ws)",
           file=out, flush=True)
     if args.open:
         import webbrowser
@@ -430,7 +438,14 @@ def cmd_d8live(args, out) -> int:
         signal.signal(signal.SIGINT, signal.default_int_handler)  # even if started with SIGINT ignored
     gain = None if str(args.gain).lower() in ("hw", "hardware") else int(args.gain)
     with args.device_factory(args.port) as dev:
-        run = LiveRun(dev, args.center, gain, web.publish)
+        if args.follow:
+            from .d8follow import FollowRun  # imports this module
+            run = FollowRun(dev, gain, web.publish, log=lambda m: print(m, file=out, flush=True))
+        else:
+            run = LiveRun(dev, args.center, gain, web.publish)
+        from .waterfall import Waterfall
+        wf = Waterfall.for_run(run, FS).attach(web).start()
+        run.tap = wf.tap
         th = threading.Thread(target=run.run, daemon=True, name="d8live-stream")
         th.start()
         last = 0.0
@@ -440,6 +455,12 @@ def cmd_d8live(args, out) -> int:
                 if args.status and time.monotonic() - last >= args.status:
                     last = time.monotonic()
                     s = run.stats()
+                    if args.follow:
+                        f = s["follow"]
+                        print(f"[{s['uptime']:7.1f}s] {s['mode']:7} ok {s['n_ok']:6d} {s['packets_per_s']:6.1f} pkt/s "
+                              f"slots {f['slot_pct']}% losses {f['losses']} lost {s['lost_samples']:.0f}",
+                              file=out, flush=True)
+                        continue
                     print(f"[{s['uptime']:7.1f}s] {s['mode']:6} ok {s['n_ok']:5d}/{s['n_all']:5d} "
                           f"{s['packets_per_s']:.2f} pkt/s  decode {s['decode_frac'] * 100:.1f}% of samples  "
                           f"lost {s['lost_samples']:.0f}  cpu {s['process_cpu_s']:.1f}s", file=out, flush=True)
@@ -448,7 +469,14 @@ def cmd_d8live(args, out) -> int:
         finally:
             run.stop.set()
             th.join(10)
+            wf.stop()
             web.stop()
+        if args.follow:
+            from .d8follow import report
+            report(run, out)
+            if run.error and not isinstance(run.error, KeyboardInterrupt):
+                raise run.error
+            return 0
         s = run.stats()
         st = run.session.stats if run.session else None
         print(f"\nstopped after {s['uptime']:.1f} s: {s['n_ok']} CRC-ok packets of {s['n_all']} "
@@ -474,4 +502,6 @@ def register(sub) -> None:
     p.add_argument("--open", action="store_true", help="open the UI in the default browser")
     p.add_argument("--status", type=float, default=5.0, metavar="S",
                    help="print a status line every S seconds (0 = off, default 5)")
+    p.add_argument("--follow", action="store_true",
+                   help="follow the 47-channel hop sequence (firmware HOPTAB; ~111 packets/s instead of ~2.4)")
     p.set_defaults(func=cmd_d8live)

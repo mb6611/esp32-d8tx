@@ -607,23 +607,31 @@ def mm_clock_recovery(d: np.ndarray, sps: float, *, mu: float = 0.5, gain_mu: fl
 
     Returns (symbol values, fractional sample positions)."""
     gain_omega = 0.25 * gain_mu * gain_mu
-    omega = omega0 = sps
+    omega = omega0 = float(sps)
+    om_lo, om_hi = omega0 * (1 - omega_limit), omega0 * (1 + omega_limit)
     i = 0.0 + mu
     last_s, last_dec = 0.0, 0.0
     out, pos = [], []
-    n = len(d)
+    dl = np.asarray(d, float).tolist()  # plain floats: ~5x faster than numpy scalar indexing
+    n = len(dl)
     while i < n - 2:
         k = int(i)
         f = i - k
-        s = d[k] * (1 - f) + d[k + 1] * f
+        s = dl[k] * (1 - f) + dl[k + 1] * f
         dec = 1.0 if s >= 0 else -1.0
         err = last_dec * s - dec * last_s
-        err = max(-1.0, min(1.0, err))
+        if err > 1.0:
+            err = 1.0
+        elif err < -1.0:
+            err = -1.0
         last_s, last_dec = s, dec
         out.append(s)
         pos.append(i)
         omega += gain_omega * err
-        omega = min(max(omega, omega0 * (1 - omega_limit)), omega0 * (1 + omega_limit))
+        if omega < om_lo:
+            omega = om_lo
+        elif omega > om_hi:
+            omega = om_hi
         i += omega + gain_mu * err
     return np.array(out), np.array(pos)
 
@@ -679,16 +687,25 @@ class StandardDecoder:
         self.cutoff = cuts[0]
         self.taps = self._taps(self.cutoff)
         self.max_sync_errors = max_sync_errors
+        self.wins: dict[float, int] = {}  # first_ok: CRC-valid stops per cutoff
 
     def _taps(self, cutoff: float) -> np.ndarray:
         return lowpass(self.fs, cutoff) if cutoff < 0.5 * self.fs else np.array([1.0])
 
-    def decode(self, iq: np.ndarray, *, fix1=False, track_bits: int = 32):
+    def decode(self, iq: np.ndarray, *, fix1=False, track_bits: int = 32, first_ok: bool = False):
         """Runs the chain once per cutoff and merges per burst (results within 2 ms): a CRC-valid
         result beats a failed one, and among CRC-valid ones the widest filter wins (a narrow filter
-        biases the carrier estimate of an off-centre burst). Sorted by time."""
+        biases the carrier estimate of an off-centre burst). Sorted by time.
+
+        first_ok: for input that holds at most one packet (a hop-follow channel segment): try the
+        cutoffs in order of past success on this decoder and stop at the first pass that gives a
+        CRC-valid result. Same decode rate on centred channels at ~1/4 of the CPU."""
         merged: list[tuple[Result, float]] = []
-        for c in self.cutoffs:
+        cuts = self.cutoffs
+        if first_ok:
+            wins = self.wins
+            cuts = sorted(cuts, key=lambda c: -wins.get(c, 0))  # stable: default order on ties
+        for c in cuts:
             self.cutoff, self.taps = c, self._taps(c)
             for r in self._decode_once(iq, fix1=fix1, track_bits=track_bits):
                 same = [i for i, (m, _) in enumerate(merged) if abs(m.t - r.t) < 2e-3]
@@ -698,6 +715,9 @@ class StandardDecoder:
                 m, mc = merged[same[0]]
                 if r.packet.crc_ok and (not m.packet.crc_ok or c > mc):
                     merged[same[0]] = (r, c)
+            if first_ok and any(r.packet.crc_ok for r, _ in merged):
+                wins[c] = wins.get(c, 0) + 1
+                break
         self.cutoff, self.taps = self.cutoffs[0], self._taps(self.cutoffs[0])
         wide = max(self.cutoffs)
         if any(c < wide and r.packet.crc_ok for r, c in merged):
@@ -750,27 +770,32 @@ class StandardDecoder:
         return out
 
 
+def _lerp_uniform(f: np.ndarray, p: np.ndarray) -> np.ndarray:
+    """np.interp(p, arange(len(f)), f) (clamped at the ends), without the per-point search."""
+    p = np.clip(p, 0.0, len(f) - 1.0)
+    k = np.minimum(p.astype(np.intp), len(f) - 2)
+    return f[k] + (p - k) * (f[k + 1] - f[k])
+
+
 def _std_refine(self, d: np.ndarray, p0: float, span: float = 1.0, steps: int = 33):
-    """Best start time (samples) near p0, carrier (preamble mean) and sliced air bits."""
+    """Best start time (samples) near p0, carrier (preamble mean) and sliced air bits.
+    All candidate start times are evaluated in one vectorized pass (rows of t0)."""
     known = 2.0 * to_bits(PREAMBLE + SYNC) - 1
     n = np.arange(AIR_BITS)
-    idx = np.arange(len(d))
-    best = None
-    cs = np.concatenate([[0.0], np.cumsum(d)])  # integrate-and-dump over the middle of each bit
-    cidx = np.arange(len(cs)) - 0.5
-    lo_f, hi_f = (0.5 - 0.5 * self.dump, 0.5 + 0.5 * self.dump)
-    for t0 in p0 + np.linspace(-span, span, steps) * self.sps:
-        if self.dump > 0 and self.sps >= 3:
-            a = np.interp(t0 + (n + lo_f) * self.sps, cidx, cs)
-            b = np.interp(t0 + (n + hi_f) * self.sps, cidx, cs)
-            v = (b - a) / (self.dump * self.sps)
-        else:
-            v = np.interp(t0 + (n + 0.5) * self.sps, idx, d)
-        c = float(np.mean(v[:32]))
-        m = float(np.mean((v[:PRE_SYNC_BITS] - c) * known))
-        if best is None or m > best[0]:
-            best = (m, t0, c, ((v - c) > 0).astype(np.uint8))
-    return best[1], best[2], best[3]
+    t0s = p0 + np.linspace(-span, span, steps) * self.sps
+    if self.dump > 0 and self.sps >= 3:
+        cs = np.concatenate([[0.0], np.cumsum(d)])  # integrate-and-dump over the middle of each bit
+        lo_f, hi_f = (0.5 - 0.5 * self.dump, 0.5 + 0.5 * self.dump)
+        # cs[j] sits at sample time j - 0.5: linear interpolation on that uniform grid
+        a = _lerp_uniform(cs, t0s[:, None] + (n + lo_f) * self.sps + 0.5)
+        b = _lerp_uniform(cs, t0s[:, None] + (n + hi_f) * self.sps + 0.5)
+        v = (b - a) / (self.dump * self.sps)
+    else:
+        v = np.interp(t0s[:, None] + (n + 0.5) * self.sps, np.arange(len(d)), d)
+    c = np.mean(v[:, :32], axis=1)
+    m = np.mean((v[:, :PRE_SYNC_BITS] - c[:, None]) * known, axis=1)
+    k = int(np.argmax(m))  # first best, as the sequential search
+    return t0s[k], float(c[k]), ((v[k] - c[k]) > 0).astype(np.uint8)
 
 
 StandardDecoder._refine = _std_refine

@@ -1,0 +1,33 @@
+IQSEND {'status': 0, 'detail': 0, 'units': 9827, 'pairs': 79244938, 'elapsed_us': 4958012, 'late_max': 11, 'work_max_cycles': 99984, 'frames': 534, 'drops': 0, 'abandoned': 0, 'ffts': 0, 'stopped_by_host': 1}
+frames 534 samples 1238202 gaps 0 in 0 bad_crc 0 resync 0 short 0
+HOPSTAT hops 512 late_max_pairs 1489 skipped 0 qfull 0 retune_max_pairs 5218
+segments 513 tagged 512; slots seen [0, 1]
+segment start spacing (samples): median 2250.0 min 2220 max 2251 (expect 2250.0)
+blank (samples) from tags: [72, 88, 104]
+line at -50.0 kHz, 25.8 dB over median bin
+line amplitude (8-sample windows, median over 255 ref / 255 other segments); steady 0.959, other-channel floor 0.432
+  samples    0-   7  (     0 us)  ref 0.419  other 1.026
+  samples    8-  15  (    32 us)  ref 0.410  other 0.917
+  samples   16-  23  (    64 us)  ref 0.427  other 0.425
+  samples   24-  31  (    96 us)  ref 0.455  other 0.396
+  samples   32-  39  (   128 us)  ref 0.448  other 0.422
+  samples   40-  47  (   160 us)  ref 0.444  other 0.447
+  samples   48-  55  (   192 us)  ref 0.412  other 0.441
+  samples   56-  63  (   224 us)  ref 0.806  other 0.413
+  samples   64-  71  (   256 us)  ref 0.775  other 0.446
+  samples   72-  79  (   288 us)  ref 1.159  other 0.418
+  samples   80-  87  (   320 us)  ref 1.230  other 0.425
+  samples   88-  95  (   352 us)  ref 0.931  other 0.466
+  samples   96- 103  (   384 us)  ref 0.947  other 0.459
+  samples  104- 111  (   416 us)  ref 0.916  other 0.417
+  samples  112- 119  (   448 us)  ref 0.933  other 0.415
+  samples  120- 127  (   480 us)  ref 0.923  other 0.406
+  samples  128- 135  (   512 us)  ref 0.926  other 0.422
+  samples  136- 143  (   544 us)  ref 0.924  other 0.441
+  samples  144- 151  (   576 us)  ref 0.927  other 0.427
+  samples  152- 159  (   608 us)  ref 0.995  other 0.419
+  samples  160- 167  (   640 us)  ref 0.953  other 0.428
+  samples  168- 175  (   672 us)  ref 0.947  other 0.429
+  samples  176- 183  (   704 us)  ref 0.958  other 0.454
+  samples  184- 191  (   736 us)  ref 0.934  other 0.459
+ref line within 10% of steady from sample 72 (288 us after the tag)

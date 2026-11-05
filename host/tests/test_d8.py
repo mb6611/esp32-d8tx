@@ -106,3 +106,25 @@ def test_cli(tmp_path):
     assert d8_cli.main([str(data)], out=out) == 0
     text = out.getvalue()
     assert "2 CRC ok (standard)" in text and " 66,178 " in text
+
+
+def test_first_ok_single_packet_segments():
+    """first_ok (hop-follow segments): one CRC-valid pass ends the decode, the cutoff order adapts,
+    and an off-centre burst still decodes through a later (wider) cutoff."""
+    pk = _packets(3, seed=11)
+    dec = d8.StandardDecoder(250_000.0)
+    for i, (p, cfo) in enumerate(zip(pk, (1000, -2000, 30000))):
+        iq, fs, starts = d8.synth([p], [0.002], cfo_hz=cfo, amp=5, noise=0.3, bits=1, dec=64, seed=20 + i)
+        full = [r for r in d8.StandardDecoder(fs).decode(iq) if r.packet.crc_ok]
+        res = [r for r in dec.decode(iq, first_ok=True) if r.packet.crc_ok]
+        assert [r.packet.raw for r in res] == [r.packet.raw for r in full] == [p]
+        assert res[0].t == pytest.approx(starts[0], abs=1 / d8.BAUD)
+        assert res[0].cfo == pytest.approx(full[0].cfo, abs=500)  # carrier as with all cutoffs
+    assert sum(dec.wins.values()) == 3 and dec.wins.get(75e3) == 1  # 30 kHz off: only the wide one
+
+
+def test_lerp_uniform_matches_interp():
+    rng = np.random.default_rng(3)
+    f = np.cumsum(rng.standard_normal(500))
+    p = rng.uniform(-5, 505, (7, 40))
+    assert np.allclose(d8._lerp_uniform(f, p), np.interp(p, np.arange(len(f)), f), rtol=0, atol=1e-9)

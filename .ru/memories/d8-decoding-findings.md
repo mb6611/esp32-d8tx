@@ -13,4 +13,6 @@ What worked for decoding the E8 transmitter's D8 packets (Nov 2026, `host/esp32s
 - dec 256 (62.5 kS/s) aliases the ±31.7 kHz tones onto each other. Only the MLSE path decodes it, and only partly.
 - The E8 sends byte 3 = 0x00, and byte 4 is the packet counter (+47 per hop cycle of 422.5 ms).
 
+- Hop following (2026-11-05, `docs/devkitv1/hop-follow.md`): `esp32sdr d8live --follow` / `d8follow` decode ~108 packets/s (97.7 % of slots). The measured hop period is 8.9893–8.9899 ms (cycle 422.5 ms), not 8.994. Slot 33 (channel 25, 2411.435 MHz) fails CRC on almost every packet. It fails the same way with one channel only, in mode 0 and 2, with LO offsets and at any gain: the carrier jumps ±8–20 kHz inside the packet. This is most likely the tx's CC2500 fractional-N synthesizer (the ratio is 2 kHz off 3/4). Do not chase it again; see hop-follow.md. Hardware AGC never locks in follow mode; use manual gain 30–50.
+
 **How to apply:** centre at the measured frequency, not the nominal one. Set a manual gain. Check the decoder with `host/tests/test_d8.py`.

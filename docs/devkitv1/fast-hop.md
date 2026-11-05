@@ -135,5 +135,5 @@ The crystal-harmonic lines are the practical lock check.
 - Hardware AGC across the span after one calibration. The sweep used manual gain 50.
   Spot checks with AGC showed nothing odd, but ambient bursts dominated them.
 - Long runs and temperature drift (each sweep lasted minutes).
-- Retuning while an IQS stream runs. The probe uses one-shot captures. In the stream the
-  retune would run on core 0 while the app CPU keeps switching banks.
+- Retuning while an IQS stream runs: since measured, lossless, transient ~0.3 ms; see
+  `hop-follow.md`.
