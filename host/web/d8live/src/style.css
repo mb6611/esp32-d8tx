@@ -1,25 +1,56 @@
-:root { color-scheme: dark; font-family: ui-monospace, Menlo, monospace; font-size: 14px; }
-body { margin: 0; background: #111418; color: #d6dde6; }
-header { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; padding: 10px 16px; background: #1a1f26; border-bottom: 1px solid #2a313b; }
-h1 { font-size: 16px; margin: 0 8px 0 0; }
-.kv { color: #8a95a3; }
-.kv b { color: #e8eef5; font-weight: 600; }
-.pill { padding: 1px 8px; border-radius: 10px; font-size: 12px; }
-.pill.ok { background: #1f5130; color: #9ff0b5; }
-.pill.bad { background: #5a2323; color: #ffb3b3; }
-.pill.stale { background: #5a4a1a; color: #ffe08a; }
-main { display: grid; grid-template-columns: auto 1fr; gap: 16px; padding: 16px; }
-.pads { display: flex; flex-direction: row; gap: 24px; justify-content: center; }
-figure { margin: 0; }
-figcaption { color: #8a95a3; font-size: 12px; text-align: center; }
-canvas { background: #0b0e11; border: 1px solid #2a313b; border-radius: 4px; display: block; }
-.bars { display: flex; flex-direction: column; gap: 8px; justify-content: center; }
-.bar { display: grid; grid-template-columns: 40px 1fr 70px; gap: 10px; align-items: center; }
-.track { position: relative; height: 22px; background: #0b0e11; border: 1px solid #2a313b; border-radius: 3px; }
-.fill { position: absolute; top: 0; bottom: 0; left: 50%; }
-.mid { position: absolute; top: -2px; bottom: -2px; left: 50%; width: 1px; background: #4a5462; }
-.val { text-align: right; font-variant-numeric: tabular-nums; }
-.plot { grid-column: 1 / -1; }
-.plot canvas { width: 100%; height: 260px; }
-footer { padding: 6px 16px 14px; color: #8a95a3; font-size: 12px; }
-.stale .fill { opacity: 0.4; }
+/* Page styles. Tokens live in theme.css; most layout is Tailwind classes in
+   index.html and the modules. The few repeated pieces are named here. */
+@import "tailwindcss";
+@import "./theme.css";
+
+@layer base {
+  html {
+    @apply bg-paper font-serif text-fg antialiased;
+    font-size: 17px;
+    line-height: 1.6;
+  }
+  code {
+    @apply rounded-sm bg-paper-2 px-[.3em] py-[.05em] font-mono text-[.85em];
+  }
+  figure { @apply m-0; }
+  figcaption {
+    @apply mt-2 font-sans text-[.8rem] leading-snug text-muted;
+  }
+  [hidden] { display: none !important; }
+}
+
+@layer components {
+  /* a row of label / value readouts, like the write-up's tables */
+  .stats {
+    @apply flex flex-wrap gap-x-7 gap-y-2 border-t border-line py-2.5 font-sans;
+  }
+  .stats + .stats { @apply border-t-0 pt-0; }
+  .stats > div { @apply min-w-0; }
+  .stats dt { @apply text-xs font-semibold text-muted; }
+  .stats dd { @apply m-0 font-mono text-sm tabular-nums; }
+
+  /* Stats tab: shadcn-style tables (Table + Card look, plain Tailwind). */
+  .card { @apply overflow-hidden rounded-lg border border-line; }
+  .tbl { @apply w-full border-collapse font-sans text-sm; }
+  .tbl caption { @apply border-b border-line bg-paper-2 px-3 py-2 text-left text-xs font-semibold text-fg; }
+  .tbl tr { @apply border-b border-line transition-colors last:border-b-0 hover:bg-paper-2; }
+  .tbl th { @apply px-3 py-1.5 text-left align-middle font-normal text-muted; }
+  .tbl td { @apply px-3 py-1.5 text-right align-middle font-mono whitespace-nowrap tabular-nums; }
+  .pad { @apply block size-[240px] rounded-md border border-line; }
+
+  /* one-line "what is this" text at the top of each tab */
+  .lede { @apply m-0 mb-4 font-sans text-sm leading-snug text-muted; }
+
+  /* Tooltips (src/tooltip.ts), shadcn Tooltip look. Triggers: a dotted underline on the
+     word, focusable, no icon. */
+  .tip {
+    @apply fixed top-0 left-0 z-50 max-w-[18rem] rounded-md bg-fg px-2.5 py-1.5
+      font-sans text-xs leading-snug font-normal text-paper shadow-sm;
+  }
+  th[data-tip], span[data-tip], [data-tip] .tip-u {
+    @apply cursor-help underline decoration-muted/60 decoration-dotted underline-offset-[3px];
+  }
+  .conn[data-tip] { @apply no-underline; }
+  [data-tip]:focus { outline: none; }
+  [data-tip]:focus-visible { @apply rounded-sm outline-1 outline-offset-2 outline-muted outline-dotted; }
+}

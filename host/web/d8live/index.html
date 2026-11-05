@@ -3,30 +3,90 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>D8 live</title>
+    <title>FrSky D8 live</title>
+    <link rel="icon" href="data:," />
   </head>
   <body>
-    <header>
-      <h1>FrSky D8 live</h1>
-      <span id="conn" class="pill bad">disconnected</span>
-      <span class="kv">tx <b id="tx">–</b></span>
-      <span class="kv">counter <b id="ctr">–</b></span>
-      <span class="kv">rate <b id="rate">–</b></span>
-      <span class="kv">CRC ok <b id="crc">–</b></span>
-      <span class="kv">last update <b id="age">–</b></span>
-      <span class="kv">decoder <b id="mode">–</b></span>
-    </header>
-    <main>
-      <section class="pads">
-        <figure><canvas id="padL" width="260" height="260"></canvas><figcaption>left stick: yaw ch4 (X) / throttle ch1 (Y)</figcaption></figure>
-        <figure><canvas id="padR" width="260" height="260"></canvas><figcaption>right stick: roll ch2 (X) / pitch ch3 (Y)</figcaption></figure>
+    <div class="mx-auto max-w-[1400px] px-5 pt-10 pb-16">
+
+      <header class="mb-5">
+        <h1 class="font-serif text-[2.1rem] leading-tight font-bold">FrSky D8 live</h1>
+      </header>
+
+      <main class="pt-6">
+        <p class="lede">What the FrSky D8 transmitter is sending right now: its eight channels, decoded from the radio packets as they arrive.</p>
+        <div class="flex flex-wrap items-center gap-x-10 gap-y-6">
+          <div class="flex gap-5">
+            <figure>
+              <canvas id="padL" class="pad"></canvas>
+              <figcaption>Left stick: yaw ch4 (X), throttle ch1 (Y)</figcaption>
+            </figure>
+            <figure>
+              <canvas id="padR" class="pad"></canvas>
+              <figcaption>Right stick: roll ch2 (X), pitch ch3 (Y)</figcaption>
+            </figure>
+          </div>
+          <div id="bars" class="flex min-w-[320px] flex-1 flex-col gap-2 transition-opacity"></div>
+        </div>
+
+        <figure class="mt-8">
+          <canvas id="plot" class="block h-[260px] w-full rounded-md border border-line"></canvas>
+          <figcaption>All eight channels over the last 20 s, 1000–2000 µs.</figcaption>
+        </figure>
+      </main>
+
+      <section id="nerd" class="nerd pt-6" hidden>
+        <p class="lede">Receiver and decoder internals, updated once a second. Hover or tab to a label for what it means.</p>
+        <div class="grid items-start gap-5 md:grid-cols-3">
+        <div class="card">
+          <table class="tbl">
+            <caption>Packets</caption>
+          <tbody>
+            <tr><th scope="row" tabindex="0" data-tip="ID bytes the transmitter puts in every packet; hex form in brackets.">transmitter</th><td id="tx">–</td></tr>
+            <tr><th scope="row" tabindex="0" data-tip="Counter byte from the last good packet. The transmitter steps it once per hop and wraps at 256.">counter</th><td id="ctr">–</td></tr>
+            <tr><th scope="row" tabindex="0" data-tip="Good (CRC-ok) packets per second over the last 10 s.">rate</th><td id="rate">–</td></tr>
+            <tr><th scope="row" tabindex="0" data-tip="Share of packets found in the last 10 s whose checksum (CRC) matched. Packets that fail are thrown away.">CRC ok</th><td id="crc">–</td></tr>
+            <tr><th scope="row" tabindex="0" data-tip="Time since the last good packet. Turns red after 1.5 s.">last update</th><td id="age">–</td></tr>
+            <tr><th scope="row" tabindex="0" data-tip="search / acquire: listening on one channel until a good packet turns up. locked: following the transmitter's timing; the ms figure is the gap it expects between packets.">decoder</th><td id="mode">–</td></tr>
+          </tbody>
+          </table>
+        </div>
+        <div class="card" id="follow" hidden>
+          <table class="tbl">
+            <caption>Hop follow</caption>
+          <tbody>
+            <tr><th scope="row" tabindex="0" data-tip="acquire: parked on slot 1 (2421.032 MHz) waiting for a good packet. locked: hopping along with the transmitter over all 47 channels.">state</th><td id="f-state">–</td></tr>
+            <tr><th scope="row" tabindex="0" data-tip="Good packets per second over the last 10 s. Every hop decoding would be about 111.">packets/s</th><td id="f-pps">–</td></tr>
+            <tr><th scope="row" tabindex="0" data-tip="Share of hops made while locked that gave a good packet from this transmitter. Slot 33 almost never decodes with the bench transmitter, which caps this near 97.9 %.">slots decoded</th><td id="f-slot">–</td></tr>
+            <tr><th scope="row" tabindex="0" data-tip="Channel visits made while locked, one about every 9 ms.">hops</th><td id="f-hops">–</td></tr>
+            <tr><th scope="row" tabindex="0" data-tip="Times 47 hops (~0.42 s) went by without a good packet and the follower dropped back to acquire.">lock losses</th><td id="f-loss">–</td></tr>
+            <tr><th scope="row" tabindex="0" data-tip="Stream time from the last lock loss to locking again.">last re-acquire</th><td id="f-reacq">–</td></tr>
+            <tr><th scope="row" tabindex="0" data-tip="Stream time from the start to the first lock.">first lock</th><td id="f-first">–</td></tr>
+            <tr><th scope="row" tabindex="0" data-tip="Hop schedules sent to the board (the HS command): one per lock, then a correction when the timing fit drifts more than 15 µs, about every 15–20 s.">schedules</th><td id="f-sched">–</td></tr>
+            <tr><th scope="row" tabindex="0" data-tip="Good packets that arrived on a different slot than scheduled / whose counter didn't match the hop number. Both should stay at 0.">slot / counter errors</th><td id="f-mis">–</td></tr>
+          </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <table class="tbl">
+            <caption>Stream</caption>
+          <tbody>
+            <tr><th scope="row" tabindex="0" data-tip="Tuned frequency. When hop-following, this is the acquire channel (slot 1) the receiver starts from.">centre</th><td id="s-center">–</td></tr>
+            <tr><th scope="row" tabindex="0" data-tip="Receiver gain from the command line (hw = the chip's own AGC). frame idx is the gain index the board reports in each stream frame.">gain</th><td id="s-gain">–</td></tr>
+            <tr><th scope="row" tabindex="0" data-tip="Time since the stream started.">uptime</th><td id="s-up">–</td></tr>
+            <tr><th scope="row" tabindex="0" data-tip="Good packets / all packets found (sync word seen) since the start.">packets CRC ok</th><td id="s-ok">–</td></tr>
+            <tr><th scope="row" tabindex="0" data-tip="I/Q sample frames received from the board over the serial link.">frames</th><td id="s-frames">–</td></tr>
+            <tr><th scope="row" tabindex="0" data-tip="Samples that never arrived (gaps in the sample index), and their share of the stream. Should be 0.">lost samples</th><td id="s-lost">–</td></tr>
+            <tr><th scope="row" tabindex="0" data-tip="Serial frames from the board that failed their checksum / stopped part way. Link errors, not radio packets.">bad CRC / short</th><td id="s-bad">–</td></tr>
+            <tr><th scope="row" tabindex="0" data-tip="Share of received samples run through the decoder: all of them in search, a ~20 ms window per cycle when locked on one channel. Not tracked when hop-following (shows 0).">decoder sees</th><td id="s-dec">–</td></tr>
+            <tr><th scope="row" tabindex="0" data-tip="Median time from the end of a packet to the server sending it here: the rest of its sample block plus decode time. Board and serial-link delay not included.">latency</th><td id="s-lat">–</td></tr>
+          </tbody>
+          </table>
+        </div>
+        </div>
       </section>
-      <section id="bars" class="bars"></section>
-      <section class="plot">
-        <canvas id="plot" width="1000" height="260"></canvas>
-      </section>
-    </main>
-    <footer id="stream">–</footer>
+    </div>
     <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/waterfall.ts"></script>
   </body>
 </html>

@@ -1,0 +1,48 @@
+/* Waterfall tab (src/waterfall.ts) and the tab bar it mounts. Colours and fonts
+   are the page tokens from theme.css. */
+.wf-tabs {
+  display: flex; gap: 1.4rem; margin-top: .4rem; border-bottom: 1px solid var(--color-line);
+  font-family: var(--font-sans); font-size: .85rem;
+}
+.wf-tabs button {
+  font: inherit; color: var(--color-link); background: none; border: 0; cursor: pointer;
+  padding: .45rem 0; margin-bottom: -1px; border-bottom: 2px solid transparent;
+}
+.wf-tabs button:focus { outline: none; }
+.wf-tabs button:focus-visible { outline: 1px dotted var(--color-muted); outline-offset: 2px; }
+.wf-tabs button:hover { text-decoration: underline; text-underline-offset: 2px; }
+.wf-tabs button.on { color: var(--color-fg); font-weight: 600; border-bottom-color: var(--color-fg); text-decoration: none; cursor: default; }
+
+main[hidden], .wf[hidden], .wf-tip[hidden], .wf-bar label[hidden] { display: none; }
+.wf { padding-top: 1rem; }
+/* Waterfall tab: same centred width as the other tabs, small bottom padding so it fits the window. */
+.wf-wide { padding-bottom: 1rem !important; }
+.wf-bar {
+  display: flex; flex-wrap: wrap; gap: .5rem 1.2rem; align-items: center; margin-bottom: .6rem;
+  font-family: var(--font-sans); font-size: .8rem; color: var(--color-muted);
+}
+.wf-bar select, .wf-bar button {
+  font: inherit; color: var(--color-fg); background: var(--color-paper);
+  border: 1px solid var(--color-line); border-radius: var(--radius-sm); padding: .15rem .4rem;
+}
+.wf-bar button { cursor: pointer; padding: .15rem .7rem; }
+.wf-bar button:hover { background: var(--color-paper-2); }
+.wf-bar button.on { color: var(--color-warn); border-color: currentColor; }
+.wf-bar input { accent-color: var(--color-link); vertical-align: -1px; }
+.wf-info { margin-left: auto; font-family: var(--font-mono); font-size: .75rem; font-variant-numeric: tabular-nums; }
+.wf-plot { position: relative; }
+.wf-axis { display: block; width: 100%; height: 22px; border: none; background: none; }
+.wf-canvas {
+  display: block; width: 100%; height: min(70vh, 720px); cursor: crosshair; image-rendering: pixelated;
+  border: 1px solid var(--color-line); border-radius: var(--radius-md);
+}
+.wf-tip {
+  position: absolute; pointer-events: none; padding: .1rem .4rem; white-space: nowrap;
+  font-family: var(--font-mono); font-size: .72rem;
+  background: var(--color-paper); color: var(--color-fg); border: 1px solid var(--color-line); border-radius: var(--radius-sm);
+}
+.wf-note { margin: .5rem 0 0; font-family: var(--font-sans); font-size: .8rem; line-height: 1.45; color: var(--color-muted); }
+
+/* Connection status: right end of the tab row, a dot plus a word. */
+.conn { margin-left: auto; align-self: center; display: inline-flex; align-items: center; gap: .4rem; font-size: .8rem; }
+.conn::before { content: ""; width: .5rem; height: .5rem; border-radius: 50%; background: currentColor; }

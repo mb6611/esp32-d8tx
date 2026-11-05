@@ -1,0 +1,10 @@
+/* Hop-follow slot hit map (src/hitmap.ts), mounted as the last item of the
+   #follow stats row. Page tokens from theme.css. */
+.hitmap { display: flex; flex-direction: column; gap: .4rem; padding: .6rem .75rem .75rem; border-top: 1px solid var(--color-line); }
+.hitmap-label { font-family: var(--font-sans); font-size: .75rem; font-weight: 600; color: var(--color-muted); }
+.hitmap-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; }
+.hitmap-key { display: block; font-weight: 400; }
+.hitmap-grid i:focus { outline: none; }
+.hitmap-grid i:focus-visible { outline: 1px dotted var(--color-fg); outline-offset: 1px; }
+.hitmap-grid i { display: block; aspect-ratio: 1; border-radius: 1px; background: var(--color-line); }
+.hitmap-grid i.empty { background: var(--color-paper-2); box-shadow: inset 0 0 0 1px var(--color-line); }
