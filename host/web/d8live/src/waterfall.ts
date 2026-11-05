@@ -10,6 +10,7 @@
 // whatever the run length. The display canvas draws the ring in two slices,
 // newest row at the top.
 import { interpolateInferno, interpolateTurbo, interpolateViridis } from "d3-scale-chromatic";
+import { Select } from "./select";
 import "./waterfall.css";
 
 interface Meta {
@@ -70,10 +71,10 @@ sec.hidden = true;
 sec.innerHTML = `
   <p class="lede">Radio spectrum over the last 45 s, newest at the top; colour shows signal level.</p>
   <div class="wf-bar">
-    <label data-tip="baseband: the 250 kHz around wherever the receiver is tuned; when hopping, that's whichever channel it is on. hop map: one strip per hop channel, by frequency, lit only while the receiver is on it."><span class="tip-u">view</span> <select id="wf-view"><option value="base">baseband ±125 kHz</option><option value="hop">hop map (47 ch)</option></select></label>
-    <label>colours <select id="wf-map"><option>viridis</option><option>turbo</option><option>inferno</option></select></label>
-    <label id="wf-hold-l" data-tip="Between visits, keep each channel's last row, dimmed, so the hop map doesn't flicker."><input type="checkbox" id="wf-hold"> <span class="tip-u">hold last visit</span></label>
-    <button id="wf-pause">Pause</button>
+    <label data-tip="baseband: the 250 kHz around wherever the receiver is tuned; when hopping, that's whichever channel it is on. hop map: one strip per hop channel, by frequency, lit only while the receiver is on it."><span class="tip-u" id="wf-view-l">view</span> <span id="wf-view-slot"></span></label>
+    <label><span id="wf-map-l">colours</span> <span id="wf-map-slot"></span></label>
+    <label id="wf-hold-l" data-tip="Between visits, keep each channel's last row, dimmed, so the hop map doesn't flicker."><input type="checkbox" id="wf-hold" class="ui-checkbox"> <span class="tip-u">hold last visit</span></label>
+    <button id="wf-pause" type="button" class="ui-button">Pause</button>
     <span class="wf-info" id="wf-info"><span id="wf-i-size">–</span><span id="wf-i-db" tabindex="0" hidden></span><span id="wf-i-t"></span><span id="wf-i-cpu" tabindex="0" hidden data-tip="Share of one CPU core the server spends on these FFTs. It only does the work while this tab is open."></span><span id="wf-i-p"></span></span>
   </div>
   <div class="wf-plot">
@@ -85,7 +86,12 @@ sec.innerHTML = `
   In the hop map a strip lights only while the receiver is on that channel.</p>`;
 (main ?? tabs).after(sec);
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
-const viewSel = $<HTMLSelectElement>("wf-view"), mapSel = $<HTMLSelectElement>("wf-map");
+const viewSel = new Select({ id: "wf-view", labelledBy: "wf-view-l", value: "base", options: [
+  { value: "base", label: "baseband ±125 kHz" }, { value: "hop", label: "hop map (47 ch)" }] });
+const mapSel = new Select({ id: "wf-map", labelledBy: "wf-map-l", value: "viridis",
+  options: ["viridis", "turbo", "inferno"].map((v) => ({ value: v, label: v })) });
+$("wf-view-slot").replaceWith(viewSel.el);
+$("wf-map-slot").replaceWith(mapSel.el);
 const holdBox = $<HTMLInputElement>("wf-hold"), pauseBtn = $<HTMLButtonElement>("wf-pause");
 const axisC = $<HTMLCanvasElement>("wf-axis"), cv = $<HTMLCanvasElement>("wf-canvas");
 const tip = $("wf-tip");
@@ -129,7 +135,7 @@ function reset(m: Meta) {
   rowPx = new Uint32Array(rowImg.data.buffer);
   held = new Uint8Array(m.width);
   head = 0;
-  viewSel.querySelector<HTMLOptionElement>('option[value="hop"]')!.disabled = !m.views.includes("hop");
+  viewSel.setDisabled("hop", !m.views.includes("hop"));
   viewSel.value = m.view;
   $("wf-hold-l").hidden = m.view !== "hop";
   drawAxis();

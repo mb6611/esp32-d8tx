@@ -21,14 +21,7 @@ main[hidden], .wf[hidden], .wf-tip[hidden], .wf-bar label[hidden] { display: non
   display: flex; flex-wrap: wrap; gap: .5rem 1.2rem; align-items: center; margin-bottom: .6rem;
   font-family: var(--font-sans); font-size: .8rem; color: var(--color-muted);
 }
-.wf-bar select, .wf-bar button {
-  font: inherit; color: var(--color-fg); background: var(--color-paper);
-  border: 1px solid var(--color-line); border-radius: var(--radius-sm); padding: .15rem .4rem;
-}
-.wf-bar button { cursor: pointer; padding: .15rem .7rem; }
-.wf-bar button:hover { background: var(--color-paper-2); }
-.wf-bar button.on { color: var(--color-warn); border-color: currentColor; }
-.wf-bar input { accent-color: var(--color-link); vertical-align: -1px; }
+.wf-bar label { display: inline-flex; align-items: center; gap: .4rem; }
 .wf-info { margin-left: auto; font-family: var(--font-mono); font-size: .75rem; font-variant-numeric: tabular-nums; }
 .wf-plot { position: relative; }
 .wf-axis { display: block; width: 100%; height: 22px; border: none; background: none; }
