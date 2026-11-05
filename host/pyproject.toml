@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "esp32sdr"
+version = "0.1.0"
+description = "Host tools for the ESP32 DevKit V1 SDR firmware (unofficial fork of ESPARGOS esp-sdr)"
+requires-python = ">=3.11"
+license = { text = "GPL-3.0-or-later" }
+dependencies = ["numpy", "pyserial"]
+
+[project.optional-dependencies]
+view = ["pyqtgraph"]
+plot = ["matplotlib"]
+dev = ["pytest"]
+
+[project.scripts]
+esp32sdr = "esp32sdr.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["esp32sdr*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
