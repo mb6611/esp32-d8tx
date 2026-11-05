@@ -265,6 +265,8 @@ The fit also measured the hop period properly: **8.989 ms**, a 422.50 ms cycle. 
 
 *The same page in follow mode, replayed from 30 s of packets logged live while I moved both sticks. Compare the GIF above: there it was 2.4 updates a second, here it's about 108.*
 
+The difference is obvious the moment you touch the sticks. On one channel the page got a new value every 420 ms or so, so the knobs jumped from place to place and a quick flick could happen entirely between two packets and never show up. Following the hops, a new value lands every 9 ms, faster than the screen refreshes, and the knobs track my thumbs with no visible lag. It stopped feeling like a readout of the radio and started feeling like the radio.
+
 ## The one channel that won't decode
 
 One channel, 2411.435 MHz (slot 33 in hop order, channel 25 in the bind table), almost never passes the CRC: 0% in the 10-minute run, and never more than 7% at any setting I tried. In that run every other slot decoded 99% or more. It's the red square on the page's hit map.
