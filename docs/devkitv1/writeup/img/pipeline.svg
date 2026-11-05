@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 360" width="920" height="360" font-family="SF Mono, Menlo, Consolas, monospace">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#f5c542"/>
+    </marker>
+  </defs>
+  <rect width="920" height="360" rx="14" fill="#111419"/>
+
+  <!-- top row: on the ESP32 -->
+  <text x="20" y="28" fill="#8a9099" font-size="12" letter-spacing="1.5">ON THE ESP32 (240 MHz, two cores)</text>
+
+  <rect x="20" y="44" width="160" height="120" rx="8" fill="#1a1f26" stroke="#3a414b"/>
+  <text x="100" y="80" fill="#e8e6e1" font-size="15" text-anchor="middle">wi-fi radio</text>
+  <text x="100" y="102" fill="#8a9099" font-size="12" text-anchor="middle">debug capture</text>
+  <text x="100" y="124" fill="#8a9099" font-size="12" text-anchor="middle">16 MS/s I/Q</text>
+
+  <rect x="225" y="44" width="230" height="120" rx="8" fill="#1a1f26" stroke="#3a414b"/>
+  <text x="340" y="66" fill="#e8e6e1" font-size="14" text-anchor="middle">64 KiB capture window</text>
+  <rect x="240" y="78" width="98" height="52" rx="5" fill="#3a3218" stroke="#f5c542"/>
+  <text x="289" y="100" fill="#f5c542" font-size="13" text-anchor="middle">bank A</text>
+  <text x="289" y="118" fill="#f5c542" font-size="11" text-anchor="middle">radio writes</text>
+  <rect x="342" y="78" width="98" height="52" rx="5" fill="#16261d" stroke="#6bd98a"/>
+  <text x="391" y="100" fill="#6bd98a" font-size="13" text-anchor="middle">bank B</text>
+  <text x="391" y="118" fill="#6bd98a" font-size="11" text-anchor="middle">cpu reads</text>
+  <text x="340" y="152" fill="#8a9099" font-size="11" text-anchor="middle">swap roles, repeat (ping-pong)</text>
+
+  <rect x="500" y="44" width="180" height="120" rx="8" fill="#1a1f26" stroke="#3a414b"/>
+  <text x="590" y="72" fill="#e8e6e1" font-size="15" text-anchor="middle">core 1</text>
+  <text x="590" y="92" fill="#8a9099" font-size="11" text-anchor="middle">bare metal, irqs off</text>
+  <text x="590" y="116" fill="#8a9099" font-size="12" text-anchor="middle">bank swaps</text>
+  <text x="590" y="136" fill="#8a9099" font-size="12" text-anchor="middle">boxcar /16</text>
+
+  <rect x="725" y="44" width="175" height="120" rx="8" fill="#1a1f26" stroke="#3a414b"/>
+  <text x="812" y="72" fill="#e8e6e1" font-size="15" text-anchor="middle">core 0</text>
+  <text x="812" y="92" fill="#8a9099" font-size="11" text-anchor="middle">FreeRTOS</text>
+  <text x="812" y="116" fill="#8a9099" font-size="12" text-anchor="middle">FIR /(dec/16)</text>
+  <text x="812" y="136" fill="#8a9099" font-size="12" text-anchor="middle">IQS1 frames+CRC</text>
+
+  <line x1="180" y1="104" x2="223" y2="104" stroke="#f5c542" stroke-width="2" marker-end="url(#a)"/>
+  <text x="202" y="188" fill="#f5c542" font-size="11" text-anchor="middle">32 MB/s</text>
+  <line x1="455" y1="104" x2="498" y2="104" stroke="#f5c542" stroke-width="2" marker-end="url(#a)"/>
+  <line x1="680" y1="104" x2="723" y2="104" stroke="#f5c542" stroke-width="2" marker-end="url(#a)"/>
+  <text x="702" y="188" fill="#f5c542" font-size="11" text-anchor="middle">1 MS/s queue</text>
+
+  <!-- bottom row: the wire and the Mac -->
+  <text x="20" y="226" fill="#8a9099" font-size="12" letter-spacing="1.5">THE WIRE AND THE MAC</text>
+
+  <rect x="725" y="242" width="175" height="90" rx="8" fill="#1a1f26" stroke="#3a414b"/>
+  <text x="812" y="276" fill="#e8e6e1" font-size="15" text-anchor="middle">UART</text>
+  <text x="812" y="298" fill="#8a9099" font-size="12" text-anchor="middle">921600 baud</text>
+  <text x="812" y="316" fill="#8a9099" font-size="11" text-anchor="middle">≤ 78 KB/s used</text>
+
+  <rect x="500" y="242" width="180" height="90" rx="8" fill="#1a1f26" stroke="#3a414b"/>
+  <text x="590" y="276" fill="#e8e6e1" font-size="15" text-anchor="middle">CP2102</text>
+  <text x="590" y="298" fill="#8a9099" font-size="12" text-anchor="middle">USB-serial</text>
+
+  <rect x="20" y="242" width="435" height="90" rx="8" fill="#1a1f26" stroke="#3a414b"/>
+  <text x="237" y="272" fill="#e8e6e1" font-size="15" text-anchor="middle">Mac: esp32sdr</text>
+  <text x="237" y="294" fill="#8a9099" font-size="12" text-anchor="middle">stream → SigMF file</text>
+  <text x="237" y="314" fill="#8a9099" font-size="12" text-anchor="middle">bridge → rtl_tcp → SDR++ / gqrx</text>
+
+  <line x1="812" y1="164" x2="812" y2="240" stroke="#f5c542" stroke-width="2" marker-end="url(#a)"/>
+  <text x="822" y="210" fill="#f5c542" font-size="11">31.25 kS/s</text>
+  <line x1="725" y1="287" x2="682" y2="287" stroke="#f5c542" stroke-width="2" marker-end="url(#a)"/>
+  <line x1="500" y1="287" x2="457" y2="287" stroke="#f5c542" stroke-width="2" marker-end="url(#a)"/>
+</svg>
