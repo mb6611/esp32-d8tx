@@ -9,7 +9,7 @@ from pathlib import Path
 
 import numpy as np
 
-from . import sigmf
+from . import cli_stream, rtltcp, sdrpp_launch, sigmf
 from .device import FREQ_MAX_MHZ, FREQ_MIN_MHZ, Device
 from .protocol import DeviceError, LinkError, TransferError
 from .samples import RATES, decode_cap
@@ -192,6 +192,9 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("-o", "--output", help="save the averaged spectrum (.csv or .png)")
     s.set_defaults(func=cmd_spectrum)
 
+    cli_stream.register(sub)
+    rtltcp.register(sub)
+    sdrpp_launch.register(sub)
     return ap
 
 
