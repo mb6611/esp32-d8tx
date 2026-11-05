@@ -21,6 +21,22 @@ Measured facts (details, tables and evidence in the READMEs; rerun with the scri
   **not shown**.
 - Keying facts: tone register `0x600060b8` (bit 18 enable, gain `[17:10]`); keying methods
   are the `K` command in `stage2/txeng/main/txeng.c`.
+- **Ring/streaming (fork U4, 2026-11-05, `docs/devkitv1/ring-feasibility.md`)**: capture ctrl bit 17 =
+  ring. `MAC_DUMP_MODE` 2/1/3/0 gives RF the lower/upper/both/no 32 KiB bank; CPU reads of an RF-owned
+  bank return constant `0xa55aa55a` (so RINGPROBE `live` is an artefact); modes 1/2 drop writer offsets
+  ≥ 8192. Ping-pong (8192-word ring, toggle 2↔1 at wrap) loses only k≈0–7 samples per half; app-CPU
+  boxcar ÷16 costs ~5.4–6.1 cycles/pair. Interrupt-masked probe loops > ~300 ms trip the interrupt WDT.
+- **IQS stream (fork U6b, 2026-11-05, `main/targets/esp32/iq_stream.c` header)**: switching banks every
+  8064 pairs (not at the wrap) with sentinel zones gives 0 lost pairs (60 s, 960 M pairs). With the RF
+  writing the other bank, app-CPU stage 1 costs ~12–13 cycles/pair, not the probe's 6 (probe ran RF
+  stopped). Both CPUs running hot code from IRAM slowed each other badly; core-0 DSP moved to flash fixed
+  it. Recheck these if the DSP chain or code placement changes.
+- Host serial: setting the pyserial `timeout` before every read drops bytes on this CP2102 link; read
+  replies in bulk with a fixed timeout.
+- **Orientation (U5.5, 2026-11-05, `docs/devkitv1/bench-results.md`)**: host-decoded CAP16 with Q negated
+  puts RF at LO + f; on-chip `SPEC` bins (natural order) are mirrored, RF = LO − f. Ambient-only
+  "tune 10 MHz below a channel" tests are ambiguous here (busy band, sparse bursts); an LO sweep
+  correlation (`docs/devkitv1/bench/orientation_sweep.py`) settled it.
 
 Analysis pitfalls each README records:
 - Stage 0: a 16k-bin single FFT shows ≈22 dB "peak over median" from noise alone; averaged
