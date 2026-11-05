@@ -29,9 +29,27 @@ DEFAULT_RATE_CODE = 6  # 16 MS/s ring
 # the table in docs/devkitv1/iq-stream-uart.md (a test compares them).
 ALLOWED: dict[tuple[int, int, int], bool] = {
     (6, dec, bits): True
-    for bits, decs in ((4, (256, 512, 1024)), (8, (512, 1024)), (16, (1024,)))
+    for bits, decs in ((1, (64, 128, 256, 512, 1024)), (4, (256, 512, 1024)), (8, (512, 1024)),
+                       (16, (1024,)))
     for dec in decs
 }
+
+MODE2_IF_HZ = 4_000_000  # mode 2: fs/4 at the 16 MS/s ring
+
+
+def plan_tune(center_hz: float, mode: int = 0) -> tuple[int, int]:
+    """(FREQ MHz, FOFS kHz) that put `center_hz` at 0 Hz of the stream.
+
+    Mode 0 tunes the LO to the centre; mode 2 tunes it fs/4 (4 MHz) below,
+    and the firmware's j^n rotation brings the centre back to 0 Hz. FOFS is
+    kept within -500..499 kHz; the PLL resolves it in 1/1024 MHz steps
+    (error <= 0.5 kHz)."""
+    if mode not in (0, 2):
+        raise ValueError("mode must be 0 or 2")
+    lo_khz = round(center_hz / 1e3) - (MODE2_IF_HZ // 1000 if mode == 2 else 0)
+    mhz = (lo_khz + 500) // 1000
+    return mhz, lo_khz - mhz * 1000
+
 
 _END_FIELDS = (
     "status detail units pairs elapsed_us late_max work_max_cycles "
@@ -57,6 +75,8 @@ class Frame:
 
 
 def payload_len(samples: int, bits: int) -> int:
+    if bits == 1:
+        return (samples + 3) // 4
     if bits == 4:
         return samples
     if bits in (8, 16):
@@ -64,8 +84,23 @@ def payload_len(samples: int, bits: int) -> int:
     raise IqsError(f"unsupported bits {bits}")
 
 
+def pack_1bit(i, nq) -> bytes:
+    """Pack (I, -Q) words as the firmware's bits=1 payload: sample k of a byte
+    has I's sign at bit 2k and -Q's at bit 2k+1 (1 = negative); the last byte
+    is zero-padded."""
+    i, nq = np.asarray(i), np.asarray(nq)
+    two = (i < 0).astype(np.uint8) | ((nq < 0).astype(np.uint8) << 1)
+    two = np.concatenate([two, np.zeros(-len(two) % 4, np.uint8)]).reshape(-1, 4)
+    return (two[:, 0] | (two[:, 1] << 2) | (two[:, 2] << 4) | (two[:, 3] << 6)).astype(np.uint8).tobytes()
+
+
 def _decode(raw: bytes, samples: int, bits: int) -> np.ndarray:
-    if bits == 4:
+    if bits == 1:  # hard-limited: each component is +1 or -1
+        b = np.frombuffer(raw, dtype=np.uint8)
+        two = ((b[:, None] >> np.array([0, 2, 4, 6], np.uint8)) & 3).reshape(-1)[:samples]
+        i = 1.0 - 2.0 * (two & 1).astype(np.float32)
+        nq = 1.0 - 2.0 * (two >> 1).astype(np.float32)
+    elif bits == 4:
         b = np.frombuffer(raw, dtype=np.uint8)
         i = (b & 0x0F).astype(np.int8)
         q = (b >> 4).astype(np.int8)
@@ -92,7 +127,7 @@ def frame_length(samples: int, bits: int) -> int:
 def parse_iqs1(buf: bytes) -> Frame:
     """Decode one complete frame (header + payload + CRC32); raises IqsError."""
     seq, index, samples, bits, flags, dec, gain, shift = parse_header(buf)
-    if bits not in (4, 8, 16) or payload_len(samples, bits) > MAX_PAYLOAD:
+    if bits not in (1, 4, 8, 16) or payload_len(samples, bits) > MAX_PAYLOAD:
         raise IqsError(f"bad frame geometry: {samples} samples, {bits} bits")
     n = frame_length(samples, bits)
     if len(buf) != n:
@@ -256,7 +291,7 @@ class IqsSession:
         if len(p) != 7 or p[0] != "IQS" or int(p[2]) != self.dec or int(p[3]) != self.bits:
             raise d._resync_after(f"unexpected IQS start: {reply!r}")
         self.start_reply = p
-        self.sample_rate = int(p[1])
+        self.sample_rate = int(p[1]) // self.dec  # reply carries the ring rate
         rd = _Reader(d.t, d.data_timeout + 1.0)
         expect_idx = expect_seq = None
         last_bad = 0

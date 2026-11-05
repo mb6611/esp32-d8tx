@@ -24,6 +24,8 @@ def frame(seq, index, vals, bits=BITS, dec=DEC, flags=0, bad_crc=False, gain=0):
         pay = vals.astype(np.int8).tobytes()
     elif bits == 16:
         pay = vals.astype("<i2").tobytes()
+    elif bits == 1:
+        pay = iqs.pack_1bit(vals[:, 0], vals[:, 1])
     else:
         pay = (((vals[:, 1] & 15) << 4) | (vals[:, 0] & 15)).astype(np.uint8).tobytes()
     h = b"IQS1" + struct.pack("<IQHBBHBB", seq, index, len(vals), bits, flags, dec, gain, 7)
@@ -140,6 +142,38 @@ def test_garbage_between_frames_resyncs():
     assert len(blocks) == 2 and s.stats.lost_samples == 0 and s.stats.resync_bytes > 0
 
 
+@pytest.mark.parametrize("n", [1, 3, 4, 5, 100, 4096])
+def test_1bit_pack_unpack(n):
+    v = vals(5, n)
+    raw = frame(0, 0, v, bits=1, dec=128)
+    assert len(raw) == 24 + (n + 3) // 4 + 4
+    f = iqs.parse_iqs1(raw)
+    assert f.samples == n and f.bits == 1
+    si = np.where(v[:, 0] < 0, -1, 1)
+    snq = np.where(v[:, 1] < 0, -1, 1)
+    np.testing.assert_array_equal(f.iq, (si - 1j * snq).astype(np.complex64))
+
+
+def test_1bit_layout():
+    # sample k of a byte: I sign at bit 2k, -Q sign at bit 2k+1 (1 = negative)
+    assert iqs.pack_1bit([-1, 1, 1, 1, -5], [1, -1, 1, 1, 0]) == bytes([0b00001001, 0b01])
+    f = iqs.parse_iqs1(frame(0, 0, np.array([[-1, 1], [1, -1], [1, 1], [-1, -1], [-5, 0]]), bits=1))
+    np.testing.assert_array_equal(f.iq, np.array([-1 - 1j, 1 + 1j, 1 - 1j, -1 + 1j, -1 - 1j], np.complex64))
+
+
+def test_1bit_session_and_budget():
+    assert (6, 64, 1) in iqs.ALLOWED and (6, 128, 1) in iqs.ALLOWED
+    t = StreamTransport(b"".join(frame(i, i * 4096, vals(i, 4096), bits=1, dec=128)
+                                 for i in range(2)) + iqsend())
+    d = Device(t, sync_timeout=0.3, reply_timeout=0.1, data_timeout=0.1)
+    s = iqs.IqsSession(d, 128, 1, 2402, 0)
+    blocks = [b for b, _ in s.blocks()]
+    assert [len(b) for b in blocks] == [4096, 4096] and s.stats.lost_samples == 0
+    assert any(c.startswith("IQS 1000 128 1 6") for c in t.sent)
+    with pytest.raises(ValueError, match="link budget"):
+        iqs.IqsSession(d, 32, 1, 2402)
+
+
 def test_truncated_stream_raises():
     with pytest.raises(TransferError):
         run(frame(0, 0, vals(0))[:-10])
@@ -244,3 +278,23 @@ def test_frame_cut_short_mid_stream_continues():
     # the cut frame's header claims more bytes than arrived; frame 2 is inside
     # them, so the bad CRC + rescan path recovers it
     assert len(blocks) == 2 and s.stats.gap_samples == N
+
+
+def test_plan_tune():
+    assert iqs.plan_tune(2421.096e6, 0) == (2421, 96)
+    assert iqs.plan_tune(2421.096e6, 2) == (2417, 96)
+    assert iqs.plan_tune(2421.7e6, 2) == (2418, -300)
+    assert iqs.plan_tune(2480e6, 2) == (2476, 0)
+
+
+def test_cli_center_mode2(tmp_path):
+    data = b"".join(frame(i, i * N, vals(i)) for i in range(2)) + iqsend()
+    t = StreamTransport(data)
+    rc = cli.main(["stream", "--center", "2421.096", "--mode", "2", "--seconds", "1",
+                   "-o", str(tmp_path / "c")], device_factory=lambda port: Device(
+                       t, sync_timeout=0.3, reply_timeout=0.1, data_timeout=0.1))
+    assert rc == 0
+    assert "FREQ 2417" in t.sent and "FOFS 96" in t.sent
+    assert any(x.startswith("IQS ") and x.split()[-1] == "2" for x in t.sent)
+    meta = json.loads((tmp_path / "c.sigmf-meta").read_text())
+    assert meta["captures"][0]["core:frequency"] == 2421.096e6

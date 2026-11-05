@@ -2,23 +2,37 @@
 """`stream` subcommand: record an IQS stream to SigMF."""
 from __future__ import annotations
 
-from .iqs import IqsError, IqsSession
+from .iqs import IqsError, IqsSession, plan_tune
 from .protocol import TransferError
 from .samples import RATES
 from .sigmf import StreamWriter
 
 
 def add_arguments(p) -> None:
-    p.add_argument("--freq", type=int, required=True, help="centre frequency, whole MHz")
-    p.add_argument("--fofs", type=int, default=0, help="PLL offset kHz (-1000..1000)")
+    g = p.add_mutually_exclusive_group(required=True)
+    g.add_argument("--freq", type=int, help="LO frequency, whole MHz (with --fofs)")
+    g.add_argument("--center", type=float, metavar="MHZ",
+                   help="wanted centre frequency in MHz (e.g. 2421.096); sets FREQ/FOFS "
+                        "so it lands at 0 Hz, LO 4 MHz below for --mode 2")
+    p.add_argument("--fofs", type=int, default=0, help="PLL offset kHz (-1000..1000), with --freq")
+    p.add_argument("--mode", type=int, default=0, choices=(0, 2),
+                   help="0: LO at the centre; 2: LO fs/4 below, rotated by j^n on-chip "
+                        "(keeps LO leakage out of band)")
     p.add_argument("--dec", type=int, default=512, help="decimation (default 512)")
-    p.add_argument("--bits", type=int, default=8, choices=(4, 8, 16))
+    p.add_argument("--bits", type=int, default=8, choices=(1, 4, 8, 16),
+                   help="bits per I/Q component; 1 = hard-limited sign only (FSK; use --dec 64)")
     p.add_argument("--seconds", type=float, default=10.0)
     p.add_argument("-o", "--output", required=True, metavar="BASE", help="SigMF base path")
 
 
 def run(dev, args, out) -> int:
-    s = IqsSession(dev, args.dec, args.bits, args.freq, args.fofs, seconds=args.seconds)
+    if args.center is not None:
+        args.freq, args.fofs = plan_tune(args.center * 1e6, args.mode)
+        fc = args.center * 1e6
+    else:
+        fc = args.freq * 1e6 + args.fofs * 1e3 + (4e6 if args.mode == 2 else 0)
+    s = IqsSession(dev, args.dec, args.bits, args.freq, args.fofs, seconds=args.seconds,
+                   mode=args.mode)
     try:
         fw = dev.version().get("git", "unknown")
     except Exception:
@@ -27,9 +41,10 @@ def run(dev, args, out) -> int:
     gain_mode = _gain(dev)[0]
     gains: list[int] = []
     with StreamWriter(args.output, fs=RATES[s.rate_code] // args.dec,
-                      fc=args.freq * 1e6 + args.fofs * 1e3,
+                      fc=fc,
                       bits=args.bits, gain_mode=gain_mode, gain_index=None, fw_version=fw,
                       extra={"decimation": args.dec, "fofs_khz": args.fofs,
+                             "lo_mhz": args.freq, "mode": args.mode,
                              "capture": "stream"}) as w:
         prev = 0
         for iq, _f in s.blocks():
