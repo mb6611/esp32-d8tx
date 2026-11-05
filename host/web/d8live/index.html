@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>D8 live</title>
+  </head>
+  <body>
+    <header>
+      <h1>FrSky D8 live</h1>
+      <span id="conn" class="pill bad">disconnected</span>
+      <span class="kv">tx <b id="tx">–</b></span>
+      <span class="kv">counter <b id="ctr">–</b></span>
+      <span class="kv">rate <b id="rate">–</b></span>
+      <span class="kv">CRC ok <b id="crc">–</b></span>
+      <span class="kv">last update <b id="age">–</b></span>
+      <span class="kv">decoder <b id="mode">–</b></span>
+    </header>
+    <main>
+      <section class="pads">
+        <figure><canvas id="padL" width="260" height="260"></canvas><figcaption>left stick: yaw ch4 (X) / throttle ch1 (Y)</figcaption></figure>
+        <figure><canvas id="padR" width="260" height="260"></canvas><figcaption>right stick: roll ch2 (X) / pitch ch3 (Y)</figcaption></figure>
+      </section>
+      <section id="bars" class="bars"></section>
+      <section class="plot">
+        <canvas id="plot" width="1000" height="260"></canvas>
+      </section>
+    </main>
+    <footer id="stream">–</footer>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

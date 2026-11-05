@@ -9,7 +9,7 @@ from pathlib import Path
 
 import numpy as np
 
-from . import cli_stream, rtltcp, sdrpp_launch, sigmf
+from . import cli_stream, d8_live, rtltcp, sdrpp_launch, sigmf
 from .device import FREQ_MAX_MHZ, FREQ_MIN_MHZ, Device
 from .protocol import DeviceError, LinkError, TransferError
 from .samples import RATES, decode_cap
@@ -195,6 +195,7 @@ def build_parser() -> argparse.ArgumentParser:
     cli_stream.register(sub)
     rtltcp.register(sub)
     sdrpp_launch.register(sub)
+    d8_live.register(sub)
     return ap
 
 
