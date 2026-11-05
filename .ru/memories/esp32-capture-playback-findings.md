@@ -38,6 +38,12 @@ Measured facts (details, tables and evidence in the READMEs; rerun with the scri
   "tune 10 MHz below a channel" tests are ambiguous here (busy band, sparse bursts); an LO sweep
   correlation (`docs/devkitv1/bench/orientation_sweep.py`) settled it.
 
+- **Fast retune (2026-11-05, `docs/devkitv1/fast-hop.md`, `-DHOP_PROBE=ON`)**: capacitor-code release +
+  `rom_set_rf_freq_offset` alone retunes in ~0.19–0.27 ms with the LO already at the target on return;
+  one calibration served all 47 D8 channels (lock/DC/clipping as recalibrated). Skip `set_chanfreq` per
+  hop (+164 µs and a saturating burst). The board's 40 MHz crystal harmonics at 2400/2440/2480 MHz are a
+  usable frequency ruler (80 MS/s + `BANDWIDTH 67` covers every D8 channel).
+
 Analysis pitfalls each README records:
 - Stage 0: a 16k-bin single FFT shows ≈22 dB "peak over median" from noise alone; averaged
   spectra show ≈21–28 dB more power inside ±8 MHz, which is the analog low-pass, not WiFi.
