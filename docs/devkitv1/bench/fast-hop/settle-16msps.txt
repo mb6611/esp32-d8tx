@@ -1,0 +1,8 @@
+/tmp/s_big_m0-q.npz 2404000->2477000 t0=100.0 t1=626.4 src_line_gone@172us dst_line_within3dB@591us (=-35 vs t1) final=45.2 ini=46.6
+/tmp/s_big_m0-q.npz 2477000->2404000 t0=100.0 t1=600.2 src_line_gone@156us dst_line_within3dB@596us (=-4 vs t1) final=47.7 ini=44.5
+/tmp/s_big_m1-q.npz 2404000->2477000 t0=100.0 t1=365.1 src_line_gone@131us dst_line_within3dB@303us (=-62 vs t1) final=44.6 ini=46.5
+/tmp/s_big_m1-q.npz 2477000->2404000 t0=100.0 t1=365.0 src_line_gone@131us dst_line_within3dB@361us (=-4 vs t1) final=47.9 ini=44.4
+/tmp/s_big_m2-q.npz 2404000->2477000 t0=100.0 t1=352.9 src_line_gone@119us dst_line_within3dB@290us (=-63 vs t1) final=44.9 ini=46.4
+/tmp/s_big_m2-q.npz 2477000->2404000 t0=100.0 t1=352.8 src_line_gone@119us dst_line_within3dB@349us (=-4 vs t1) final=47.8 ini=44.6
+/tmp/s_small_m1-q.npz 2404000->2410000 t0=100.0 t1=284.9 src_line_gone@131us dst_line_within3dB@283us (=-2 vs t1) final=41.7 ini=46.6
+/tmp/s_small_m1-q.npz 2410000->2404000 t0=100.0 t1=365.0 src_line_gone@155us dst_line_within3dB@362us (=-3 vs t1) final=48.0 ini=40.5
