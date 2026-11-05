@@ -224,9 +224,9 @@ cd host && .venv/bin/esp32sdr d8live --center 2421.032 --gain 40 --open
 # http://127.0.0.1:8765/
 ```
 
-![the live page: transmitter ID 66,178, 2.4 updates a second, left stick at throttle low, right stick centred, eight channel bars](img/d8live.png)
+![the two sticks of the E8, redrawn from 30 s of packets decoded live while I moved them around; the knob glides between updates, which arrive about 2.4 times a second](img/d8live-sticks.gif)
 
-*The live page with the sticks at rest. The plot of channel values over time is below this, cut off here.*
+*My two sticks, redrawn from 30 s of packets decoded live while I moved them. Real updates arrive about 2.4 times a second; the knob glides in between.*
 
 In one 274-second run it decoded **649 of the 649** visits to the channel, with no lost samples. It updates about 2.4 times a second, which is exactly what you'd expect from hearing 1 channel out of 47. It works, but it's slow next to the 111 packets a second the transmitter is really sending.
 
