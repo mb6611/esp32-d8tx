@@ -46,8 +46,14 @@ esp32sdr capture --freq 2437 --rate 40 --n 16380 -o ch6 --psd ch6.png   # SigMF 
 esp32sdr spectrum --freq 2437 --bins 1024 -o ch6.csv
 esp32sdr stream --freq 2402 --dec 512 --bits 8 --seconds 60 -o ble    # continuous, ~31 kHz wide
 esp32sdr bridge --listen 127.0.0.1:1234                              # rtl_tcp for gqrx
+esp32sdr sdrpp                                                       # SDR++ live view
+esp32sdr d8live --center 2421.032 --gain 40 --open                   # FrSky D8 live page, one channel
+esp32sdr d8live --follow --gain 40 --open                            # same, all 47 hop channels (~108 pkt/s)
+esp32sdr d8follow --seconds 60                                       # hop follow, console stats only
 ```
-`--port` defaults to `/dev/cu.usbserial-0001`. See `bench-results.md` and `live-view.md`.
+`--port` defaults to `/dev/cu.usbserial-0001`. The d8live page needs a one-time
+`cd host/web/d8live && npm install && npm run build`. Hop following needs this firmware
+(`HOPTAB`) and a manual gain. See `bench-results.md`, `live-view.md` and `hop-follow.md`.
 
 ## Check the link
 Open `/dev/cu.usbserial-0001` at 921600 and send `VERSION?`, `INFO`, `TRANSPORT?`;

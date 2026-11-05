@@ -1,8 +1,14 @@
 # d8live web UI
 
-Browser view for `esp32sdr d8live` (backend: `host/esp32sdr/d8_live.py`): eight channel bars
-(980–2020 µs), stick pads (left: yaw ch4 X / throttle ch1 Y; right: roll ch2 X / pitch ch3 Y), a 20 s channel plot,
-tx id / counter / packet rate / CRC rate / last-update age, and stream loss stats.
+Browser view for `esp32sdr d8live` (backend: `host/esp32sdr/d8_live.py`), in three tabs:
+
+- **Channels** (default): eight channel bars (980–2020 µs), stick pads (left: yaw ch4 X /
+  throttle ch1 Y; right: roll ch2 X / pitch ch3 Y) and a 20 s channel plot.
+- **Waterfall** (`#waterfall`): baseband waterfall, or the per-channel hop map with `--follow`.
+- **Stats for nerds** (`#stats`): three tables. *Packets*: tx id, counter, rate, CRC rate,
+  last-update age, decoder state. *Hop follow* (only with `--follow`): see below. *Stream*:
+  centre, gain, uptime, CRC-ok count, frames, lost samples, bad-CRC/short frames, decoder
+  share of samples, latency.
 
 ```sh
 cd host/web/d8live && npm install && npm run build   # once; writes dist/
@@ -21,7 +27,9 @@ The backend serves `dist/` and a broadcast-only WebSocket at `/ws` (JSON text fr
 `{"type":"packet", t, tx_id, counter, ch[8] µs, raw[8], crc_ok, cfo, mode, latency_ms}` per
 decoded packet and `{"type":"stats", packets_per_s, crc_rate, n_ok, n_all, mode, period_ms,
 decode_frac, latency_ms, frames, samples, lost_samples, loss_frac, bad_crc, short_frames,
-center_mhz, gain, gain_index, ...}` once a second. `crc_rate` is over decode attempts (bursts
+center_mhz, gain, gain_index, process_cpu_s, follow?}` once a second. `follow` is present only
+with `--follow`: `{hops, ok_locked, slot_pct, losses, reacq_s[], first_lock_s, schedules,
+slot_mismatch, counter_mismatch, decode_cpu_s, slot_ok[47], slot_hops[47], slot_mhz[47]}`. `crc_rate` is over decode attempts (bursts
 with a sync word), so false syncs inside the locked window count against it.
 
 ## Look and code layout
@@ -35,13 +43,13 @@ write-up's figures. Styling is Tailwind CSS v4 through `@tailwindcss/vite`.
   utilities from them (`text-muted`, `border-line`, `bg-paper-2`, `font-serif`, ...) and they
   are also CSS variables, which `src/tokens.ts` reads for canvas drawing and
   `waterfall.css` / `hitmap.css` use directly. Change colours here only.
-- `src/style.css`: Tailwind entry, base element styles, and the two repeated components
-  (`.stats` label/value rows, `.pad`). Everything else is utility classes in `index.html`
+- `src/style.css`: Tailwind entry, base element styles, and the repeated components
+  (`.card` / `.tbl` stats tables, `.pad`, `.lede` tab intro line, `.tip` tooltip). Everything else is utility classes in `index.html`
   and the modules.
 - `src/main.ts`: WebSocket wiring and the animation frame. Packets only update state; bars,
   pads, plot and the packet readouts are redrawn once per frame (and not at all while the
   waterfall tab hides `<main>`), so ~108 packets/s cause no per-packet layout.
-- `src/stats.ts` (header, follow row, footer text), `src/bars.ts` (channel bars, moved with
+- `src/stats.ts` (the Stats tab tables), `src/bars.ts` (channel bars, moved with
   `transform` only), `src/pads.ts` (stick gimbals), `src/plot.ts` (20 s plot with an O(1)-trim
   history), `src/canvas.ts` (HiDPI canvas sizing), `src/channels.ts` (µs range),
   `src/types.ts` (message types), plus `src/hitmap.ts` and `src/waterfall.ts`.
@@ -52,8 +60,9 @@ With `d8_live.py --follow` the Stats tab shows a "Hop follow" table from `stats.
 
 ## Waterfall tab
 
-`src/waterfall.ts` (+ `waterfall.css`, colormaps from `d3-scale-chromatic`) adds a
-"Channels | Waterfall" tab bar; `http://127.0.0.1:8765/#waterfall` opens it directly.
+`src/waterfall.ts` (+ `waterfall.css`, colormaps from `d3-scale-chromatic`) also mounts the
+"Channels | Waterfall | Stats for nerds" tab bar and switches tabs; `#waterfall` or `#stats`
+in the URL opens that tab directly.
 Backend: `host/esp32sdr/waterfall.py`. The stream thread hands each IQS frame to
 `Waterfall.tap`; a worker thread makes rows with `numpy.fft` (256-point Hann, all blocks
 averaged, 25 rows/s on the stream sample clock). With no subscriber `tap` returns at once

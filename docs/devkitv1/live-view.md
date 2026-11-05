@@ -104,3 +104,12 @@ was not reading. `esp32sdr sdrpp` with real SDR++: auto play, >2.5 min continuou
 `F 2402000000` and back to 2480 (SDR++ `f` confirms each), every 30 s status 936448
 samples (31215 S/s), 0 lost, 0 short frames, 0 bad CRC, 0 dropped; socket queues empty
 (SDR++ keeps up).
+
+## Built-in waterfall in d8live (2026-11-05)
+
+For the D8 work there is also a browser waterfall that needs no SDR program: the Waterfall
+tab of `esp32sdr d8live` (`http://127.0.0.1:8765/#waterfall`). It shows ±125 kHz around the
+tuned frequency, or with `--follow` a hop map with one strip per hop channel. Rows are made on
+the host (256-point FFT, 25 rows/s) only while the tab is open. It is not an rtl_tcp client
+and does not replace the bridge for general use. See `host/web/d8live/README.md` and
+`hop-follow.md`.

@@ -133,7 +133,9 @@ The crystal-harmonic lines are the practical lock check.
 ## Not measured
 
 - Hardware AGC across the span after one calibration. The sweep used manual gain 50.
-  Spot checks with AGC showed nothing odd, but ambient bursts dominated them.
-- Long runs and temperature drift (each sweep lasted minutes).
+  Spot checks with AGC showed nothing odd, but ambient bursts dominated them. (In hop
+  following, `--gain hw` never acquired; see `hop-follow.md`.)
+- Temperature drift. Long runs: since measured in hop following, 10.5 min of fast
+  retunes (no recalibration in the hop path) and no lock loss (`hop-follow.md`).
 - Retuning while an IQS stream runs: since measured, lossless, transient ~0.3 ms; see
   `hop-follow.md`.

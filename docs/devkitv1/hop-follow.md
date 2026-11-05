@@ -112,6 +112,20 @@ Command: `cd host && .venv/bin/esp32sdr d8live --follow` (gain 40) and
 - Host CPU: decoding ~0.57 s per stream second, about 57 % of one core. `StandardDecoder`
   runs 5 filter cutoffs per segment. (Since cut to ~0.05 s: see *Decoder CPU* below.)
 
+### Decoder CPU
+
+Changes in `host/esp32sdr/d8.py` (tests in `host/tests/test_d8.py`):
+
+- `StandardDecoder.decode(first_ok=True)`, used by the follower: a segment holds at most one
+  packet, so the cutoffs are tried in order of past CRC-valid wins and the loop stops at the first
+  CRC-valid pass, instead of running all 5 cutoffs.
+- `mm_clock_recovery` indexes a plain Python float list instead of numpy scalars (~5× faster loop).
+- `_std_refine` evaluates all 33 candidate start times in one vectorized pass.
+
+Measured live: 0.575 s per stream second before (159 s run, 91.3 s decode CPU), 0.068 s after
+(630 s run, 42.8 s), with the same slot rate. `bench/hop-follow/decode_cpu.py` times the
+segment decode offline on single-channel recordings.
+
 ### Longer runs and other gains (2026-11-05, after the decoder CPU change)
 
 | Run | Duration | CRC-ok/s | Slots decoded | Losses | Stream loss | Decode CPU |
@@ -172,4 +186,6 @@ shadow at (+3, +4) px and the upper-left highlight can make the knob look offset
 - Decoder CPU: done (above). Confirmed live: 0.068 s per stream second over 630 s.
 - Lock-loss detection is a fixed 47 hops. Coasting on the old schedule (fades) and
   acquiring on more than one slot would shorten outages.
-- Not measured: runs longer than ~10 min.
+- Not measured in a log: runs longer than ~10.5 min. (A `d8live --follow` session left running
+  showed 97.8 % of slots and 0 lock losses on the Stats tab after ~18 min; see the write-up's
+  `img/d8live-stats.png`.)

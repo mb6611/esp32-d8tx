@@ -2,7 +2,7 @@
 
 *Matthew Banaag · November 2026 · [esp32-devkitv1-sdr](https://github.com/mb6611/esp32-devkitv1-sdr)*
 
-I wanted to see whether a classic ESP32 DevKit V1, the cheap board with a CP2102 USB-serial chip, could work as a 2.4 GHz software-defined receiver. I built one on the I/Q capture path that [esp-sdr](https://github.com/ESPARGOS/esp-sdr) found in the chip, got it streaming without gaps over the board's slow serial link, and tried it on Wi-Fi, Bluetooth LE advertising and a FrSky D8 RC transmitter, whose packets it can now decode live. Everything here is receive-only.
+I wanted to see whether a classic ESP32 DevKit V1, the cheap board with a CP2102 USB-serial chip, could work as a 2.4 GHz software-defined receiver. I built one on the I/Q capture path that [esp-sdr](https://github.com/ESPARGOS/esp-sdr) found in the chip, got it streaming without gaps over the board's slow serial link, and tried it on Wi-Fi, Bluetooth LE advertising and a FrSky D8 RC transmitter. In the end it follows the D8 transmitter across all 47 of its hop channels and decodes about 108 packets a second live. Everything here is receive-only.
 
 ---
 
@@ -228,11 +228,94 @@ cd host && .venv/bin/esp32sdr d8live --center 2421.032 --gain 40 --open
 
 *My two sticks, redrawn from 30 s of packets decoded live while I moved them. Real updates arrive about 2.4 times a second; the knob glides in between.*
 
-In one 274-second run it decoded **649 of the 649** visits to the channel, with no lost samples. It updates about 2.4 times a second, which is exactly what you'd expect from hearing 1 channel out of 47. It works, but it's slow next to the 111 packets a second the transmitter is really sending.
+In one 274-second run it decoded **649 of the 649** visits to the channel, with no lost samples. It updates about 2.4 times a second, which is exactly what you'd expect from hearing 1 channel out of 47. It works, but it's slow next to the 111 packets a second the transmitter is really sending. To get those, the board has to hop.
+
+## Who keeps the time
+
+"Can it hop?" said the retune fits in the gap. The harder question was who decides when to do it. A command over the UART takes a few milliseconds to arrive, and not always the same few, so the Mac can't just say "retune now" 108 times a second. The board can't decide on its own either, because the decoder runs on the Mac.
+
+So I split the job. The Mac loads the 47 frequencies into the board once, with a `HOPTAB` command. While the stream is running, it sends one short line, `HS slot pair period`, which means: at stream sample number *pair*, go to *slot*, then step to the next slot every *period*. The schedule is written in stream samples, not in wall-clock time, so the board and the Mac agree exactly on where every hop happened, and timer jitter on the board doesn't pile up. A one-shot timer on core 0 does the retune; core 1 keeps swapping banks as before.
+
+The board also marks the stream. At each retune it ends the current frame, and the next frame's header says: a new channel starts here, it's slot *k*, and the first *n* samples are the LO moving, so skip them. The Mac never has to guess which samples belong to which channel. There are no replies to these commands; you see their effect in the marks.
+
+Before I tried it on the transmitter, I checked that retuning mid-stream doesn't break the stream. I pointed one slot at the board's own 40 MHz crystal harmonic at 2400 MHz and the other 10 MHz away, and flipped between them every 9 ms for 5 seconds. That was 512 retunes with no lost samples and no bad CRCs. The retune call took at most about 0.4 ms, and the line on the new channel was back within 10% of its normal level 0.3 ms after the mark. Each retune lands about 1.15 ms before a packet, so that's well clear of it.
+
+## Locking on
+
+The Mac starts by sitting on one channel, 2421.032 MHz, the one I'd been decoding all along, and waits for a packet. The E8 comes round every 422.5 ms, so the first one arrives within half a second (0.14–0.40 s in my runs). Its preamble time tells you where all the later packets will be: hop *m* is at *a* + *m*·*P*, on the next slot in the bind table. The Mac sends one `HS` so that each retune lands 1.15 ms before the next predicted preamble, in the middle of the gap.
+
+After that it decodes each marked segment on its own and fits a straight line through the times of the last 141 packets. When the fit says the schedule would be more than 15 µs off ten hops ahead, it sends a new `HS`. That works out to about one every 15–20 s. If 47 hops in a row go by without a good packet, it gives up, goes back to 2421.032 and waits again.
+
+I only ever measured one channel's true frequency. The E8 sits 26.4 ppm low on 2421.032, so I applied the same −26.4 ppm to the whole table. Packets on the other channels came in 0.3–1.8 kHz off centre, so that one measurement was enough.
+
+To test recovery I added a `--kick` option that pushes the board's schedule 4 ms off the transmitter, so every retune lands in the middle of a packet. The follower noticed after the 47 hops (0.44 s) and was locked again 0.11–0.37 s later.
+
+## 108 packets a second
+
+| run | length | good packets/s | slots decoded | lock losses |
+| --- | --- | --- | --- | --- |
+| `d8live --follow` | 159 s | 108.0 | 97.7% (17,155 of 17,557) | 0 |
+| `d8follow` | 630 s | 108.5 | 97.8% (68,408 of 69,926) | 0 |
+
+The 10.5-minute run kept its lock the whole time with 37 schedule corrections. Every packet arrived on the slot the schedule said, and the packet counter went up by exactly one per hop. The only damage in the stream was one frame with a bad CRC: 2248 samples lost out of 157.6 million. Gains of 30, 40 and 50 all gave the same rate. The board's automatic gain never locked at all, the same failure I'd seen on one channel, so it stays on manual gain.
+
+The fit also measured the hop period properly: **8.989 ms**, a 422.50 ms cycle. My strobe estimate from the max-hold snapshots was 422.70 ms, 47 × 8.994. That's only 0.05% off, but at 108 hops a second it would push the retunes into the packets within a few seconds, so the follower has to measure it. Over the ten minutes the period also crept from 8.9893 to 8.9887 ms as the two crystals drifted against each other, which the line fit tracks without any help.
+
+![the restyled d8live Channels tab, sticks and bars moving smoothly with about 108 packets a second while I moved both sticks](img/d8live-follow-sticks.gif)
+
+*The same page in follow mode, replayed from 30 s of packets logged live while I moved both sticks. Compare the GIF above: there it was 2.4 updates a second, here it's about 108.*
+
+## The one channel that won't decode
+
+One channel, 2411.435 MHz (slot 33 in hop order, channel 25 in the bind table), almost never passes the CRC: 0% in the 10-minute run, and never more than 7% at any setting I tried. In that run every other slot decoded 99% or more. It's the red square on the page's hit map.
+
+![the Stats for nerds tab: packets, hop-follow and stream tables, and a 47-cell hit map with one red cell](img/d8live-stats.png)
+
+*The Stats tab of the live page after about 18 minutes: 97.8% of slots, no lock losses. Each square is one hop slot, in hop order; the red one is 2411.435 MHz.*
+
+My first thought was that it was my receiver, so I tried to make it decode:
+
+- recorded that channel alone, no hopping: 0 good packets
+- mode 0 instead of mode 2: 0
+- LO moved ±50 and ±100 kHz: 0
+- manual gain 20, 60 and 81: 0, 2 and 0
+- 4-bit samples and the slow Viterbi decoder: 0 of 10
+
+In the same sessions two nearby channels, 2410.835 and 2415.933 MHz, decoded every packet, and 2410.835 gave 14 of 14 with the Viterbi decoder. The bad channel's bursts are as strong as its neighbour's, the same 7 ms long, and there's nothing else on the channel. On the hop map further down it looks just like the others.
+
+The CRC-valid packet on the slot before tells me what the bad one should contain: the counter is one higher, and 9 ms later the stick values are almost certainly the same. So I could work out the ideal frequency of each bad packet and subtract it from what I received.
+
+![frequency residual over 6.5 ms packets: flat within about ±2 kHz on slot 19, but jumping in steps of 8–20 kHz on slot 33](img/slot33_resid.png)
+
+*What's left after subtracting the ideal signal. A good slot (top) stays flat; slot 33 (bottom) jumps around.*
+
+On a good slot the residual is flat, 0.7 kHz rms. On slot 33 the carrier jumps by 8–20 kHz for 0.1–0.3 ms at a time, all through the packet. The tones are only ±31.7 kHz from centre, so jumps like that flip bits, and often break the preamble or sync word before the decoder gets going: only 15 of 70 bad-slot segments in one 30 s run even found the sync word. Faster carrier tracking and single-bit CRC repair recovered 0–1 of 70.
+
+So the signal itself looks wrong, and my best guess is the transmitter's synthesizer. The CC2500 makes its carrier with a fractional-N synthesizer from a 26 MHz crystal, and for this channel the ratio is 92.74993, about 2 kHz from exactly 3/4. Synthesizers like that tend to make spurs and wander when the fraction sits just next to a simple ratio, and this is the only one of the 47 channels within 8 kHz of a ratio with a denominator of 8 or less.
+
+That's a guess, though. I haven't looked at this transmitter with a proper receiver, haven't tried another transmitter, and haven't checked whether a real D8 receiver also loses this channel. What I can say is that nothing I change on my side makes a difference. The follower doesn't mind: one missed slot per cycle doesn't threaten the lock, it just caps the slot rate at 46/47, 97.9%.
+
+## Making the decoder cheaper
+
+The first follow runs used 0.57 s of CPU per second of stream, more than half a core on the Mac. The decoder was trying all five filter widths on every segment, the trick from the frequency chapter that made single-channel decoding reliable.
+
+Three changes fixed it. Each segment holds at most one packet, so the decoder now tries the widths in the order that has worked before and stops at the first one that passes the CRC. The clock recovery loop reads plain Python floats instead of indexing a numpy array one sample at a time, which alone was about five times faster. And the search for the packet's exact start time does all 33 candidate times in one numpy pass instead of a loop. Over the 10.5-minute run that came to **0.068 s of CPU per second of stream**, about 8 times less, at the same decode rate.
+
+## Seeing the hops
+
+I also wanted to see the hopping, not just the numbers. The live page got a Waterfall tab. In follow mode it shows a hop map: one narrow strip per channel, sorted by frequency, each ±125 kHz around the channel. A strip only lights up while the receiver is on that channel, about once every 422 ms, so every column fills with short dashes, one per visit.
+
+![the Waterfall tab's hop map: 47 narrow columns labelled from 2403.9 to 2477.4 MHz, each with a dash every 0.42 s](img/d8live-hopmap.png)
+
+*About 22 s of the hop map. Each dash is one 9 ms visit. The 2411.4 column looks like all the others: the signal is there, it just doesn't decode.*
+
+So the transmitter really is on that channel, as strong as anywhere else; the trouble is in what it sends.
+
+The page was redone at the same time to look like this write-up, in three tabs: Channels for the sticks, Waterfall, and "Stats for nerds" for the numbers above. The waterfall rows are made on the Mac with a 256-point FFT, 25 rows a second, and only while the tab is open; the page reports about 1% of a core for it.
 
 ## What's next
 
-The obvious next step is to put the hop in the firmware: once a packet is decoded, follow the bind table on the chip, retuning in the 2 ms gap before each packet, so the board hears every packet instead of one in 47. The retune is fast enough. What I haven't tried is retuning while the stream is running; so far the hop tests used one-shot captures.
+The follower drops the lock only after 47 silent hops, then waits up to a whole cycle on one channel, so a real outage costs up to about 0.9 s. Coasting on the old schedule through a short fade, and listening for the first packet on more than one channel, would both shorten that. And I'd like to check the 2411.435 MHz theory on a proper receiver.
 
 ## Reproducing it
 
@@ -263,10 +346,16 @@ esp32sdr stream --freq 2480 --dec 512 --bits 8 --seconds 20 -o /tmp/ble/on
 # D8: record 20 s centred on the E8's channel at manual gain 40, then decode
 python ../docs/devkitv1/bench/d8/rec_centred.py /tmp/d8/c 2421.032 40 20
 python -m esp32sdr.d8_cli /tmp/d8/c.sigmf-data
-esp32sdr d8live --center 2421.032 --gain 40 --open      # live page (build host/web/d8live first)
+esp32sdr d8live --center 2421.032 --gain 40 --open      # live page, one channel (build host/web/d8live first)
+
+# D8, all 47 hop channels
+esp32sdr d8follow --seconds 60 --gain 40                # console only: packets/s, slots, period, CPU
+esp32sdr d8live --follow --gain 40 --open               # live page; #waterfall and #stats open those tabs
 ```
 
-`--port` defaults to `/dev/cu.usbserial-0001`. The analysis scripts (numpy, scipy, matplotlib; reading from `/tmp/ble` and `/tmp/d8`) are in [`docs/devkitv1/bench/`](../bench/): `ble-onoff/analyze.py` and `isolate.py` for Bluetooth, `d8/maxhold.py`, `strobe.py`, `strobe2.py` and `sbs.py` for the D8 hops, and `d8/rec_centred.py` (which also sets a manual gain), `cap16_bursts.py` and `cap16_tones.py` for the decoding work. The decoder is `host/esp32sdr/d8.py`, the fast-retune measurements are in [fast-hop.md](../fast-hop.md) and the decoding notes in [bench/d8/centred-m2.md](../bench/d8/centred-m2.md). Full numbers are in [bench-results.md](../bench-results.md), register probes in [ring-feasibility.md](../ring-feasibility.md), the link budget in [iq-stream-uart.md](../iq-stream-uart.md) and viewer setup in [live-view.md](../live-view.md).
+Following needs the current firmware (it adds `HOPTAB`) and a manual gain; the board's automatic gain doesn't lock.
+
+`--port` defaults to `/dev/cu.usbserial-0001`. The analysis scripts (numpy, scipy, matplotlib; reading from `/tmp/ble` and `/tmp/d8`) are in [`docs/devkitv1/bench/`](../bench/): `ble-onoff/analyze.py` and `isolate.py` for Bluetooth, `d8/maxhold.py`, `strobe.py`, `strobe2.py` and `sbs.py` for the D8 hops, and `d8/rec_centred.py` (which also sets a manual gain), `cap16_bursts.py` and `cap16_tones.py` for the decoding work. The decoder is `host/esp32sdr/d8.py` and the follower `host/esp32sdr/d8follow.py`; the fast-retune measurements are in [fast-hop.md](../fast-hop.md), hop following (commands, runs, the slot 33 analysis and its scripts in `bench/hop-follow/`) in [hop-follow.md](../hop-follow.md) and the decoding notes in [bench/d8/centred-m2.md](../bench/d8/centred-m2.md). Full numbers are in [bench-results.md](../bench-results.md), register probes in [ring-feasibility.md](../ring-feasibility.md), the link budget in [iq-stream-uart.md](../iq-stream-uart.md) and viewer setup in [live-view.md](../live-view.md).
 
 ---
 
