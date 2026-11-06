@@ -144,11 +144,11 @@ The tone generator's frequency steps only reach about ±20 MHz around the LO, an
 
 Channel and ID mismatches were zero throughout (ID 42B2). The one RESYNC in each ESP32 run came after the ESP32 stopped sending, so it is not a loss.
 
-![Left: hop map of ESP32 run B, slot against channel, coloured by RSSI, red crosses unreceived slots. Right: per-channel received fraction, near 100% everywhere.](img/tx-evidence/hop-esp-runB-map.png)
+![Hop map of ESP32 run B: time against RF frequency, cyan line the expected hop sequence, blue dots received, red crosses unreceived, zoom of the first 47-hop cycle below, per-channel received fraction on the right (red below 90%).](img/tx-evidence/hop-esp-runB-map.png)
 
 *Figure 8. ESP32 run B, 921 of 940 slots. The 19 misses are scattered with no channel losing more than two. Source: `results/hop/esp_hop/runB_hop_map.png`.*
 
-![The same hop map for the real E8 control; two channels are visibly weaker.](img/tx-evidence/hop-e8-map.png)
+![The same hop map for the real E8 control; weak channels (red bars) show in the per-channel panel.](img/tx-evidence/hop-e8-map.png)
 
 *Figure 9. The real E8 over 20 s, 2133 of 2204 slots. Channels 25 (2411.5 MHz) and 133 are weak, at 29/47 and 22/47. Source: `results/hop/e8_control/e8_hop_map.png`.*
 

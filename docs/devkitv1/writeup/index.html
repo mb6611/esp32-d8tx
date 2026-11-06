@@ -516,11 +516,11 @@ esp32sdr d8live --follow --gain 40 --open               # live page; #waterfall 
 </table></div>
 <p>Channel and ID mismatches were zero throughout (ID 42B2). The one RESYNC in each ESP32 run came after the ESP32 stopped sending, so it is not a loss.</p>
 <figure>
-<a href="img/tx-evidence/hop-esp-runB-map.png"><img loading="lazy" src="img/tx-evidence/hop-esp-runB-map.png" alt="Left: hop map of ESP32 run B, slot against channel, coloured by RSSI, red crosses unreceived slots. Right: per-channel received fraction, near 100% everywhere." /></a>
+<a href="img/tx-evidence/hop-esp-runB-map.png"><img loading="lazy" src="img/tx-evidence/hop-esp-runB-map.png" alt="Hop map of ESP32 run B: time against RF frequency, cyan line the expected hop sequence, blue dots received, red crosses unreceived, zoom of the first 47-hop cycle below, per-channel received fraction on the right (red below 90%)." /></a>
 <figcaption>Figure 8. ESP32 run B, 921 of 940 slots. The 19 misses are scattered with no channel losing more than two. Source: <code>results/hop/esp_hop/runB_hop_map.png</code>.</figcaption>
 </figure>
 <figure>
-<a href="img/tx-evidence/hop-e8-map.png"><img loading="lazy" src="img/tx-evidence/hop-e8-map.png" alt="The same hop map for the real E8 control; two channels are visibly weaker." /></a>
+<a href="img/tx-evidence/hop-e8-map.png"><img loading="lazy" src="img/tx-evidence/hop-e8-map.png" alt="The same hop map for the real E8 control; weak channels (red bars) show in the per-channel panel." /></a>
 <figcaption>Figure 9. The real E8 over 20 s, 2133 of 2204 slots. Channels 25 (2411.5 MHz) and 133 are weak, at 29/47 and 22/47. Source: <code>results/hop/e8_control/e8_hop_map.png</code>.</figcaption>
 </figure>
 <p><strong>The weak channels.</strong> The E8’s 96.8% hides two poor channels, ch25 and ch133. The RX write-up had already noticed ch25 and suspected the transmitter. The ESP32 decodes the same two channels fine (19/20 each in run B, 12/12 each in run A) on the same receiver. That is consistent with an E8 transmitter quirk on those channels, but it is not proof: different time, different packet content and a small count.</p>
