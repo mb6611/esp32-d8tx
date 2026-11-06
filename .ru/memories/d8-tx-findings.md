@@ -12,5 +12,6 @@ Measured on 2026-11-06 (evidence under `bench/d8-tx/results/{tone,packet}/`):
 - The Tinyhawk's stock config has `frsky_spi_offset = -32` (≈ −51 kHz) to match the E8. The diagnostic doesn't apply it, so receive the E8 at its measured frequency (2421.032 MHz for nominal 2421.096).
 - Noise produces short CRC-failed fragments in `rxdiag pkt` even with all sources off. Count only `crc_ok=1` records.
 - Betaflight CLI enters DFU with `bl`, not `dfu`.
+- Fixed-channel packet loss (2026-11-06, `bench/d8-tx/results/packet/{reliability,freqest}/`): the ESP32 reached ~95% CRC-valid reception on the CC2500 rxdiag (123/130 attributable), and the stock E8 on the same receiver reached ~93% (175 of ~189 expected; it revisits one channel every 422.7 ms). The owner accepted this as receiver/bench loss, cause unknown, and moved on. Per-packet FREQEST clamps at ±33.3 kHz and scatters ~15 kHz even for the E8, so it cannot resolve small carrier offsets.
 
 **How to apply:** start new TX work from these numbers instead of re-deriving them, and recheck the carrier wander if decoding gets marginal on other channels.

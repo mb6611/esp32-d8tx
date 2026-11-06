@@ -1,0 +1,3 @@
+{"test": "U3 batch1 2412000 pwr127 owner-scoped", "max_duration_us": 6800, "max_abs_offset": 0,
+ "max_power": 127, "max_transitions": 0, "max_commands": 10, "max_packets": 10,
+ "control_approval": {"receiver_fw": "c5cc593b", "receiver_bf": "948ba63", "approved_at": 1793992800, "max_control_age_s": 3600}}

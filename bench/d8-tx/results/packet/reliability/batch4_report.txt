@@ -1,0 +1,15 @@
+attempts=10  valid=10 crc_invalid=0 malformed=0 unobserved=0  (sum=10)
+separate: duplicates=0 split_tails=0 noise=4 unassigned=0 receiver_errors=0
+  #0 valid primary=0 dup=[] 
+  #1 valid primary=2 dup=[] 
+  #2 valid primary=3 dup=[] 
+  #3 valid primary=4 dup=[] 
+  #4 valid primary=6 dup=[] 
+  #5 valid primary=7 dup=[] 
+  #6 valid primary=8 dup=[] 
+  #7 valid primary=9 dup=[] 
+  #8 valid primary=10 dup=[] 
+  #9 valid primary=11 dup=[] 
+clock={'t0': 1966895505, 'lo': 1793995319.8739002, 'hi': 1793995319.9049, 'uncertainty_s': 0.03099989891052246, 'clock_rate_tol': 0.003, 'verified_latency_bound': None}
+unparsed_lines=2
+raw_matching_records(n=10)=[{'seq': 0, 't_us': 1968496084, 'len': 18, 'crc_ok': 1}, {'seq': 2, 't_us': 1969011721, 'len': 18, 'crc_ok': 1}, {'seq': 3, 't_us': 1969529052, 'len': 18, 'crc_ok': 1}, {'seq': 4, 't_us': 1970045858, 'len': 18, 'crc_ok': 1}, {'seq': 6, 't_us': 1970558610, 'len': 18, 'crc_ok': 1}, {'seq': 7, 't_us': 1971074679, 'len': 18, 'crc_ok': 1}, {'seq': 8, 't_us': 1971588441, 'len': 18, 'crc_ok': 1}, {'seq': 9, 't_us': 1972102682, 'len': 18, 'crc_ok': 1}, {'seq': 10, 't_us': 1972619939, 'len': 18, 'crc_ok': 1}, {'seq': 11, 't_us': 1973136235, 'len': 18, 'crc_ok': 1}]

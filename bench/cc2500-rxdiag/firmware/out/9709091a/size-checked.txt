@@ -1,0 +1,1 @@
+ 365249	   5712	  46060	 417021	  65cfd	/Users/1unoe/Developer/personal/esp32-devkitv1-sdr-tx/bench/cc2500-rxdiag/tests/../firmware/out/9709091a/betaflight_MATEKF411RXDIAG.elf

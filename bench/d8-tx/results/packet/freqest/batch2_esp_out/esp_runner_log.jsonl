@@ -1,0 +1,36 @@
+{"event": "phase", "t": 1793996967.386275, "phase": "esp32-test"}
+{"event": "cmd", "text": "STAT", "t": 1793996967.3863308, "phase": "esp32-test"}
+{"event": "reply_line", "text": "S,keyed=0,b8=20000000,a8=00000000", "t": 1793996967.3883011, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793996967.388329, "phase": "esp32-test"}
+{"event": "envelope", "envelope": {"test": "U3 batch2 2412000 pwr127 owner-scoped", "max_duration_us": 6800, "max_abs_offset": 1, "max_power": 127, "max_transitions": 0, "max_commands": 10, "max_packets": 10}, "t": 1793996967.3883479, "phase": "esp32-test"}
+{"event": "cmd", "text": "PKT 1142b2000001cacacaca8888cacacaca8888 127", "t": 1793996967.388436, "phase": "esp32-test"}
+{"event": "reply_line", "text": "K,pkt,bits=208,pwr=127,on_us=6700,key_cycles=5211,unkey_cycles=5430,max_late_ns=1266,late_bits=207,b8_on=20060400,b8_end=20060400,b8_off=20000000,a8_on=00000001,a8_off=00000000", "t": 1793996967.399362, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793996967.3993778, "phase": "esp32-test"}
+{"event": "cmd", "text": "PKT 1142b2000001cacacaca8888cacacaca8888 127", "t": 1793996967.90446, "phase": "esp32-test"}
+{"event": "reply_line", "text": "K,pkt,bits=208,pwr=127,on_us=6700,key_cycles=5214,unkey_cycles=4488,max_late_ns=1266,late_bits=207,b8_on=20060400,b8_end=20060400,b8_off=20000000,a8_on=00000001,a8_off=00000000", "t": 1793996967.915353, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793996967.915377, "phase": "esp32-test"}
+{"event": "cmd", "text": "PKT 1142b2000001cacacaca8888cacacaca8888 127", "t": 1793996968.420467, "phase": "esp32-test"}
+{"event": "reply_line", "text": "K,pkt,bits=208,pwr=127,on_us=6700,key_cycles=5211,unkey_cycles=5430,max_late_ns=1266,late_bits=207,b8_on=20060400,b8_end=20060400,b8_off=20000000,a8_on=00000001,a8_off=00000000", "t": 1793996968.4312708, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793996968.431322, "phase": "esp32-test"}
+{"event": "cmd", "text": "PKT 1142b2000001cacacaca8888cacacaca8888 127", "t": 1793996968.933619, "phase": "esp32-test"}
+{"event": "reply_line", "text": "K,pkt,bits=208,pwr=127,on_us=6700,key_cycles=5214,unkey_cycles=4485,max_late_ns=1266,late_bits=207,b8_on=20060400,b8_end=20060400,b8_off=20000000,a8_on=00000001,a8_off=00000000", "t": 1793996968.9444091, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793996968.9444458, "phase": "esp32-test"}
+{"event": "cmd", "text": "PKT 1142b2000001cacacaca8888cacacaca8888 127", "t": 1793996969.448688, "phase": "esp32-test"}
+{"event": "reply_line", "text": "K,pkt,bits=208,pwr=127,on_us=6700,key_cycles=5214,unkey_cycles=5433,max_late_ns=1266,late_bits=207,b8_on=20060400,b8_end=20060400,b8_off=20000000,a8_on=00000001,a8_off=00000000", "t": 1793996969.459423, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793996969.459457, "phase": "esp32-test"}
+{"event": "cmd", "text": "PKT 1142b2000001cacacaca8888cacacaca8888 127", "t": 1793996969.961805, "phase": "esp32-test"}
+{"event": "reply_line", "text": "K,pkt,bits=208,pwr=127,on_us=6700,key_cycles=5211,unkey_cycles=4485,max_late_ns=1266,late_bits=207,b8_on=20060400,b8_end=20060400,b8_off=20000000,a8_on=00000001,a8_off=00000000", "t": 1793996969.9725618, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793996969.972587, "phase": "esp32-test"}
+{"event": "cmd", "text": "PKT 1142b2000001cacacaca8888cacacaca8888 127", "t": 1793996970.477664, "phase": "esp32-test"}
+{"event": "reply_line", "text": "K,pkt,bits=208,pwr=127,on_us=6700,key_cycles=5214,unkey_cycles=5433,max_late_ns=1266,late_bits=207,b8_on=20060400,b8_end=20060400,b8_off=20000000,a8_on=00000001,a8_off=00000000", "t": 1793996970.4883652, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793996970.488395, "phase": "esp32-test"}
+{"event": "cmd", "text": "PKT 1142b2000001cacacaca8888cacacaca8888 127", "t": 1793996970.993477, "phase": "esp32-test"}
+{"event": "reply_line", "text": "K,pkt,bits=208,pwr=127,on_us=6700,key_cycles=5211,unkey_cycles=4485,max_late_ns=1266,late_bits=207,b8_on=20060400,b8_end=20060400,b8_off=20000000,a8_on=00000001,a8_off=00000000", "t": 1793996971.0043619, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793996971.0044, "phase": "esp32-test"}
+{"event": "cmd", "text": "PKT 1142b2000001cacacaca8888cacacaca8888 127", "t": 1793996971.50767, "phase": "esp32-test"}
+{"event": "reply_line", "text": "K,pkt,bits=208,pwr=127,on_us=6700,key_cycles=5214,unkey_cycles=5433,max_late_ns=1266,late_bits=207,b8_on=20060400,b8_end=20060400,b8_off=20000000,a8_on=00000001,a8_off=00000000", "t": 1793996971.5183308, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793996971.518353, "phase": "esp32-test"}
+{"event": "cmd", "text": "PKT 1142b2000001cacacaca8888cacacaca8888 127", "t": 1793996972.0234292, "phase": "esp32-test"}
+{"event": "reply_line", "text": "K,pkt,bits=208,pwr=127,on_us=6700,key_cycles=5211,unkey_cycles=4485,max_late_ns=1266,late_bits=207,b8_on=20060400,b8_end=20060400,b8_off=20000000,a8_on=00000001,a8_off=00000000", "t": 1793996972.034218, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793996972.034247, "phase": "esp32-test"}
+{"event": "cmd", "text": "U", "note": "auto-unkey", "t": 1793996972.0342798, "phase": "esp32-test"}

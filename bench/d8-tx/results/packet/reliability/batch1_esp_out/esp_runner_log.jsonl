@@ -1,0 +1,8 @@
+{"event": "phase", "t": 1793993855.371179, "phase": "esp32-test"}
+{"event": "cmd", "text": "STAT", "t": 1793993855.371239, "phase": "esp32-test"}
+{"event": "reply_line", "text": "S,keyed=0,b8=20000000,a8=00000000", "t": 1793993855.373145, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793993855.373167, "phase": "esp32-test"}
+{"event": "envelope", "envelope": {"test": "U3 batch1 2412000 pwr127 owner-scoped", "max_duration_us": 6800, "max_abs_offset": 0, "max_power": 127, "max_transitions": 0, "max_commands": 10, "max_packets": 10}, "t": 1793993855.373184, "phase": "esp32-test"}
+{"event": "refused", "text": "PKT 1142b2000001cacacaca8888cacacaca8888 127", "error": "offset exceeds envelope 0", "t": 1793993855.373253, "phase": "esp32-test"}
+{"event": "cmd", "text": "U", "note": "auto-unkey", "t": 1793993855.373268, "phase": "esp32-test"}
+{"event": "cmd", "text": "U", "note": "auto-unkey", "t": 1793993855.373284, "phase": "esp32-test"}

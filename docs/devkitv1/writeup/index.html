@@ -312,7 +312,7 @@ esp32sdr d8live --follow --gain 40 --open               # live page; #waterfall 
 <h2 id="tx-chapter">Making a $5 ESP32 say one FrSky D8 packet</h2>
 <p class="by"><em>Private TX research note · November 2026 · continuing the RX write-up above</em></p>
 
-<p>The RX write-up ended with a board that could listen: record a FrSky D8 transmitter, decode it, follow its hops. That is a long way from talking. Nothing in it showed that the same chip could produce a packet a real D8 receiver chip would accept. This note covers the first time that happened, on a bench, once: an ESP32 DevKit V1 transmitted a hand-built D8 packet and an independent CC2500 reported it with a valid hardware CRC. It was 7 of 10 attempts. It is not hopping, not control, and not a calibrated transmitter.</p>
+<p>The RX write-up ended with a board that could listen: record a FrSky D8 transmitter, decode it, follow its hops. That is a long way from talking. Nothing in it showed that the same chip could produce a packet a real D8 receiver chip would accept. This note covers the first time that happened, on a bench, once: an ESP32 DevKit V1 transmitted a hand-built D8 packet and an independent CC2500 reported it with a valid hardware CRC. The first try got 7 of 10; after fixing a receiver-side bug, 140 more attempts got about 94%, the same rate the real E8 transmitter gets on that receiver. It is not hopping, not control, and not a calibrated transmitter.</p>
 <p>The short version of what worked: the ESP32’s Wi-Fi PHY has a test-tone generator whose frequency can be stepped by a ROM function. Switching that tone between two steps at 31 kbaud is a crude 2-FSK modulator. A CC2500 listening on the channel decoded it. Most of the effort went into finding out where the tone actually lands, because the first attempts saw nothing.</p>
 <p>All numbers below are re-derived from the raw logs by <a href="../../../bench/d8-tx/analysis/plot_tx.py"><code>bench/d8-tx/analysis/plot_tx.py</code></a> (<code>--summary</code> prints them). Raw logs are in <a href="../../../bench/d8-tx/results/"><code>bench/d8-tx/results/</code></a>.</p>
 <h2 id="why-one-packet-and-how-to-know-it-worked">Why one packet, and how to know it worked</h2>
@@ -406,12 +406,67 @@ esp32sdr d8live --follow --gain 40 --open               # live page; #waterfall 
 <figcaption>Figure 3 (<a href="img/tx-evidence/packet-outcome.svg">SVG</a>). Receiver outcomes. “Body matches” = 18 bytes equal to <code>d8_vectors.build(0)[:18]</code>. Source: <code>results/packet/*.txt</code>, classified by <code>plot_tx.py</code>; CRC flag = CC2500 hardware CRC_OK, which strips the two CRC bytes, so a P record carries 18 bytes and a flag (the same for the E8, for which the 32 valid records are all 18 bytes).</figcaption>
 </figure>
 <p>The ESP32 build used here has SHA-256 <code>3698ae6f6bbe0b11bfac103c9f008320d9d90dfe9d22d179d55da0bcd5c60461</code> (<a href="../../../bench/d8-tx/results/packet/esp_hashes.txt">flash/hash evidence</a>); its generated <code>.bin</code> is not included in this clone, so it must be rebuilt from <code>bench/d8-tx/firmware/</code>. The STM diagnostic binary and checksum manifest are included under <code>bench/cc2500-rxdiag/firmware/out/4bdc8581/</code>.</p>
-<p>The result: with a source of known state, a distinctive byte sequence and a CRC computed independently on the receiving chip, <strong>7 of 10 packets were received intact</strong>, while the real transmitter’s control worked and the empty channel never produced a valid record. Of the other three, I do not know why. One has no full record, two have the right bytes with the CRC flag cleared. The E8 control shows the same signature (an <code>EPART</code> error and a 2-byte stray record beside valid ones), so a receiver-side FIFO-split artefact is the likely explanation. It is a hypothesis; I did not isolate it.</p>
+<p>The result: with a source of known state, a distinctive byte sequence and a CRC computed independently on the receiving chip, <strong>7 of 10 packets were received intact</strong>, while the real transmitter’s control worked and the empty channel never produced a valid record. Of the other three, I do not know why. One has no full record, two have the right bytes with the CRC flag cleared. The E8 control shows the same signature (an <code>EPART</code> error and a 2-byte stray record beside valid ones), so a receiver-side FIFO-split artefact is the likely explanation. It is a hypothesis; I did not isolate it. Section 5 shows it was right: the diagnostic’s 500 µs packet-end wait was shorter than the CRC gap.</p>
+<h3 id="fixed-channel-reliability-about-94-the-same-as-the-real-transmitter">5. Fixed-channel reliability: about 94%, the same as the real transmitter</h3>
+<p>Seven of ten is not a reliability figure, and Section 4 already suspected the receiver. A closer look found it. The diagnostic firmware decides that a packet has ended after 500 µs with no new bytes in the FIFO. The two CRC status bytes arrive about 515 µs after the payload (two bytes at 31 kbaud, 257.7 µs each), so the 500 µs window closed just before them. Some packets were therefore reported as a body fragment plus a separate two-byte stray, and the “CRC flag 0” records of Section 4 are that split. Raising the quiet time to 2000 µs fixed it, and the ESP32 was then measured on the same fixed channel, 2412.000 MHz, with no hopping, about one packet every 516 ms, power 127. Each group was preceded by a source-off capture, and E8 controls bracketed the sessions.</p>
+<p><strong>Ten batches of ten.</strong> Nine of the ten batches (1b, 3–10) were tied to their commands: <strong>85 CRC-valid receptions, 5 unobserved</strong> (one each in batches 1b, 3, 9 and two in batch 6), no CRC-invalid or malformed record. Batch 2 received 8 CRC-valid packets, but they cannot be assigned to commands. That batch had no timestamp taken just before the start command, so the receiver’s clock was only known against the host’s to within 0.54 s, more than the 0.5 s packet spacing: each reception fits two neighbouring commands. The two clocks also drift apart by about 0.18% (1.75 ms per second; Figure 7), so the offset cannot be extrapolated from elsewhere in the run. Later batches took an anchor, narrowing the uncertainty to 30–40 ms. Counting batch 2 as raw receptions, 93 of 100 commands produced a valid packet. No batch had a CRC-invalid copy: when the sync was found, the payload was right.</p>
+<p><strong>FREQEST session.</strong> The receiver also reports its frequency estimate (FREQEST) per packet. Five more batches of ten, with that field logged, gave <strong>47 of 50</strong>; the ESP32 and real E8 FREQEST distributions look alike (Figure 6). Over 47 ESP32 and 88 E8 packets the means were +1.8 and −1.8 kHz and the standard deviations 16.4 and 14.7 kHz. The values stop at ±21 LSB, ±33.3 kHz, which is the clamp: 5 of 135 packets sit on it. A spread that wide, with a clamp inside it, is too noisy to resolve carrier wander of the kind the tone work suspected (±10 kHz keying to keying), so FREQEST cannot say whether the ESP32 carrier lands where it should.</p>
+<p><strong>The E8 on the same receiver.</strong> The real transmitter, one visit every 422.7 ms, would show about 47 packets per 20 s. Four controls gave 46, 41, 44 and 44: <strong>175 of about 189, 93%</strong>. The ESP32 got 132 of 140 attributed commands, 94%. The two intervals overlap (Figure 5, panel B), so the misses look at least partly like receiver or bench effects, not like something only the ESP32 does.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Measurement</th>
+<th>Sent / expected</th>
+<th>Received (CRC-valid)</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reliability, batches 1b, 3–10</td>
+<td>90</td>
+<td>85</td>
+<td>5 unobserved, 0 CRC-invalid</td>
+</tr>
+<tr>
+<td>Reliability, batch 2</td>
+<td>10</td>
+<td>8 raw</td>
+<td>not attributable to commands</td>
+</tr>
+<tr>
+<td>FREQEST session, 5 batches</td>
+<td>50</td>
+<td>47</td>
+<td>3 unobserved</td>
+</tr>
+<tr>
+<td>Real E8, 4 × 20 s</td>
+<td>≈189</td>
+<td>175</td>
+<td>one visit per 422.7 ms</td>
+</tr>
+</tbody>
+</table></div>
+<figure>
+<a href="img/tx-evidence/reliability-outcome.png"><img loading="lazy" src="img/tx-evidence/reliability-outcome.png" alt="Left: per-batch outcomes of the ESP32 reliability and FREQEST batches. Right: received fraction with 95% intervals, ESP32 and real E8." /></a>
+<figcaption>Figure 5 (<a href="img/tx-evidence/reliability-outcome.svg">SVG</a>). Panel A: each bar is ten commands; red is a command with no receiver record, the hatched bar is batch 2 (see text). Panel B: Wilson 95% intervals; the E8 denominator is the expected visit count, not an observed one, so its interval is approximate. Source: <code>results/packet/{reliability,freqest}/batch*_report.txt</code>, <code>control_e8*</code>; <code>plot_reliability.py</code>.</figcaption>
+</figure>
+<figure>
+<a href="img/tx-evidence/freqest-hist.png"><img loading="lazy" src="img/tx-evidence/freqest-hist.png" alt="FREQEST histogram for ESP32 and real E8 packets, spanning about −33 to +33 kHz." /></a>
+<figcaption>Figure 6 (<a href="img/tx-evidence/freqest-hist.svg">SVG</a>). Receiver FREQEST of CRC-valid packets, in 4 kHz bins, each series normalised to its own packet count. Dashed lines: the ±21 LSB clamp. Source: <code>results/packet/freqest/batch*_stm.txt</code>, <code>control_e8_{pre,post}.txt</code>.</figcaption>
+</figure>
+<p><strong>Where the misses fall in time.</strong> For the three batches with a tight anchor and a miss, the received packets sit on a straight line against send time with at most 91 µs of residual, so the expected arrival of each missing packet is known to about 0.1 ms. At those instants the receiver recorded no packet and no noise fragment (<a href="../../../bench/d8-tx/results/packet/reliability/missing_four_offline.md"><code>missing_four_offline.md</code></a>). The packet is 6.7 ms long, the nearest noise record was at least 41 ms away, and the receiver reported no errors. These look like clean “sync not detected” events. Two explanations remain open: the receiver was blind to a sync at that instant, or the ESP32 packet start was occasionally not decodable. The recorded noise rate allows a blind time of at most about 1%, which makes four or five misses in 80–90 attempts unlikely, but that argument assumes the unrecorded events are as common as the recorded ones.</p>
+<figure>
+<a href="img/tx-evidence/reliability-timing.png"><img loading="lazy" src="img/tx-evidence/reliability-timing.png" alt="Receiver-minus-host clock against send time for batches 3, 6 and 9, with the expected time of each unobserved send marked." /></a>
+<figcaption>Figure 7 (<a href="img/tx-evidence/reliability-timing.svg">SVG</a>). Matched receptions lie on a line of slope 0.175% (receiver clock fast against the host), and each unobserved send is placed by that line. Batch 6 lost two in a row. Source: <code>results/packet/reliability/batch{3,6,9}_*</code>.</figcaption>
+</figure>
+<p><strong>What this shows and does not show.</strong> On a fixed channel, on one bench with one receiver position, the ESP32 packet is received CRC-valid about 94% of the time, close to what the real E8 achieves on the same receiver, and a received packet is never corrupt. It does not give an ESP32 loss rate, because receiver loss and send-side loss are not separated: the E8 baseline is about as lossy. Nor does it say why the roughly 6% are missing. The receiver would need to log every sync detect, or the ESP32 keyings would need to be captured with an SDR beside it. FREQEST cannot settle carrier accuracy. Hopping and flight are untested, and the RSSI of received packets stepped down by about 5 dB between batches 3 and 4 when the setup was touched, which did not change the loss pattern.</p>
 <h2 id="what-this-does-not-show">What this does not show</h2>
 <ul>
 <li><strong>Not hopping, control or flight.</strong> One packet, one fixed frequency, one hop-counter value (0). No bound receiver was involved: the proof is that a CC2500 with the D8 settings and an independent CRC accepted it, not that a model aircraft would.</li>
 <li><strong>Not a calibrated transmitter.</strong> The ±1-step deviation (≈39 kHz) is 23% wider than the stock 31.7 kHz, there is no Gaussian shaping, and the power setting has no verified output level. The packet was radiated within bench range; there is no distance or attenuation information. Frequency accuracy rests on the 100 kHz-granularity scan and a coarse FREQEST. That the packet works says the receiver is tolerant, not that the ESP32 is accurate.</li>
-<li><strong>7/10 is one batch on one day.</strong> No statistics on retries, temperature, the first packet vs later ones, or the position of the board. Two more batches were budgeted and not needed after the pass, so they were not run.</li>
+<li><strong>7/10 was one batch, and partly the receiver.</strong> Section 5 repeats the measurement with the fixed receiver (about 94%); the cause of the remaining misses is open.</li>
 <li><strong>The ESP32’s readback is not RF evidence.</strong> <code>late_bits=207</code> of 208, <code>max_late_ns=1266</code> is timing of the CPU loop. It is small compared with a bit time (~32 µs) but I did not verify it on air.</li>
 <li><strong>Not understood:</strong> why FREQEST at the step-0 tone swings by ±10 kHz, why 3 of 10 packets did not arrive intact, and what produced the single ncs=1 window in the first attempt.</li>
 <li><strong>Betaflight was not restored</strong> on the CC2500 board after the experiments, and no comparison of other receivers was done.</li>
@@ -420,6 +475,7 @@ esp32sdr d8live --follow --gain 40 --open               # live page; #waterfall 
 <h2 id="reproduce-the-figures">Reproduce the figures</h2>
 <pre class="sh"><code>python3 -m venv /tmp/mpl &amp;&amp; /tmp/mpl/bin/pip install matplotlib   # &gt;=3.5; the only dependency
 /tmp/mpl/bin/python bench/d8-tx/analysis/plot_tx.py               # writes docs/devkitv1/writeup/img/tx-evidence/*.{svg,png}
+/tmp/mpl/bin/python docs/devkitv1/writeup/plot_reliability.py     # Figures 5-7 and the Section 5 numbers
 python3 bench/d8-tx/analysis/plot_tx.py --summary                 # numbers only, standard library</code></pre>
 <p>Offline firmware and host tests: <code>python3 -m unittest discover -s bench/d8-tx/tests</code>, <code>bench/d8-tx/firmware/test/run.sh</code>. No RF hardware is needed for any of this. The script reads only files in this repo.</p>
 <!-- END TX CHAPTER -->

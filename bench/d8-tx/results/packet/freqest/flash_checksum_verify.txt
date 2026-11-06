@@ -1,0 +1,5 @@
+betaflight_4.2.11_MATEKF411RXDIAG_.hex: OK
+betaflight_4.2.11_MATEKF411RXDIAG_.bin: OK
+betaflight_MATEKF411RXDIAG.map: OK
+betaflight_MATEKF411RXDIAG.elf: OK
+BUILD_ID: OK

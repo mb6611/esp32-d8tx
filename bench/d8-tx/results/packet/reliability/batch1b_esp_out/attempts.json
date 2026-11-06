@@ -1,0 +1,127 @@
+{
+ "attempts": [
+  {
+   "i": 0,
+   "t_send": 1793993882.916138,
+   "ok": true,
+   "error": null,
+   "on_us": 6700
+  },
+  {
+   "i": 1,
+   "t_send": 1793993883.432203,
+   "ok": true,
+   "error": null,
+   "on_us": 6700
+  },
+  {
+   "i": 2,
+   "t_send": 1793993883.948151,
+   "ok": true,
+   "error": null,
+   "on_us": 6700
+  },
+  {
+   "i": 3,
+   "t_send": 1793993884.464038,
+   "ok": true,
+   "error": null,
+   "on_us": 6700
+  },
+  {
+   "i": 4,
+   "t_send": 1793993884.980261,
+   "ok": true,
+   "error": null,
+   "on_us": 6700
+  },
+  {
+   "i": 5,
+   "t_send": 1793993885.4961889,
+   "ok": true,
+   "error": null,
+   "on_us": 6700
+  },
+  {
+   "i": 6,
+   "t_send": 1793993886.0120761,
+   "ok": true,
+   "error": null,
+   "on_us": 6700
+  },
+  {
+   "i": 7,
+   "t_send": 1793993886.524441,
+   "ok": true,
+   "error": null,
+   "on_us": 6700
+  },
+  {
+   "i": 8,
+   "t_send": 1793993887.036684,
+   "ok": true,
+   "error": null,
+   "on_us": 6700
+  },
+  {
+   "i": 9,
+   "t_send": 1793993887.553153,
+   "ok": true,
+   "error": null,
+   "on_us": 6700
+  }
+ ],
+ "controls": {
+  "go": true,
+  "offline_only": false,
+  "reasons": [],
+  "source_off_valid": 0,
+  "e8_valid": 46,
+  "verdict": "GO",
+  "receiver": {
+   "source_off": {
+    "fw": "c5cc593b",
+    "bf": "948ba63",
+    "quiet_us": 2000
+   },
+   "e8": {
+    "fw": "c5cc593b",
+    "bf": "948ba63",
+    "quiet_us": 2000
+   }
+  },
+  "approved_fw": "c5cc593b",
+  "approved_bf": "948ba63",
+  "control_sha256": {
+   "source_off": "bd42d069bc62ad8248ebff92549de5fea1ed152dffcb116948a028d61331ec8b",
+   "e8": "1295c710cb9f4012aff56c369245989d48b2a33c3b50afa6b4ae929f80b06e0d"
+  },
+  "log_file_sha256": {
+   "source_off": "bd0e8cf19f8ec2e0d64394cce83516e595685e4d5375d7e4319d250ddc539846",
+   "e8": "74c92a9f2a93d4262afb639c7906a06bbea64c19e1d24574ccb152eb9a6829c8"
+  },
+  "approved_at": 1793992800,
+  "max_control_age_s": 3600,
+  "verified_at": 1793993882.842514
+ },
+ "receiver": {
+  "source_off": {
+   "fw": "c5cc593b",
+   "bf": "948ba63",
+   "quiet_us": 2000
+  },
+  "e8": {
+   "fw": "c5cc593b",
+   "bf": "948ba63",
+   "quiet_us": 2000
+  }
+ },
+ "control_sha256": {
+  "source_off": "bd42d069bc62ad8248ebff92549de5fea1ed152dffcb116948a028d61331ec8b",
+  "e8": "1295c710cb9f4012aff56c369245989d48b2a33c3b50afa6b4ae929f80b06e0d"
+ },
+ "log_file_sha256": {
+  "source_off": "bd0e8cf19f8ec2e0d64394cce83516e595685e4d5375d7e4319d250ddc539846",
+  "e8": "74c92a9f2a93d4262afb639c7906a06bbea64c19e1d24574ccb152eb9a6829c8"
+ }
+}

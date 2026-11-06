@@ -1,0 +1,1 @@
+ 365105	   5712	  46060	 416877	  65c6d	out/c5cc593b/betaflight_MATEKF411RXDIAG.elf

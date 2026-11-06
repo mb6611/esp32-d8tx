@@ -1,0 +1,5 @@
+E8 post-batch10 positive control: control_e8_post10_2421032.txt
+sha256 5ba71e1338b2fa5d2772c45b2a20d153bd0f750bdd84acf3cb1ff53d08dd431d
+H ok: fw=c5cc593b bf=948ba63 freq_req_khz=2421032 quiet_us=2000 duration_ms=20000 mode=pkt; X,50,...,done
+P records 50: CRC-valid (last field 1) 41, all 18B expected-ID 1142B200; CRC-fail 9 (non-matching lengths/garbage, 1 of them 18B)
+Result: PASS. No ESP access/commands.

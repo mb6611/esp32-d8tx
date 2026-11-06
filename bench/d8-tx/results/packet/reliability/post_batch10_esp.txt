@@ -1,0 +1,2 @@
+PING 'P,d8tone,1\r\nOK\r\n'
+STAT 'S,keyed=0,b8=20000000,a8=00000000\r\nOK\r\n'

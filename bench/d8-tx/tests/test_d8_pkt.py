@@ -152,7 +152,7 @@ class Stm(unittest.TestCase):
         parts = good.split(",")
         def mod(i, val):
             q = list(parts); q[i] = val; return ",".join(q)
-        bads = [good[:-2], good + ",1", "P," + ",".join(parts[1:6]),
+        bads = [good[:-2], good + ",1,1", "P," + ",".join(parts[1:6]),
                 mod(3, "19"), mod(3, "21"), mod(3, "0"), mod(4, parts[4].lower()), mod(4, parts[4][:-1]),
                 mod(4, "ZZ" * 20), mod(5, "128"), mod(5, "-129"), mod(5, "abc"), mod(5, ""),
                 mod(6, "128"), mod(7, "2"), mod(7, "-1"), mod(1, "-1"), mod(1, "01"), mod(2, "x"),
@@ -244,6 +244,33 @@ class Compare(unittest.TestCase):
             r.compare_p_to_vector(r.parse_pkt_record(prec()), VEC[:5])
         with self.assertRaises(ValueError):
             r.compare_p_to_vector({"kind": "E"}, VEC)
+
+
+class FreqEst(unittest.TestCase):
+    def test_old_p_has_no_freqest(self):
+        x = r.parse_pkt_record(prec())
+        self.assertIsNone(x["freqest"])
+        self.assertEqual(x["rssi"], -40)
+
+    def test_new_p(self):
+        for tail, want in ((",-7", -7), (",12", 12), (",0", 0), (",-128", -128), (",127", 127), (",na", None)):
+            x = r.parse_pkt_record(prec() + tail)
+            self.assertEqual(x["freqest"], want, tail)
+            self.assertEqual((x["rssi"], x["lqi"], x["crc_ok"]), (-40, 50, 1))
+
+    def test_bad_freqest(self):
+        for tail in (",128", ",-129", ",-0", ",07", ",x", ",", ",1,2"):
+            with self.assertRaises(r.ReportError, msg=tail):
+                r.parse_pkt_record(prec() + tail)
+
+    def test_h_proto4_and_5(self):
+        base = ("H,proto=%s,mode=pkt,fw=x,bf=y,freq_req_khz=2412000,freq_set_hz=1,freq_word=0x5CC4EC,"
+                "freq_rb=0x5CC4EC,chan=0,hop=0,cfg_rb_ok=1,bw_hz=135416,sync=0xD391,cal_us=800,part=0x80,"
+                "ver=0x03,spur=0,ant=1,lna=1,txen=0,quiet_us=2000,duration_ms=100,t0_us=5")
+        for pv in ("4", "5"):
+            self.assertEqual(r.parse_pkt_record(base % pv)["proto"], int(pv))
+        with self.assertRaises(r.ReportError):
+            r.parse_pkt_record(base % "3")
 
 
 if __name__ == "__main__":

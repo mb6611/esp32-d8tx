@@ -1,0 +1,11 @@
+dfu-util 0.11
+
+Copyright 2005-2009 Weston Schmidt, Harald Welte and OpenMoko Inc.
+Copyright 2010-2021 Tormod Volden and Stefan Schmidt
+This program is Free Software and has ABSOLUTELY NO WARRANTY
+Please report bugs to http://sourceforge.net/p/dfu-util/tickets/
+
+Found DFU: [0483:df11] ver=2200, devnum=3, cfg=1, intf=0, path="2-1.4", alt=3, name="@Device Feature/0xFFFF0000/01*004 e", serial="318237673132"
+Found DFU: [0483:df11] ver=2200, devnum=3, cfg=1, intf=0, path="2-1.4", alt=2, name="@OTP Memory /0x1FFF7800/01*512 e,01*016 e", serial="318237673132"
+Found DFU: [0483:df11] ver=2200, devnum=3, cfg=1, intf=0, path="2-1.4", alt=1, name="@Option Bytes  /0x1FFFC000/01*016 e", serial="318237673132"
+Found DFU: [0483:df11] ver=2200, devnum=3, cfg=1, intf=0, path="2-1.4", alt=0, name="@Internal Flash  /0x08000000/04*016Kg,01*064Kg,03*128Kg", serial="318237673132"

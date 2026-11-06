@@ -1,0 +1,127 @@
+{
+ "attempts": [
+  {
+   "i": 0,
+   "t_send": 1793996988.967477,
+   "ok": true,
+   "error": null,
+   "on_us": 6700
+  },
+  {
+   "i": 1,
+   "t_send": 1793996989.483555,
+   "ok": true,
+   "error": null,
+   "on_us": 6700
+  },
+  {
+   "i": 2,
+   "t_send": 1793996989.999637,
+   "ok": true,
+   "error": null,
+   "on_us": 6700
+  },
+  {
+   "i": 3,
+   "t_send": 1793996990.5155609,
+   "ok": true,
+   "error": null,
+   "on_us": 6700
+  },
+  {
+   "i": 4,
+   "t_send": 1793996991.0310001,
+   "ok": true,
+   "error": null,
+   "on_us": 6700
+  },
+  {
+   "i": 5,
+   "t_send": 1793996991.5438871,
+   "ok": true,
+   "error": null,
+   "on_us": 6700
+  },
+  {
+   "i": 6,
+   "t_send": 1793996992.05976,
+   "ok": true,
+   "error": null,
+   "on_us": 6700
+  },
+  {
+   "i": 7,
+   "t_send": 1793996992.575645,
+   "ok": true,
+   "error": null,
+   "on_us": 6700
+  },
+  {
+   "i": 8,
+   "t_send": 1793996993.091564,
+   "ok": true,
+   "error": null,
+   "on_us": 6700
+  },
+  {
+   "i": 9,
+   "t_send": 1793996993.6038022,
+   "ok": true,
+   "error": null,
+   "on_us": 6700
+  }
+ ],
+ "controls": {
+  "go": true,
+  "offline_only": false,
+  "reasons": [],
+  "source_off_valid": 0,
+  "e8_valid": 44,
+  "verdict": "GO",
+  "receiver": {
+   "source_off": {
+    "fw": "9709091a",
+    "bf": "948ba63",
+    "quiet_us": 2000
+   },
+   "e8": {
+    "fw": "9709091a",
+    "bf": "948ba63",
+    "quiet_us": 2000
+   }
+  },
+  "approved_fw": "9709091a",
+  "approved_bf": "948ba63",
+  "control_sha256": {
+   "source_off": "6eac097661d01ec3144db4fa61dbc81261da1810187ef667b640cc733e9f14bf",
+   "e8": "5de813fe2662bf9c4f84ba6d61a5165155a92db07380580175371acb7a44b895"
+  },
+  "log_file_sha256": {
+   "source_off": "b0b040b4afd026ec308cbd079dc9066d91c162cf6e441cbfd5b786e0fefb1d1e",
+   "e8": "71d4e79ae52be28a5fb1b37b7f9cc62f5d9c6357ea2f86efbaf24c5db3af0208"
+  },
+  "approved_at": 1793996715,
+  "max_control_age_s": 3600,
+  "verified_at": 1793996988.894034
+ },
+ "receiver": {
+  "source_off": {
+   "fw": "9709091a",
+   "bf": "948ba63",
+   "quiet_us": 2000
+  },
+  "e8": {
+   "fw": "9709091a",
+   "bf": "948ba63",
+   "quiet_us": 2000
+  }
+ },
+ "control_sha256": {
+  "source_off": "6eac097661d01ec3144db4fa61dbc81261da1810187ef667b640cc733e9f14bf",
+  "e8": "5de813fe2662bf9c4f84ba6d61a5165155a92db07380580175371acb7a44b895"
+ },
+ "log_file_sha256": {
+  "source_off": "b0b040b4afd026ec308cbd079dc9066d91c162cf6e441cbfd5b786e0fefb1d1e",
+  "e8": "71d4e79ae52be28a5fb1b37b7f9cc62f5d9c6357ea2f86efbaf24c5db3af0208"
+ }
+}

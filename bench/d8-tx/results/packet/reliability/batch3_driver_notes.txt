@@ -1,0 +1,35 @@
+batch3_driver.py notes (offline prep; never executed, no port opened)
+
+Plan: reuse the existing fresh E8 positive control (control_e8_2421032.txt, fw=c5cc593b, quiet_us=2000);
+E8 stays OFF; no new E8 control and no E8 toggle before the batch. Final E8 recheck happens AFTER batch3, separately.
+Stage approved_at = 1793992800 (constant APPROVED_AT in the driver; E8 log must be >= it, and <=3600 s old at gate time).
+
+Order (repo root; ESP /dev/cu.usbserial-0001, STM /dev/cu.usbmodem*):
+ 1. python3 .../batch3_driver.py envelope   OFFLINE. Refuses unless E8 log parses, is >= approved_at, has X, <=3600 s old.
+    Writes fresh one-use batch3_envelope.json (offset 1, <=10 PKT, 6800 us, pwr 127, approved_at=1793992800).
+ 2. python3 .../batch3_driver.py run   (E8 OFF)
+    re-check E8 age -> ESP PING/STAT idle -> NEW 5 s source-off @2412000 -> offline verify (H identity, quiet_us=2000,
+    zero CRC-valid expected ID in source-off, E8 has valid ID) -> main 11 s capture; host time stamped immediately BEFORE
+    os.write of "rxdiag pkt" (# t_cmd_pre_write_host= in batch3_stm.txt, start_cmd_host in batch3_anchor.json) ->
+    first H must match corrected identity else gate never starts -> ONE batch_gate.main (.used reserve, <=10 PKT,
+    0.5 s spacing, no retry) -> post ESP STAT: ONE attempt, no retry; if idle not verified => STOP -> sha256 of all raw
+    files incl. the E8 control (batch3_hashes.txt); E8 file hash must be unchanged during the run.
+ 3. python3 .../batch3_driver.py classify   OFFLINE: classify_attempts(start_cmd_host=anchor, clock_rate_tol=0.003)
+    (opt-in conservative bound, not a measured frequency); report lists raw matching P records separately.
+Any failure: STOP, exit 2; no retry, no second envelope/PKT (driver refuses if batch3 files exist; files opened 'x').
+Existing pk.py/batch_gate/attempts untouched.
+
+Verified offline only: py_compile and mocked tests (bench/d8-tx/tests/test_batch3_driver.py; full suite 108 OK).
+Caveat: the post-run STAT reopens the ESP port after batch_gate's handle is dropped (not explicitly closed).
+
+== Batches 4..10 (added offline) ==
+CLI: python3 .../batch3_driver.py [--batch N] {envelope,run,classify}; N default 3 (original paths); N<3 or N>10 -> STOP.
+Per-batch files: batchN_envelope.json(.used), batchN_esp_out, batchN_stm.txt, source_off_batchN_2412000.txt, batchN_anchor.json,
+ pre_/post_batchN_esp.txt, batchN_hashes.txt, batchN_report.txt (all opened 'x'; existing => STOP).
+Gate for N>=4: batch N-1 .used, 10/10 attempts ok, STM has X,...,done, post STAT keyed=0, hashes + source-off present;
+ total physical PKT (ok attempts in all batch*_esp_out, incl. aborted) + 10 must be <=100. No retry, no second envelope.
+Batch4 only: 1.5 s after first corrected H before gate starts (others 0.4 s as before).
+E8 EXPIRY WORKFLOW: control_e8_2421032.txt recorded 1793993380 (X ~1793993400) -> unusable after ~1793997000 (epoch), i.e. about
+ 17:00-ish local. Each envelope/run call checks age; if expired the driver STOPs without keying. Then: ask the owner to toggle E8 ON,
+ capture a NEW E8 control (rxdiag pkt 2421032 20000) into a new file, update E8 / APPROVED_AT constants deliberately (owner-approved),
+ owner turns E8 OFF + confirms, then continue with the next batch. Check age before every batch: python3 -c "import time;print(1793993400+3600-time.time())"

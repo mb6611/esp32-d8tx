@@ -394,7 +394,8 @@ def check_pkt_reply(cmd, lines):
 
 _PKT_H_REQUIRED = ("fw", "bf", "freq_req_khz", "freq_set_hz", "freq_word", "freq_rb", "bw_hz", "cal_us",
                    "part", "ver", "spur", "quiet_us", "duration_ms", "t0_us")
-_PKT_H_FIXED = {"proto": "4", "mode": "pkt", "chan": "0", "hop": "0", "cfg_rb_ok": "1", "sync": "0xD391",
+_PKT_H_PROTOS = ("4", "5")   # proto 5 appends freqest to P records
+_PKT_H_FIXED = {"mode": "pkt", "chan": "0", "hop": "0", "cfg_rb_ok": "1", "sync": "0xD391",
                 "ant": "1", "lna": "1", "txen": "0"}
 PKT_E_CODES = ("ECFG", "EFIFO", "EGDO", "EMOTOR", "ENOCHIP", "ENOSAMP", "EOVF", "EPART", "ESTATE", "ECAL")
 P_MAX = 240
@@ -409,19 +410,21 @@ def _uint(tok, what, hi=None):
     return v
 
 
-def parse_pkt_record(line):
+def parse_pkt_record(line, strict_partial=True):
     """Strictly parse one `rxdiag pkt` line: H (proto=4), P, E or X. Anything else raises ReportError.
 
-    P,seq,t_us,len,<UPPERCASE hex>,rssi,lqi,crc_ok -> dict(kind='P', seq, t_us, len, data(bytes),
+    P,seq,t_us,len,<UPPERCASE hex>,rssi,lqi,crc_ok[,freqest|na] -> dict(kind='P', seq, t_us, len, data(bytes),
     rssi (signed), lqi (0..127), crc_ok (0/1), whole (len 18 or 20)). len must equal the hex byte count;
-    a partial FIFO is len<18 with rssi=lqi=crc_ok=0 (preceded by an E,EPART)."""
+    a partial FIFO is len<18 with rssi=lqi=crc_ok=0 (preceded by an E,EPART). strict_partial=False
+    accepts short P records that carry real rssi/lqi (complete reads of small length-byte noise, seen
+    in U7 logs); use it for log analysis, where EPART (not the field values) marks truncation."""
     line = _strip_eol(line)
     if len(line) > P_MAX + 240:
         raise ReportError("record too long")
     parts = line.split(",")
     kind = parts[0]
     if kind == "P":
-        if len(parts) != 8:
+        if len(parts) not in (8, 9):
             raise ReportError("P: wrong field count %d" % len(parts))
         seq, t_us = _uint(parts[1], "seq"), _uint(parts[2], "t_us")
         n = _uint(parts[3], "len", 64)
@@ -435,10 +438,18 @@ def parse_pkt_record(line):
         if not -128 <= rssi <= 127:
             raise ReportError("P: rssi out of int8 range")
         lqi, crc = _uint(parts[6], "lqi", 127), _uint(parts[7], "crc_ok", 1)
-        if n < PKT_BODY_BYTES and (rssi or lqi or crc):
+        if strict_partial and n < PKT_BODY_BYTES and (rssi or lqi or crc):
             raise ReportError("P: partial record must have rssi=lqi=crc_ok=0")
+        freqest = None   # proto-4 logs have no freqest; "na" = not valid for this P (earlier packet of a batch)
+        if len(parts) == 9 and parts[8] != "na":
+            if not re.fullmatch(r"-?[0-9]+", parts[8]) or parts[8].startswith("-0") or \
+                    (parts[8][0:1] == "0" and len(parts[8]) > 1):
+                raise ReportError("P: bad freqest %r" % parts[8])
+            freqest = int(parts[8])
+            if not -128 <= freqest <= 127:
+                raise ReportError("P: freqest out of int8 range")
         return {"kind": "P", "seq": seq, "t_us": t_us, "len": n, "data": bytes.fromhex(hx),
-                "rssi": rssi, "lqi": lqi, "crc_ok": crc, "whole": n in (PKT_BODY_BYTES, PKT_FULL_BYTES)}
+                "freqest": freqest, "rssi": rssi, "lqi": lqi, "crc_ok": crc, "whole": n in (PKT_BODY_BYTES, PKT_FULL_BYTES)}
     if kind == "E":
         if len(parts) != 4:
             raise ReportError("E: wrong field count")
@@ -461,6 +472,8 @@ def parse_pkt_record(line):
             if not eq or not k or not v or k in kv:
                 raise ReportError("H: bad/duplicate field %r" % p)
             kv[k] = v
+        if kv.get("proto") not in _PKT_H_PROTOS:
+            raise ReportError("H: proto must be 4 or 5 (got %r) - not a pkt header" % kv.get("proto"))
         for k, want in _PKT_H_FIXED.items():
             if kv.get(k) != want:
                 raise ReportError("H: %s must be %s (got %r) - not a proto=4 pkt header" % (k, want, kv.get(k)))

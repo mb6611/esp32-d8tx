@@ -1,0 +1,7 @@
+# cmd=rxdiag pkt 2412000 5000 utc=2026-11-06T20:03:45Z
+# t_cmd_pre_write_host=1793995425.963810 t_cmd_post_write_host=1793995425.963820
+1793995426.0310 rxdiag pkt 2412000 5000
+1793995426.0310 H,proto=4,mode=pkt,fw=c5cc593b,bf=948ba63,freq_req_khz=2412000,freq_set_hz=2411999877,freq_word=0x5CC4EC,freq_rb=0x5CC4EC,chan=0,hop=0,cfg_rb_ok=1,bw_hz=135416,sync=0xD391,mdmcfg4=0xAA,mdmcfg3=0x39,mdmcfg2=0x11,deviatn=0x42,pktctrl1=0x04,pktctrl0=0x05,pktlen=0x19,foccfg=0x16,iocfg0=0x2E,fscal3=0xAD,fscal2=0x0D,fscal1=0x1B,fscal0=0x11,cal_us=809,part=0x80,ver=0x03,spur=0,ant=1,lna=1,txen=0,spi_hz=3375000,quiet_us=2000,duration_ms=5000,t0_us=2073171394
+1793995430.2066 P,0,2077346704,17,10B67F5005FDA4D10672649A7200C6A769,-75,127,0
+1793995431.0226 X,1,2078171422,done
+1793995431.0226 

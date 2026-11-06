@@ -1,0 +1,12 @@
+attempts=10  valid=0 crc_invalid=0 malformed=0 unobserved=10  (sum=10)
+separate: duplicates=0 split_tails=0 noise=6 unassigned=8 receiver_errors=0
+  #0 unobserved primary=None dup=[] 
+  #1 unobserved primary=None dup=[] 
+  #2 unobserved primary=None dup=[] 
+  #3 unobserved primary=None dup=[] 
+  #4 unobserved primary=None dup=[] 
+  #5 unobserved primary=None dup=[] 
+  #6 unobserved primary=None dup=[] 
+  #7 unobserved primary=None dup=[] 
+  #8 unobserved primary=None dup=[] 
+  #9 unobserved primary=None dup=[] 
