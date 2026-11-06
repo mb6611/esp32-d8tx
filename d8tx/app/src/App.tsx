@@ -47,6 +47,7 @@ const REASONS: Record<string, string> = {
   RXLOSS: 'no radio link yet',
   ARMSWITCH: 'arm switch was high: release and re-arm',
   FAILSAFE: 'failsafe active',
+  RUNAWAYTAKEOFF: 'runaway-takeoff protection (props off or drone stuck)',
 }
 
 export default function App() {
@@ -94,6 +95,16 @@ export default function App() {
   else if (!fcOn) banner = { text: 'Ready (no Betaflight readback), hold R to arm', cls: 'border-ok text-ok' }
   else banner = { text: 'Ready, hold R to arm', cls: 'border-ok text-ok' }
 
+  if (!c.armed && c.disarmNote) {
+    const n = c.disarmNote.replace(/^(Betaflight (?:disarmed|did not arm)|Cannot arm yet): ?/, '')
+    const head = c.disarmNote.slice(0, c.disarmNote.length - n.length).replace(/: ?$/, '')
+    const plain = n
+      .split(', ')
+      .filter(Boolean)
+      .map((r) => REASONS[r.toUpperCase().replace(/_/g, '')] ?? r)
+      .join(', ')
+    banner = { text: plain ? `${head}: ${plain}` : head, cls: 'border-warn text-warn' }
+  }
   if (fcOn && c.armed && !fcArmed && reasons) banner = { text: `Armed requested, not armed: ${reasons}`, cls: 'border-warn text-warn' }
 
   const thrLabel = c.armed ? 'throttle' : 'throttle (preview, not sent)'

@@ -46,6 +46,12 @@ export function useController() {
   const mouseL = useRef<{ x: number; y: number } | null>(null)
   const mouseR = useRef<{ x: number; y: number } | null>(null)
   const armedRef = useRef(false)
+  const telRef = useRef<Telemetry | null>(null)
+  const armTrack = useRef({ at: 0, seen: false, bad: null as number | null })
+  const [disarmNote, setDisarmNote] = useState<string | null>(null)
+  useEffect(() => {
+    telRef.current = tel
+  }, [tel])
   const armStart = useRef<number | null>(null)
   const allowArm = useRef(false)
   const sock = useRef<WebSocket | null>(null)
@@ -60,6 +66,7 @@ export function useController() {
   const disarm = useCallback(() => {
     armedRef.current = false
     armStart.current = null
+    setDisarmNote(null)
     setArmed(false)
     setArmProgress(0)
   }, [])
@@ -232,9 +239,41 @@ export function useController() {
         if (!allowArm.current) {
           armStart.current = null
         } else if (now - armStart.current >= ARM_HOLD_MS) {
-          armedRef.current = true
+          const f0 = telRef.current?.fc
+          const blk = (f0?.connected ? (f0.arming_disable ?? []) : []).filter((r) =>
+            ['ARMSWITCH', 'THROTTLE'].includes(r.toUpperCase().replace(/_/g, '')),
+          )
           armStart.current = null
+          if (blk.length) {
+            setDisarmNote(`Cannot arm yet: ${blk.join(', ')}`)
+          } else {
+            armedRef.current = true
+            armTrack.current = { at: now, seen: false, bad: null }
+            setDisarmNote(null)
+          }
         }
+      }
+      // Betaflight disarmed itself (or never armed): drop our arm state
+      if (armedRef.current) {
+        const fc = telRef.current?.fc
+        const tr = armTrack.current
+        if (fc?.connected && fc.armed) {
+          tr.seen = true
+          tr.bad = null
+        } else if (fc?.connected && fc.armed === false) {
+          if (tr.bad === null) tr.bad = now
+          const limit = tr.seen ? 500 : 1000
+          if (now - Math.max(tr.bad, tr.seen ? 0 : tr.at) >= limit) {
+            const why = (fc.arming_disable ?? []).join(', ')
+            armedRef.current = false
+            st.current.throttle = 0
+            s.throttle = 0
+            thrUs = 1000
+            setDisarmNote(
+              tr.seen ? `Betaflight disarmed${why ? ': ' + why : ''}` : `Betaflight did not arm${why ? ': ' + why : ''}`,
+            )
+          }
+        } else tr.bad = null
       }
       if (armedRef.current && !allowArm.current) armedRef.current = false
 
@@ -308,6 +347,7 @@ export function useController() {
     sticks,
     channels,
     armed,
+    disarmNote,
     armProgress,
     sendHz,
     telHz,
