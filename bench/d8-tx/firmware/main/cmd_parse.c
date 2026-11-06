@@ -27,10 +27,10 @@ static cmd_t fail(const char *why) {
 
 cmd_t cmd_parse(char *line) {
     cmd_t c = {.kind = CMD_NONE, .pwr = PWR_MAX};
-    char *save, *tok[8];
+    char *save, *tok[10];
     int n = 0;
     for (char *t = strtok_r(line, " \t", &save); t; t = strtok_r(NULL, " \t", &save)) {
-        if (n == 8) return fail("args");
+        if (n == 10) return fail("args");
         tok[n++] = t;
     }
     if (!n) return c;
@@ -56,6 +56,33 @@ cmd_t cmd_parse(char *line) {
             c.pwr = (int)v;
         }
         c.kind = CMD_PKT;
+        return c;
+    }
+    if (!strcmp(tok[0], "RETUNE")) { /* RETUNE khz: move the LO (no keying) */
+        if (n != 2) return fail("args");
+        if (!parse_int(tok[1], RETUNE_KHZ_MIN, RETUNE_KHZ_MAX, &v)) return fail("khz");
+        c.khz = (int)v;
+        c.kind = CMD_RETUNE;
+        return c;
+    }
+    if (!strcmp(tok[0], "HOP")) { /* HOP n_slots [pwr] */
+        if (n < 2 || n > 3) return fail("args");
+        if (!parse_int(tok[1], 1, HOP_SLOTS_MAX, &v)) return fail("slots");
+        c.n_slots = (unsigned)v;
+        if (n == 3) {
+            if (!parse_int(tok[2], 0, PWR_MAX, &v)) return fail("pwr");
+            c.pwr = (int)v;
+        }
+        c.kind = CMD_HOP;
+        return c;
+    }
+    if (!strcmp(tok[0], "STICKS")) { /* STICKS c1..c8 in microseconds */
+        if (n != 1 + (int)D8_STICKS) return fail("args");
+        for (unsigned i = 0; i < D8_STICKS; i++) {
+            if (!parse_int(tok[1 + i], D8_STICK_US_MIN, D8_STICK_US_MAX, &v)) return fail("stick");
+            c.sticks[i] = (int)v;
+        }
+        c.kind = CMD_STICKS;
         return c;
     }
     if (!strcmp(tok[0], "TONE")) { /* TONE f dur_us [pwr] */

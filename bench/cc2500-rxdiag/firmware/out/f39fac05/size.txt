@@ -1,0 +1,2 @@
+   text	   data	    bss	    dec	    hex	filename
+ 369169	   5712	  46252	 421133	  66d0d	/Users/1unoe/Developer/personal/esp32-devkitv1-sdr-tx/bench/cc2500-rxdiag/firmware/out/f39fac05/betaflight_MATEKF411RXDIAG.elf

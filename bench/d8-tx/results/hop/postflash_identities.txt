@@ -1,0 +1,8 @@
+version
+# Betaflight / MATEKF411RXDIAG (M41R) 4.2.11 Nov  6 2026 / 20:49:48 () MSP API: 1.43
+
+# 
+rxdiag info
+I,proto=1,fw=f39fac05,bf=948ba63,build=MATEKF411RXDIAG,board=M41R,usb=MATEKF411RX-RXDIAG,reset_ok=1,rb_ok=1,part=0x80,ver=0x03,cs=A15,exti=C14,txen=A8,lna=A13,ant=A14,spi=3,spidiv=32,spi_hz=3375000,motor_proto=DISABLED,motor_dev=null,vbat_cv=1
+
+# 

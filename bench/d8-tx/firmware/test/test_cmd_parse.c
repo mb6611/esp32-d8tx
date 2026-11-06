@@ -27,7 +27,7 @@ int main(void) {
     ERR("ALT 0 8 50 12800", "transitions");
     ERR("ALT 0 600 100 1000", "freq"); ERR("ALT 0 8 100", "args");
     ERR("KEY", "cmd"); ERR("tone 0 1000", "cmd");
-    ERR("A B C D E F G H I", "args");
+    ERR("A B C D E F G H I J K", "args");
     puts("cmd_parse tests ok");
     return 0;
 }

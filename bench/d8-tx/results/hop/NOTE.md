@@ -1,0 +1,1 @@
+Wave2 step1: STM flashed f39fac05 via CLI bl+dfu-util (rc 0); ESP d8tone.bin c7274824... app-only 0x10000 921600, verified. dfu_enter.txt is first failed attempt (bl not executed); second attempt succeeded (not logged). esp_idle.txt from second boot after flash; first section of earlier run predates flash (overwritten).

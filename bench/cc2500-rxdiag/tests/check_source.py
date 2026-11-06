@@ -69,7 +69,7 @@ fifo_sites = re.findall(r"->\s*spiReadFifo\s*\(", core)
 (ok if len(fifo_sites) == 1 else bad)(f"core: exactly 1 HAL FIFO burst-read call site (got {len(fifo_sites)})")
 mfr = re.search(r"static bool fifoRead\(.*?\n\}", core, re.S)
 (ok if mfr and "!st->pkt" in mfr.group(0) and "n > 64u" in mfr.group(0) and "n == 0" in mfr.group(0) and "->spiReadFifo(" in mfr.group(0) else bad)("core: FIFO read guarded (pkt mode only, 1..64 bytes)")
-(ok if len(re.findall(r"\bfifoRead\s*\(st,", core)) == 1 else bad)("core: fifoRead called from exactly one site (doPkt)")
+(ok if len(re.findall(r"\bfifoRead\s*\(st,", core)) == 2 else bad)("core: fifoRead called from exactly two sites (doPkt, doHop)")
 enum = re.search(r"enum\s*\{(.*?)\};", core, re.S)
 consts = dict((n, int(v, 16)) for n, v in re.findall(r"\b([RS]_\w+|STROBE_\w+)\s*=\s*(0x[0-9A-Fa-f]+)", enum.group(1))) if enum else {}
 allowed_strobes = {0x30, 0x33, 0x34, 0x36, 0x3D, 0x3A}
@@ -141,7 +141,17 @@ pd = pk[pk.index("static rxdiagResult_e doPkt("):]
 (ok if not re.search(r"\bR_CHANNR\b.*\bR_FREQ", pd.split("for (size_t i = 0; i < nc; i++)")[1] if "for (size_t i = 0; i < nc; i++)" in pd else "") else bad)("doPkt: no per-packet retune")
 (ok if re.search(r"if \(st->pkt\) \{\s*spiStrobe\(st, STROBE_SFRX\);", core) and "!(s == STROBE_SFRX && st->pkt)" in core else bad)("core: SFRX only when st->pkt; finish() flushes RX FIFO in pkt mode")
 sf = re.findall(r"spiStrobe\(st, STROBE_SFRX\)", core)
-(ok if len(sf) == 3 else bad)(f"core: SFRX sites = finish, pktRecover, doPkt startup (got {len(sf)})")
+(ok if len(sf) == 4 else bad)(f"core: SFRX sites = finish, pktRecover, doPkt startup, hopTune (got {len(sf)})")
+# 4d. hop mode (proto 6): receive-only, bounded; CHANNR/FSCAL retune only inside hopTune and the calibration loop
+hp = core[core.index("#define HOP_N"):core.index("rxdiagResult_e rxdiagRun(")]
+hd = hp[hp.index("static rxdiagResult_e doHop("):]
+(ok if "finish(st, RXDIAG_DONE" in hd and "durUs" in hd and hd.count("for (;;)") == 1 else bad)("doHop: bounded by duration, ends through finish()")
+(ok if "frontEnd(h->ctx, true)" in hd and hd.index("liveness(st, &l)") < hd.index("frontEnd(h->ctx, true)") else bad)("doHop: LNA on only after liveness")
+(ok if "txen=0" in hd and "hop=1" in hd and "proto=6" in hd else bad)("doHop: header reports txen=0, proto 6")
+(ok if hd.index("STROBE_SCAL") < hd.index("frontEnd(h->ctx, true)") else bad)("doHop: SCAL calibration before the LNA is on")
+(ok if len(re.findall(r"spiWriteReg\(st, R_CHANNR,", hp)) == 2 else bad)("hop: CHANNR written only in hopTune and calibration loop")
+(ok if re.search(r"hopTune\(st, &T, 0\);", hd) and "hopTune(st, &T, idx)" in hd else bad)("doHop: retunes through hopTune()")
+(ok if not re.search(r"STROBE_(STX|SFTX|SXOFF|SWOR|SPWD|SFSTXON)", hp) else bad)("hop: no TX strobes")
 (ok if re.search(r"\{ R_IOCFG0, 0x2E \}", pk) and re.search(r"\{ R_PKTLEN, 0x19 \}", pk) and re.search(r"\{ R_MDMCFG4, 0xAA \}", pk) and re.search(r"\{ R_MDMCFG3, 0x39 \}", pk) and re.search(r"\{ R_MDMCFG2, 0x11 \}", pk) and re.search(r"\{ R_DEVIATN, 0x42 \}", pk) and re.search(r"\{ R_PKTCTRL0, 0x05 \}", pk) and re.search(r"\{ R_FOCCFG, 0x16 \}", pk) else bad)("pktRegs: stock D8 modem/packet values (cc2500_frsky_d.c config, FOCCFG 0x16)")
 (ok if re.search(r"rxdiagDurationValid\(dur\)", core) and re.search(r"FREQ_DUR_MAX_MS\s+60000u", core) else bad)("freq: duration validated, max 60000 ms")
 

@@ -118,7 +118,11 @@ static void chipUpdate(fake_t *f)
         f->state = 0x0D;
     }
     for (int i = 0; i < f->npk; i++) {
-        if (!f->pk[i].done && f->state == 0x0D && t >= f->pk[i].at) {
+        if (!f->pk[i].done && f->pkChan[i] >= 0 && t >= f->pk[i].at + 2500u) {
+            f->pk[i].done = true;   // arrived while not tuned to its channel: lost
+            continue;
+        }
+        if (!f->pk[i].done && f->state == 0x0D && t >= f->pk[i].at && (f->pkChan[i] < 0 || f->reg[0x0A] == f->pkChan[i])) {
             f->pk[i].done = true;
             if (f->pk[i].ovf) {
                 f->fifoOvf = true;
@@ -134,11 +138,20 @@ static void chipUpdate(fake_t *f)
     }
 }
 
+void fakePktCh(fake_t *f, uint64_t at, int chan, const uint8_t *data, uint8_t n)
+{
+    f->pkChan[f->npk] = chan;
+    f->pkChanSet = true;
+    fakePkt(f, at, data, n);
+}
+
 void fakePkt(fake_t *f, uint64_t at, const uint8_t *data, uint8_t n)
 {
     f->pk[f->npk].at = at;
     f->pk[f->npk].n = n;
     f->pk[f->npk].ovf = data == NULL;
+    if (!f->pkChanSet) f->pkChan[f->npk] = -1;
+    f->pkChanSet = false;
     f->pk[f->npk].done = false;
     if (data) {
         memcpy(f->pk[f->npk].data, data, n);
@@ -168,7 +181,18 @@ static void doStrobe(fake_t *f, uint8_t s)
         f->fifoLen = 0;
         f->fifoOvf = false;
         break;
+    case 0x33:
+        f->scalCount++;
+        if (f->calModel) {
+            f->reg[0x23] = (uint8_t)(0x40u ^ f->reg[0x0A]);
+            f->reg[0x24] = (uint8_t)(0x80u ^ f->reg[0x0A]);
+            f->reg[0x25] = (uint8_t)(0x20u ^ f->reg[0x0A]);
+        }
+        break;
     case 0x34:
+        if (f->calModel && (f->reg[0x23] != (uint8_t)(0x40u ^ f->reg[0x0A]) || f->reg[0x25] != (uint8_t)(0x20u ^ f->reg[0x0A]))) {
+            fakeViolation(f, "SRX with FSCAL not matching CHANNR");
+        }
         if (f->state == 0x01 && !(f->estateDone && f->estateStuck)) {
             f->state = 0x13;
             f->rxAtUs = fakeNow(f) + f->calDelayUs;

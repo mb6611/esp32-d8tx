@@ -11,4 +11,22 @@
 uint16_t d8_crc(const uint8_t *bytes, size_t n);
 /* n=18 appends CRC, n=20 preserves supplied CRC verbatim. Reject bad length byte. */
 int d8_air_bytes(const uint8_t *packet, size_t n, uint8_t out[D8_AIR_BYTES]);
+
+/* Hopping helpers (pure; mirrors host/esp32sdr/d8.py build_packet and hopfollow.D8_TABLE). */
+#define D8_HOP_CHANNELS 47u
+#define D8_STICKS 8u
+#define D8_TXID0 0x42
+#define D8_TXID1 0xb2
+#define D8_STICK_US_MIN 800
+#define D8_STICK_US_MAX 2200
+/* Table: entry 0 = 0, entry i>=1 = (start + step*i) & 0xff (start 2, step 55 = E8 table). */
+void d8_hop_table(unsigned start, unsigned step, uint8_t out[D8_HOP_CHANNELS]);
+/* Carrier of CC2500 channel n in units of 10 Hz: 2404 MHz + n * 299.93 kHz. */
+uint32_t d8_channel_f10(unsigned n);
+/* us -> raw 12-bit channel value (Betaflight scales raw by 2/3 to us), rounded, clamped 0..4095. */
+uint16_t d8_us_to_raw(int us);
+/* Length byte + 17 payload bytes (no CRC): id, [3]=0, counter at [4], [5]=1 (same as host d8_vectors.build), 8 channels
+ * (low bytes at 6,7,8,9,12,13,14,15; high nibbles at 10,11,16,17). */
+void d8_build_body(uint8_t id0, uint8_t id1, uint8_t counter, const uint16_t raw[D8_STICKS],
+                   uint8_t out[D8_BODY_BYTES]);
 #endif

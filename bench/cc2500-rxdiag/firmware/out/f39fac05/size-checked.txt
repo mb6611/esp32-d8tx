@@ -1,0 +1,1 @@
+ 369169	   5712	  46252	 421133	  66d0d	firmware/out/f39fac05/betaflight_MATEKF411RXDIAG.elf

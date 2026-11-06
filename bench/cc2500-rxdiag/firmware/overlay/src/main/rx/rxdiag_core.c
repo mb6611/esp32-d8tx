@@ -1368,12 +1368,16 @@ static rxdiagResult_e doFreq(st_t *st, uint32_t freqKhz, uint32_t windowMs, uint
 //   * SYNC1/SYNC0 written explicitly with the chip reset default 0xD3/0x91 that stock relies on.
 //   * MCSM0 keeps 0x18 (auto-calibrate on IDLE->RX) instead of the manually restored per-channel FSCAL data.
 // D8 packet: length byte 0x11, 17 payload bytes (+2 appended status bytes: RSSI, LQI|CRC_OK<<7) = 20 FIFO bytes.
-// Records: H, P,seq,t_us,len,<hex>,rssi,lqi,crc_ok (len = hex bytes shown = length byte + payload; t_us = when the
+// Records: H, P,seq,t_us,len,<hex>,rssi,lqi,crc_ok,freqest (proto 5; freqest = FREQEST int8 or na; len = hex bytes shown = length byte + payload; t_us = when the
 // first FIFO byte was seen; rssi = raw signed byte; crc_ok = hardware CRC_OK bit), E, X. A short/partial FIFO is
 // reported as E EPART followed by a P record with the bytes seen and rssi=lqi=crc_ok=0. Overflow (RXBYTES bit7
 // or MARCSTATE 0x11): E EOVF, SIDLE, SFRX, SRX and resume. Nothing is transmitted: STX/SFTX are not reachable.
 #define PKT_DUR_DEFAULT_MS 5000u
-#define PKT_QUIET_US 500u       // FIFO byte count unchanged this long = packet finished (a byte takes ~64 us)
+// FIFO byte count unchanged this long = packet finished. The CC2500 appends RSSI/LQI+CRC_OK to the FIFO only after the
+// CRC check, which can trail the last payload byte by more than the two CRC bytes (~515 us at 31 kbaud);
+// the U7 split signature has a ~640 us status gap, so the wait is bounded at 2 ms. If status is still missing then, the read is reported as
+// incomplete (EPART before the P), never silently as a complete packet.
+#define PKT_QUIET_US 2000u
 #define PKT_OVF_MAX 8u          // consecutive overflows without a clean read: give up
 #define P_MAX 240u
 #define MARC_OVF 17u
@@ -1405,6 +1409,59 @@ static bool pktRecover(st_t *st)
     spiStrobe(st, STROBE_SFRX);
     spiStrobe(st, STROBE_SRX);
     return waitRx(st, &m);
+}
+
+// Emit the P records of one FIFO read (shared by pkt and hop). hop: append ",chan,slot". valid (hop) is set when a whole
+// D8 data packet (length byte 0x11) with hardware CRC_OK was seen.
+static void pktEmitBatch(st_t *st, const uint8_t *fifo, uint32_t n, uint64_t tFirst, int8_t freqEst, bool hop,
+                         uint8_t chan, uint32_t slot, bool *valid)
+{
+    uint32_t off = 0;
+    while (off < n) {
+        const uint32_t rem = n - off;
+        const uint32_t plen = fifo[off];       // length byte
+        const uint32_t total = plen + 3u;      // length + payload + RSSI + LQI/CRC
+        const bool whole = rem >= total;
+        const uint32_t shown = whole ? plen + 1u : rem;
+        char buf[P_MAX + 4];
+        sb_t s;
+        sbInit(&s, buf, sizeof buf);
+        if (!whole) {
+            char d[40];
+            sb_t ds;
+            sbInit(&ds, d, sizeof d);
+            sbs(&ds, "seq="); sbu(&ds, st->seq);
+            sbs(&ds, ";exp="); sbu(&ds, total);
+            sbs(&ds, ";got="); sbu(&ds, rem);
+            emitE(st, "EPART", d);
+        }
+        if (whole && valid && plen == 0x11u && (fifo[off + plen + 2u] & 0x80u)) {
+            *valid = true;
+        }
+        sbs(&s, "P,"); sbu(&s, st->seq);
+        sbc(&s, ','); sbu(&s, tFirst);
+        sbc(&s, ','); sbu(&s, shown);
+        sbc(&s, ',');
+        for (uint32_t i = 0; i < shown; i++) {
+            sbh(&s, fifo[off + i]);
+        }
+        sbc(&s, ','); sbi(&s, whole ? (int8_t)fifo[off + plen + 1u] : 0);
+        sbc(&s, ','); sbu(&s, whole ? (fifo[off + plen + 2u] & 0x7Fu) : 0u);
+        sbc(&s, ','); sbu(&s, whole ? (fifo[off + plen + 2u] >> 7) : 0u);
+        sbc(&s, ',');
+        if (off + (whole ? total : rem) >= n) {
+            sbi(&s, freqEst);   // proto 5: appended field, old parsers stop at crc_ok
+        } else {
+            sbs(&s, "na");
+        }
+        if (hop) {
+            sbc(&s, ','); sbu(&s, chan);
+            sbc(&s, ','); sbu(&s, slot);
+        }
+        emit(st, &s, P_MAX);
+        st->seq++;
+        off += whole ? total : rem;
+    }
 }
 
 static rxdiagResult_e doPkt(st_t *st, uint32_t freqKhz, uint32_t durationMs)
@@ -1489,7 +1546,7 @@ static rxdiagResult_e doPkt(st_t *st, uint32_t freqKhz, uint32_t durationMs)
         char buf[RX_LINE_MAX];
         sb_t s;
         sbInit(&s, buf, sizeof buf);
-        sbs(&s, "H,proto=4,mode=pkt,fw="); sbs(&s, st->b->fw);
+        sbs(&s, "H,proto=5,mode=pkt,fw="); sbs(&s, st->b->fw);
         sbs(&s, ",bf="); sbs(&s, st->b->bf);
         sbs(&s, ",freq_req_khz="); sbu(&s, freqKhz);
         sbs(&s, ",freq_set_hz="); sbu(&s, setHz);
@@ -1591,42 +1648,13 @@ static rxdiagResult_e doPkt(st_t *st, uint32_t freqKhz, uint32_t durationMs)
 
         // Packet(s) finished: read exactly RXBYTES bytes.
         prevN = 0;
+        // One status read per completed read batch: FREQEST (signed, 26 MHz/2^14 per LSB) of the last packet. It is
+        // read before the FIFO burst; it is not valid for earlier packets of a back-to-back batch ("na").
+        const int8_t freqEst = (int8_t)spiReadStatus(st, S_FREQEST);
         if (!fifoRead(st, fifo, n)) {
             return finish(st, RXDIAG_EXIT_RADIO, "radio");
         }
-        uint32_t off = 0;
-        while (off < n) {
-            const uint32_t rem = n - off;
-            const uint32_t plen = fifo[off];       // length byte
-            const uint32_t total = plen + 3u;      // length + payload + RSSI + LQI/CRC
-            const bool whole = rem >= total;
-            const uint32_t shown = whole ? plen + 1u : rem;
-            char buf[P_MAX + 4];
-            sb_t s;
-            sbInit(&s, buf, sizeof buf);
-            if (!whole) {
-                char d[40];
-                sb_t ds;
-                sbInit(&ds, d, sizeof d);
-                sbs(&ds, "seq="); sbu(&ds, st->seq);
-                sbs(&ds, ";exp="); sbu(&ds, total);
-                sbs(&ds, ";got="); sbu(&ds, rem);
-                emitE(st, "EPART", d);
-            }
-            sbs(&s, "P,"); sbu(&s, st->seq);
-            sbc(&s, ','); sbu(&s, tFirst);
-            sbc(&s, ','); sbu(&s, shown);
-            sbc(&s, ',');
-            for (uint32_t i = 0; i < shown; i++) {
-                sbh(&s, fifo[off + i]);
-            }
-            sbc(&s, ','); sbi(&s, whole ? (int8_t)fifo[off + plen + 1u] : 0);
-            sbc(&s, ','); sbu(&s, whole ? (fifo[off + plen + 2u] & 0x7Fu) : 0u);
-            sbc(&s, ','); sbu(&s, whole ? (fifo[off + plen + 2u] >> 7) : 0u);
-            emit(st, &s, P_MAX);
-            st->seq++;
-            off += whole ? total : rem;
-        }
+        pktEmitBatch(st, fifo, n, tFirst, freqEst, false, 0, 0, NULL);
     }
 }
 
@@ -1638,6 +1666,291 @@ static bool parseByte(const char *t, size_t n, uint8_t *out)
     }
     *out = (uint8_t)v;
     return true;
+}
+
+// ---------------------------------------------------------------- hop (proto 6)
+// Receive-only D8 hop follower. Same radio configuration and packet path as pkt (proto 5); the channel logic follows
+// stock Betaflight (work/betaflight/src/main/rx/cc2500_frsky_shared.c nextChannel, cc2500_frsky_d.c frSkyDHandlePacket):
+//   * table: entry 0 = channel 0, entry i = (start + step*i) & 0xFF, 47 entries (start 2, step 55 = E8 table);
+//   * FSCAL3/2/1 pre-calibrated once per entry (SCAL, 900 us each) and written back on every retune (SIDLE, FSCAL, CHANNR, SFRX, SRX);
+//   * SEARCH: dwell on entry 0 until a CRC-valid D8 packet (length byte 0x11, hardware CRC_OK) is received; it is slot 0 of the lock;
+//   * FOLLOW: after each valid packet advance one entry at once (ref = detection time); with no packet 9000 us (HOP_SLOT_US,
+//     SYNC_DELAY_MAX) + 500 us grace after ref, advance one entry anyway and move ref on by exactly 9000 us (no drift on misses);
+//   * more than 100 consecutive missed slots (MAX_MISSING_PKT) = lost: E RESYNC, back to SEARCH on entry 0.
+// slot = monotonic absolute slot index since the start of the run, +1 per advance (packet or timeout), never reset;
+// a resync moves it to the next multiple of 47 so that table[slot % 47] is always the tuned entry.
+// A packet is complete as soon as RXBYTES >= 20 (stock), otherwise after PKT_QUIET_US without change.
+// P,seq,t_us,len,<hex>,rssi,lqi,crc_ok,freqest,chan,slot  (chan = CHANNR tuned when it arrived, slot = slot it arrived in)
+// E,t,LOCK,slot=..;chan=.. and E,t,RESYNC,slot=.. are informational. Nothing is transmitted.
+#define HOP_N 47u
+#define HOP_SLOT_US 9000u
+#define HOP_GRACE_US 500u   // timeout fires this long after the slot's expected packet end (ref is taken at detection, after the packet ends)
+#define HOP_MAX_MISSING 100u
+#define HOP_CAL_US 900u
+
+typedef struct {
+    uint8_t tab[HOP_N];
+    uint8_t cal[HOP_N][3];
+} hopTab_t;
+
+// Stock nextChannel() sequence for table entry i; the LNA stays on, nothing is keyed.
+static void hopTune(st_t *st, const hopTab_t *t, uint32_t i)
+{
+    spiStrobe(st, STROBE_SIDLE);
+    spiWriteReg(st, R_FSCAL3, t->cal[i][0]);
+    spiWriteReg(st, R_FSCAL2, t->cal[i][1]);
+    spiWriteReg(st, R_FSCAL1, t->cal[i][2]);
+    spiWriteReg(st, R_CHANNR, t->tab[i]);
+    spiStrobe(st, STROBE_SFRX);
+    spiStrobe(st, STROBE_SRX);
+}
+
+static void emitHopE(st_t *st, const char *code, uint32_t slot, int chan)
+{
+    char d[40];
+    sb_t s;
+    sbInit(&s, d, sizeof d);
+    sbs(&s, "slot="); sbu(&s, slot);
+    if (chan >= 0) {
+        sbs(&s, ";chan="); sbu(&s, (uint32_t)chan);
+    }
+    emitE(st, code, d);
+}
+
+static rxdiagResult_e doHop(st_t *st, uint8_t start, uint8_t step, uint32_t durationMs, uint32_t freqKhz)
+{
+    static hopTab_t T;   // 190 bytes; static to keep the CLI stack small (single-threaded, fully rewritten per run)
+    const rxdiagHal_t *h = st->h;
+    if (!h->spiReadFifo) {
+        emitE(st, "EFIFO", "nohal");
+        return RXDIAG_ERR_REFUSED;
+    }
+    if (!motorGateOk(st)) {
+        return RXDIAG_ERR_REFUSED;
+    }
+    uint32_t word = 0, setHz = 0;
+    bool spur = false;
+    rxdiagFreqWord(freqKhz, &word, &setHz, &spur);
+    const uint64_t durUs = (uint64_t)durationMs * 1000u;
+    T.tab[0] = 0;
+    for (uint32_t i = 1; i < HOP_N; i++) {
+        T.tab[i] = (uint8_t)(start + step * i);
+    }
+
+    h->rxDrain(h->ctx);
+    live_t l;
+    h->frontEnd(h->ctx, false);
+    liveness(st, &l);
+    if (!l.resetOk || !l.rbOk) {
+        spiStrobe(st, STROBE_SIDLE);
+        h->frontEnd(h->ctx, false);
+        emitE(st, "ENOCHIP", l.resetOk ? "rb_ok=0" : "reset_ok=0");
+        return RXDIAG_EXIT_RADIO;
+    }
+
+    st->pkt = true;
+    regval_t cfg[sizeof pktRegs / sizeof pktRegs[0] + 3];
+    size_t nc = 0;
+    cfg[nc].addr = R_FREQ2; cfg[nc++].val = (uint8_t)(word >> 16);
+    cfg[nc].addr = R_FREQ1; cfg[nc++].val = (uint8_t)(word >> 8);
+    cfg[nc].addr = R_FREQ0; cfg[nc++].val = (uint8_t)word;
+    for (size_t i = 0; i < sizeof pktRegs / sizeof pktRegs[0]; i++) {
+        cfg[nc++] = pktRegs[i];
+    }
+    for (size_t i = 0; i < nc; i++) {
+        spiWriteReg(st, cfg[i].addr, cfg[i].val);
+    }
+    spiWriteReg(st, R_PATABLE, 0x00);
+    uint32_t mism = 0;
+    uint8_t firstBad = 0xFF;
+    for (size_t i = 0; i < nc; i++) {
+        if (spiReadCfg(st, cfg[i].addr) != cfg[i].val) {
+            if (!mism) {
+                firstBad = cfg[i].addr;
+            }
+            mism++;
+        }
+    }
+    if (mism) {
+        char d[32];
+        sb_t s;
+        sbInit(&s, d, sizeof d);
+        sbs(&s, "mism="); sbu(&s, mism);
+        sbs(&s, ";reg="); sbx(&s, firstBad, 2);
+        emitE(st, "ECFG", d);
+        return finish(st, RXDIAG_EXIT_RADIO, "radio");
+    }
+
+    // Per-entry calibration (stock: IDLE, CHANNR, SCAL, 900 us, read FSCAL3/2/1). LNA still off.
+    const uint64_t calAt = nowUs(st);
+    for (uint32_t i = 0; i < HOP_N; i++) {
+        spiStrobe(st, STROBE_SIDLE);
+        spiWriteReg(st, R_CHANNR, T.tab[i]);
+        spiStrobe(st, STROBE_SCAL);
+        h->delayUs(h->ctx, HOP_CAL_US);
+        T.cal[i][0] = spiReadCfg(st, R_FSCAL3);
+        T.cal[i][1] = spiReadCfg(st, R_FSCAL2);
+        T.cal[i][2] = spiReadCfg(st, R_FSCAL1);
+        if (st->h->rxWaiting(st->h->ctx) > 0) {   // host abort during the ~45 ms calibration
+            h->rxDrain(h->ctx);
+            return finish(st, RXDIAG_EXIT_HOST, "host");
+        }
+    }
+    const uint32_t calUs = (uint32_t)(nowUs(st) - calAt);
+
+    h->frontEnd(h->ctx, true);
+    hopTune(st, &T, 0);
+    uint8_t marc = 0;
+    if (!waitRx(st, &marc)) {
+        emitMarcDetail(st, "ECAL", marc);
+        return finish(st, RXDIAG_EXIT_RADIO, "radio");
+    }
+    const uint32_t freqRb = ((uint32_t)spiReadCfg(st, R_FREQ2) << 16) | ((uint32_t)spiReadCfg(st, R_FREQ1) << 8) | spiReadCfg(st, R_FREQ0);
+
+    const uint64_t t0 = nowUs(st);
+    {
+        char buf[RX_LINE_MAX];
+        sb_t s;
+        sbInit(&s, buf, sizeof buf);
+        sbs(&s, "H,proto=6,mode=hop,fw="); sbs(&s, st->b->fw);
+        sbs(&s, ",bf="); sbs(&s, st->b->bf);
+        sbs(&s, ",base_khz="); sbu(&s, freqKhz);
+        sbs(&s, ",freq_set_hz="); sbu(&s, setHz);
+        sbs(&s, ",freq_word="); sbx(&s, word, 6);
+        sbs(&s, ",freq_rb="); sbx(&s, freqRb, 6);
+        sbs(&s, ",start="); sbu(&s, start);
+        sbs(&s, ",step="); sbu(&s, step);
+        sbs(&s, ",nchan="); sbu(&s, HOP_N);
+        sbs(&s, ",slot_us="); sbu(&s, HOP_SLOT_US);
+        sbs(&s, ",grace_us="); sbu(&s, HOP_GRACE_US);
+        sbs(&s, ",max_missing="); sbu(&s, HOP_MAX_MISSING);
+        sbs(&s, ",cfg_rb_ok=1,bw_hz="); sbu(&s, PKT_BW_HZ);
+        sbs(&s, ",sync=0xD391,mdmcfg4=0xAA,mdmcfg3=0x39,mdmcfg2=0x11,deviatn=0x42,pktctrl1=0x04,pktctrl0=0x05,pktlen=0x19,foccfg=0x16,iocfg0=0x2E");
+        sbs(&s, ",cal_total_us="); sbu(&s, calUs);
+        sbs(&s, ",part="); sbx(&s, l.part, 2);
+        sbs(&s, ",ver="); sbx(&s, l.ver, 2);
+        sbs(&s, ",spur="); sbu(&s, spur ? 1 : 0);
+        sbs(&s, ",ant=1,lna=1,txen=0,hop=1,spi_hz="); sbu(&s, st->b->spiHz);
+        sbs(&s, ",quiet_us="); sbu(&s, PKT_QUIET_US);
+        sbs(&s, ",duration_ms="); sbu(&s, durationMs);
+        sbs(&s, ",t0_us="); sbu(&s, t0);
+        emit(st, &s, MAX_IH);
+    }
+
+    uint8_t fifo[64];
+    uint32_t prevN = 0, consecOvf = 0, idleTick = 0, ovfCount = 0;
+    uint64_t tFirst = 0, tChange = 0, ref = 0;
+    uint32_t idx = 0, slot = 0, missing = 0;
+    bool locked = false;
+    for (;;) {
+        const uint64_t now = nowUs(st);
+        if (now - t0 >= durUs) {
+            return finish(st, RXDIAG_DONE, "done");
+        }
+        if (++st->sinceCheck >= 16u) {
+            st->sinceCheck = 0;
+            const int r = linkCheck(st);
+            if (r >= 0) {
+                return (rxdiagResult_e)r;
+            }
+        }
+
+        if (locked && now - ref >= HOP_SLOT_US + HOP_GRACE_US) {
+            // No packet this slot: advance anyway (stock timeoutUs == 1 branch).
+            if (++missing > HOP_MAX_MISSING) {
+                emitHopE(st, "RESYNC", slot, -1);
+                locked = false;
+                missing = 0;
+                slot = (slot / HOP_N + 1u) * HOP_N;
+                idx = 0;
+            } else {
+                slot++;
+                idx = (idx + 1u) % HOP_N;
+                ref += HOP_SLOT_US;
+                if (now - ref >= HOP_SLOT_US + HOP_GRACE_US) {
+                    ref = now;
+                }
+            }
+            hopTune(st, &T, idx);
+            prevN = 0;
+            continue;
+        }
+
+        uint8_t rb = 0;
+        bool stable = false;
+        for (int k = 0; k < 4 && !stable; k++) {
+            stable = readStable(st, S_RXBYTES, &rb);
+        }
+        if (!stable) {
+            continue;
+        }
+        const uint32_t n = rb & 0x7Fu;
+        if ((rb & 0x80u) || n > sizeof fifo) {
+            char d[32];
+            sb_t ds;
+            sbInit(&ds, d, sizeof d);
+            sbs(&ds, "seq="); sbu(&ds, st->seq);
+            sbs(&ds, ";n="); sbu(&ds, ++ovfCount);
+            emitE(st, "EOVF", d);
+            prevN = 0;
+            if (++consecOvf >= PKT_OVF_MAX || !pktRecover(st)) {
+                return finish(st, RXDIAG_EXIT_RADIO, "radio");
+            }
+            continue;
+        }
+        consecOvf = 0;
+
+        if (n == 0) {
+            prevN = 0;
+            if (++idleTick >= 32u) {
+                idleTick = 0;
+                // Not a general MARCSTATE check: right after a retune the chip is legitimately calibrating.
+                if ((spiReadStatus(st, S_MARCSTATE) & 0x1F) == MARC_OVF) {
+                    char d[32];
+                    sb_t ds;
+                    sbInit(&ds, d, sizeof d);
+                    sbs(&ds, "seq="); sbu(&ds, st->seq);
+                    sbs(&ds, ";n="); sbu(&ds, ++ovfCount);
+                    emitE(st, "EOVF", d);
+                    if (++consecOvf >= PKT_OVF_MAX || !pktRecover(st)) {
+                        return finish(st, RXDIAG_EXIT_RADIO, "radio");
+                    }
+                }
+            }
+            continue;
+        }
+        if (n != prevN) {
+            if (prevN == 0) {
+                tFirst = now;
+            }
+            prevN = n;
+            tChange = now;
+            if (n < 20u) {
+                continue;
+            }
+        } else if (n < 20u && now - tChange < PKT_QUIET_US) {
+            continue;
+        }
+
+        prevN = 0;
+        const int8_t freqEst = (int8_t)spiReadStatus(st, S_FREQEST);
+        if (!fifoRead(st, fifo, n)) {
+            return finish(st, RXDIAG_EXIT_RADIO, "radio");
+        }
+        bool valid = false;
+        pktEmitBatch(st, fifo, n, tFirst, freqEst, true, T.tab[idx], slot, &valid);
+        if (valid) {
+            if (!locked) {
+                locked = true;
+                emitHopE(st, "LOCK", slot, T.tab[idx]);
+            }
+            missing = 0;
+            ref = now;
+            slot++;
+            idx = (idx + 1u) % HOP_N;
+            hopTune(st, &T, idx);
+        }
+    }
 }
 
 // ---------------------------------------------------------------- entry
@@ -1733,6 +2046,22 @@ rxdiagResult_e rxdiagRun(const rxdiagHal_t *hal, const rxdiagBoard_t *board, con
             }
             if (rxdiagDurationValid(dur)) {
                 return doPkt(&st, freq, dur);
+            }
+        }
+    }
+    if (n >= 4 && n <= 5 && tokIs(tok[0], len[0], "hop")) {
+        // hop <start> <step> <duration_ms> [base_khz=2404000]
+        uint8_t start = 0, step = 0;
+        uint32_t dur = 0, base = 2404000u;
+        bool ok = parseByte(tok[1], len[1], &start) && parseByte(tok[2], len[2], &step) && parseU(tok[3], len[3], &dur);
+        ok = ok && (n < 5 || parseU(tok[4], len[4], &base));
+        if (ok) {
+            if (!rxdiagFreqWord(base, NULL, NULL, NULL)) {
+                emitE(&st, "EFREQ", "-");
+                return RXDIAG_ERR_ARG;
+            }
+            if (rxdiagDurationValid(dur)) {
+                return doHop(&st, start, step, dur, base);
             }
         }
     }

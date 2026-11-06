@@ -71,8 +71,12 @@ struct fake_s {
     bool feDisagree;              // FREQEST consecutive reads always differ
     uint32_t feToggle, feReads, pktReads;
     // ---- pkt mode: RX FIFO model. Scripted arrivals appended while in RX at time >= at.
-    struct { uint64_t at; uint8_t n; uint8_t data[64]; bool ovf; bool done; } pk[16];
+    struct { uint64_t at; uint8_t n; uint8_t data[64]; bool ovf; bool done; } pk[80];
     int npk;
+    int pkChan[80];               // -1 = any channel; else delivered only while CHANNR == pkChan, dropped 2500 us after `at`
+    bool pkChanSet;
+    bool calModel;                // SCAL sets FSCAL3/2/1 from CHANNR; SRX with FSCAL not matching CHANNR is a violation (hop)
+    uint32_t scalCount;
     uint8_t fifo[64], fifoLen;
     bool fifoOvf;
     uint32_t sfrxCount, fifoReads, fifoBytesRead;
@@ -92,6 +96,7 @@ struct fake_s {
 };
 
 void fakePkt(fake_t *f, uint64_t at, const uint8_t *data, uint8_t n); // schedule bytes into the FIFO
+void fakePktCh(fake_t *f, uint64_t at, int chan, const uint8_t *data, uint8_t n); // same, only while tuned to chan
 void fakeInit(fake_t *f);
 void fakeFree(fake_t *f);
 void fakeHal(fake_t *f, rxdiagHal_t *hal);

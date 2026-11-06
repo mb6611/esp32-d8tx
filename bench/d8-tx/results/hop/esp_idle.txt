@@ -1,0 +1,2 @@
+b'PING\n' b'P,d8tone,1\r\nOK\r\n'
+b'STAT\n' b'S,keyed=0,b8=2003a020,a8=00000000\r\nOK\r\n'

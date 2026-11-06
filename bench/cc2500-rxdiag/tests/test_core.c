@@ -979,7 +979,7 @@ static void pkInvariants(run_t *r, const char *name)
         CHECK(len - 2 <= (l[0] == 'H' ? 480u : l[0] == 'P' ? 240u : 96u), "%s: line too long", name);
     }
 }
-static void pkSetup(run_t *r) { runInit(r); r->f.rssiConst = -100; }
+static void pkSetup(run_t *r) { runInit(r); r->f.rssiConst = -100; r->f.fqOn = 0; r->f.fqOff = ~(uint64_t)0; r->f.feVal = -7; r->f.feStale = 55; }
 static void hexOf(const uint8_t *b, int n, char *out) { for (int i = 0; i < n; i++) snprintf(out + 2 * i, 3, "%02X", b[i]); }
 
 static void testPktGood(void)
@@ -994,7 +994,7 @@ static void testPktGood(void)
     fake_t *f = &R.f;
     pkInvariants(&R, "pkt-good");
     CHECK(R.res == RXDIAG_DONE, "pkt res %d", R.res);
-    int h = findLine(f, "H,proto=4,mode=pkt", 0);
+    int h = findLine(f, "H,proto=5,mode=pkt", 0);
     char v[40];
     CHECK(h >= 0, "pkt: no H");
     CHECK(h >= 0 && field(f->lines[h], "txen", v, sizeof v) && !strcmp(v, "0"), "pkt: txen=0");
@@ -1005,10 +1005,10 @@ static void testPktGood(void)
     char hx[64];
     hexOf(g, 18, hx);
     char want[160];
-    snprintf(want, sizeof want, ",18,%s,%d,%d,1\r\n", hx, (int8_t)0xB0, 0x35);
+    snprintf(want, sizeof want, ",18,%s,%d,%d,1,-7\r\n", hx, (int8_t)0xB0, 0x35);
     CHECK(p0 >= 0 && strstr(f->lines[p0], want) != NULL && strncmp(f->lines[p0], "P,0,", 4) == 0, "pkt good record: %s want %s", p0 >= 0 ? f->lines[p0] : "-", want);
     hexOf(b, 18, hx);
-    snprintf(want, sizeof want, ",18,%s,%d,%d,0\r\n", hx, (int8_t)0xC1, 0x12);
+    snprintf(want, sizeof want, ",18,%s,%d,%d,0,-7\r\n", hx, (int8_t)0xC1, 0x12);
     int p1 = findLine(f, "P,", p0 + 1);
     CHECK(p1 >= 0 && strstr(f->lines[p1], want) != NULL && strncmp(f->lines[p1], "P,1,", 4) == 0, "pkt crc-bad record: %s", p1 >= 0 ? f->lines[p1] : "-");
     CHECK(f->fifoBytesRead == 40, "pkt: %u bytes read", f->fifoBytesRead);
@@ -1034,6 +1034,11 @@ static void testPktBack2Back(void)
     runGo(&R, &board, "pkt 2421032 40");
     pkInvariants(&R, "pkt-b2b");
     CHECK(countLines(&R.f, "P,") == 2 && countLines(&R.f, "E,") == 0, "b2b: %d P", countLines(&R.f, "P,"));
+    {
+        int a = findLine(&R.f, "P,", 0), b = findLine(&R.f, "P,", a + 1);
+        CHECK(a >= 0 && b >= 0 && strstr(R.f.lines[a], ",na\r\n") && strstr(R.f.lines[b], ",-7\r\n"), "b2b freqest na then value");
+        CHECK(R.f.feReads == 1, "b2b: one FREQEST read for the batch (%u)", R.f.feReads);
+    }
     fakeFree(&R.f);
 }
 
@@ -1049,7 +1054,7 @@ static void testPktIncomplete(void)
     int e = findLine(f, "E,", 0);
     CHECK(e >= 0 && strstr(f->lines[e], "EPART") && strstr(f->lines[e], "exp=20") && strstr(f->lines[e], "got=10"), "partial E: %s", e >= 0 ? f->lines[e] : "-");
     int p = findLine(f, "P,", 0);
-    CHECK(p >= 0 && strstr(f->lines[p], ",10,") && strstr(f->lines[p], ",0,0,0\r\n"), "partial P: %s", p >= 0 ? f->lines[p] : "-");
+    CHECK(p >= 0 && strstr(f->lines[p], ",10,") && strstr(f->lines[p], ",0,0,0,-7\r\n"), "partial P: %s", p >= 0 ? f->lines[p] : "-");
     CHECK(R.res == RXDIAG_DONE, "partial res %d", R.res);
     fakeFree(&R.f);
     // a lone length byte
@@ -1059,6 +1064,88 @@ static void testPktIncomplete(void)
     pkInvariants(&S, "pkt-1byte");
     CHECK(countLines(&S.f, "P,") == 1 && countLines(&S.f, "E,") == 1, "1byte records");
     fakeFree(&S.f);
+}
+
+// U1: status bytes arriving after the payload (late RSSI/LQI+CRC) must complete one packet, not split it
+static const uint8_t U7BODY[18] = {0x11,0x42,0xB2,0x00,0x00,0x01,0xCA,0xCA,0xCA,0xCA,0x88,0x88,0xCA,0xCA,0xCA,0xCA,0x88,0x88};
+static void splitCase(const char *name, uint64_t gapUs, uint8_t crcByte, int wantP, int wantE, const char *wantFirst)
+{
+    run_t R; pkSetup(&R);
+    const uint8_t st[2] = { 0x0C, crcByte };
+    fakePkt(&R.f, 20000, U7BODY, 18);
+    fakePkt(&R.f, 20000 + gapUs, st, 2);
+    runGo(&R, &board, "pkt 2421032 60");
+    fake_t *f = &R.f;
+    pkInvariants(&R, name);
+    CHECK(R.res == RXDIAG_DONE, "%s res %d", name, R.res);
+    CHECK(countLines(f, "P,") == wantP && countLines(f, "E,") == wantE, "%s: %d P %d E", name, countLines(f, "P,"), countLines(f, "E,"));
+    int p = findLine(f, "P,", 0);
+    CHECK(p >= 0 && strstr(f->lines[p], wantFirst) != NULL, "%s first P: %s", name, p >= 0 ? f->lines[p] : "-");
+    fakeFree(f);
+}
+static void testPktSplit(void)
+{
+    const char *hex = "1142B2000001CACACACA8888CACACACA8888";
+    char want[96];
+    snprintf(want, sizeof want, ",18,%s,12,51,1,-7\r\n", hex);   // 0x33 = LQI 51, CRC_OK in bit 7 => 0xB3
+    splitCase("split-640", 640, 0xB3, 1, 0, want);
+    splitCase("split-1400", 1400, 0xB3, 1, 0, want);
+    // beyond the quiet bound: flagged (EPART before each P); never an unflagged second packet
+    {
+        run_t R; pkSetup(&R);
+        const uint8_t st[2] = { 0x0C, 0xB3 };
+        fakePkt(&R.f, 20000, U7BODY, 18);
+        fakePkt(&R.f, 20000 + 4000, st, 2);
+        runGo(&R, &board, "pkt 2421032 60");
+        fake_t *f = &R.f;
+        pkInvariants(&R, "split-4000");
+        int np = countLines(f, "P,"), ne = countLines(f, "E,");
+        CHECK(np == ne && np >= 1, "split-4000: %d P %d E (every P flagged)", np, ne);
+        for (int i = 0; i < f->nlines; i++) {
+            if (f->lines[i][0] == 'P') {
+                CHECK(i > 0 && strstr(f->lines[i - 1], "EPART") != NULL, "split-4000: P without preceding EPART: %s", f->lines[i]);
+            }
+        }
+        fakeFree(f);
+    }
+    // CRC_OK=0 with full status: a real hardware failure, no EPART
+    splitCase("split-crcbad", 640, 0x33, 1, 0, ",12,51,0,-7\r\n");
+    // complete E8-like packet (first payload byte 0xE8) with immediate status
+    {
+        run_t R; pkSetup(&R);
+        uint8_t e[20]; d8pkt(e, 0xE0, 0xB0, 0x80 | 0x20); e[1] = 0xE8;
+        fakePkt(&R.f, 20000, e, 20);
+        runGo(&R, &board, "pkt 2421032 40");
+        pkInvariants(&R, "e8-like");
+        CHECK(countLines(&R.f, "P,") == 1 && countLines(&R.f, "E,") == 0, "e8-like records");
+        int p = findLine(&R.f, "P,", 0);
+        CHECK(p >= 0 && strstr(R.f.lines[p], ",18,11E8") != NULL && strstr(R.f.lines[p], ",1,-7\r\n"), "e8-like P: %s", p >= 0 ? R.f.lines[p] : "-");
+        fakeFree(&R.f);
+    }
+    // truncation without any status stays EPART + partial P
+    {
+        run_t R; pkSetup(&R);
+        fakePkt(&R.f, 20000, U7BODY, 18);
+        runGo(&R, &board, "pkt 2421032 40");
+        pkInvariants(&R, "trunc");
+        int e = findLine(&R.f, "E,", 0);
+        CHECK(countLines(&R.f, "P,") == 1 && e >= 0 && strstr(R.f.lines[e], "EPART") && strstr(R.f.lines[e], "got=18"), "trunc records");
+        fakeFree(&R.f);
+    }
+    // two complete packets, the second one's status delayed
+    {
+        run_t R; pkSetup(&R);
+        uint8_t a[20], b[20];
+        d8pkt(a, 1, 0x90, 0xA0); d8pkt(b, 2, 0x91, 0xA1);
+        uint8_t first[38];
+        memcpy(first, a, 20); memcpy(first + 20, b, 18);
+        fakePkt(&R.f, 20000, first, 38);
+        fakePkt(&R.f, 20000 + 700, b + 18, 2);
+        runGo(&R, &board, "pkt 2421032 40");
+        pkInvariants(&R, "b2b-delayed");
+        CHECK(countLines(&R.f, "P,") == 2 && countLines(&R.f, "E,") == 0, "b2b-delayed: %d P %d E", countLines(&R.f, "P,"), countLines(&R.f, "E,"));
+        fakeFree(&R.f);
+    }
 }
 
 static void testPktOverflow(void)
@@ -1169,6 +1256,179 @@ static void testPktArgs(void)
     fakeFree(&F.f);
 }
 
+
+// ---- hop mode (proto 6): table follow, miss tolerance, resync, search rules
+static uint8_t hopTab(int i, int start, int step) { return i == 0 ? 0 : (uint8_t)(start + step * i); }
+static void hopSched(run_t *R, int k, uint64_t at, bool crcOk)
+{
+    uint8_t p[20];
+    d8pkt(p, (uint8_t)(k * 3), 0xB0, crcOk ? 0x80 | 0x30 : 0x10);
+    fakePktCh(&R->f, at, hopTab(k % 47, 2, 55), p, 20);
+}
+// n-th P record: fills chan, slot
+static bool hopP(fake_t *f, int nth, long long *chan, long long *slot)
+{
+    int from = 0, i = -1;
+    for (int k = 0; k <= nth; k++) {
+        i = findLine(f, "P,", from);
+        if (i < 0) return false;
+        from = i + 1;
+    }
+    const char *l = f->lines[i];
+    int commas = 0;
+    const char *p = l;
+    for (; *p; p++) if (*p == ',' && ++commas == 9) break;
+    return sscanf(p, ",%lld,%lld", chan, slot) == 2;
+}
+static void hopSetup(run_t *R) { pkSetup(R); R->f.calModel = true; }
+
+static void testHopFollow(void)
+{
+    run_t R; hopSetup(&R);
+    const int N = 60;   // crosses the 47-entry wrap
+    for (int k = 0; k < N; k++) hopSched(&R, k, 100000 + 9000u * (uint64_t)k, true);
+    runGo(&R, &board, "hop 2 55 700");
+    pkInvariants(&R, "hop-follow");
+    fake_t *f = &R.f;
+    CHECK(R.res == RXDIAG_DONE, "hop res %d", R.res);
+    CHECK(f->scalCount == 47, "hop: %u SCAL", f->scalCount);
+    int h = findLine(f, "H,proto=6,mode=hop", 0);
+    char v[64];
+    CHECK(h >= 0, "hop: no H");
+    CHECK(h >= 0 && field(f->lines[h], "txen", v, sizeof v) && !strcmp(v, "0"), "hop: txen=0");
+    CHECK(h >= 0 && field(f->lines[h], "hop", v, sizeof v) && !strcmp(v, "1"), "hop: hop=1");
+    CHECK(h >= 0 && field(f->lines[h], "start", v, sizeof v) && !strcmp(v, "2"), "hop: start");
+    CHECK(h >= 0 && field(f->lines[h], "freq_rb", v, sizeof v) && !strcmp(v, "0x5C7627"), "hop: freq_rb %s", v);
+    CHECK(countLines(f, "P,") == N, "hop: %d P lines", countLines(f, "P,"));
+    CHECK(countLines(f, "E,") == 1 && findLine(f, "E,", 0) >= 0 && strstr(f->lines[findLine(f, "E,", 0)], ",LOCK,slot=0;chan=0") != NULL, "hop: one LOCK");
+    int bad = 0;
+    for (int k = 0; k < N; k++) {
+        long long c = -1, sl = -1;
+        if (!hopP(f, k, &c, &sl) || c != hopTab(k % 47, 2, 55) || sl != k) bad++;
+    }
+    CHECK(bad == 0, "hop: %d records with wrong chan/slot", bad);
+    int p0 = findLine(f, "P,0,", 0);
+    CHECK(p0 >= 0 && strstr(f->lines[p0], ",0,A") == NULL, "hop p0");
+    CHECK(f->fifoBytesRead == 20u * N, "hop: %u bytes", f->fifoBytesRead);
+    CHECK(strstr(f->lines[f->nlines - 1], ",done") != NULL, "hop: ends done");
+    fakeFree(&f[0]);
+}
+
+static void testHopMiss(void)
+{
+    run_t R; hopSetup(&R);
+    for (int k = 0; k < 20; k++) {
+        if (k == 5 || k == 6 || k == 12) continue;     // lost slots: the follower must stay on schedule
+        hopSched(&R, k, 100000 + 9000u * (uint64_t)k, true);
+    }
+    hopSched(&R, 13, 100000 + 9000u * 13u + 1, false);   // duplicate slot arrival, CRC bad: reported, does not advance
+    runGo(&R, &board, "hop 2 55 400");
+    pkInvariants(&R, "hop-miss");
+    fake_t *f = &R.f;
+    CHECK(countLines(f, "P,") == 18, "hop-miss: %d P lines", countLines(f, "P,"));
+    int bad = 0, seen = 0;
+    for (int i = 0; i < 18; i++) {
+        long long c, sl;
+        if (!hopP(f, i, &c, &sl)) { bad++; continue; }
+        if (c != hopTab((int)sl % 47, 2, 55)) bad++;
+        seen += sl == 7 || sl == 13 || sl == 19;
+    }
+    CHECK(bad == 0 && seen >= 3, "hop-miss: chan/slot mismatch bad=%d seen=%d", bad, seen);
+    CHECK(countLines(f, "E,") == 1, "hop-miss: unexpected E (%d)", countLines(f, "E,"));
+    fakeFree(f);
+}
+
+static void testHopResync(void)
+{
+    run_t R; hopSetup(&R);
+    for (int k = 0; k < 4; k++) hopSched(&R, k, 100000 + 9000u * (uint64_t)k, true);
+    // silence for >100 slots (about 0.95 s), then the tx is back, at slot 160 of its own count
+    for (int k = 160; k < 166; k++) hopSched(&R, k, 100000 + 9000u * (uint64_t)k, true);
+    runGo(&R, &board, "hop 2 55 2200");
+    pkInvariants(&R, "hop-resync");
+    fake_t *f = &R.f;
+    CHECK(R.res == RXDIAG_DONE, "hop-resync res %d", R.res);
+    int resync = 0, lock = 0;
+    for (int i = 0; i < f->nlines; i++) { resync += strstr(f->lines[i], ",RESYNC,") != NULL; lock += strstr(f->lines[i], ",LOCK,") != NULL; }
+    CHECK(resync == 1 && lock >= 1, "hop-resync: resync %d lock %d", resync, lock);
+    // 160 % 47 = 19: the tx only reaches entry 0 again at k = 188 (not scheduled): the follower, dwelling on entry 0, never hears it.
+    CHECK(countLines(f, "P,") == 4, "hop-resync: %d P lines (packets on other channels must not be heard while searching)", countLines(f, "P,"));
+    fakeFree(f);
+
+    // tx returns on entry 0: relock, slot%47==0, then follow
+    run_t S; hopSetup(&S);
+    for (int k = 0; k < 4; k++) hopSched(&S, k, 100000 + 9000u * (uint64_t)k, true);
+    for (int k = 141; k < 150; k++) hopSched(&S, k, 100000 + 9000u * (uint64_t)k, true);
+    runGo(&S, &board, "hop 2 55 1800");
+    pkInvariants(&S, "hop-relock");
+    CHECK(S.f.violations == 0 && countLines(&S.f, "P,") == 13, "hop-relock: %d P lines", countLines(&S.f, "P,"));
+    long long c, sl;
+    CHECK(hopP(&S.f, 4, &c, &sl) && c == 0 && sl % 47 == 0 && sl >= 104, "hop-relock: first P after resync chan %lld slot %lld", c, sl);
+    CHECK(hopP(&S.f, 5, &c, &sl) && c == hopTab(1, 2, 55) && sl % 47 == 1, "hop-relock: next chan %lld slot %lld", c, sl);
+    fakeFree(&S.f);
+}
+
+static void testHopSearch(void)
+{
+    run_t R; hopSetup(&R);
+    hopSched(&R, 0, 100000, false);                 // CRC-bad on entry 0: reported, no lock
+    hopSched(&R, 1, 109000, true);                  // slot 1 channel: must not be heard (still dwelling on entry 0)
+    hopSched(&R, 47, 100000 + 9000u * 47u, true);   // entry 0 again, CRC ok: lock
+    hopSched(&R, 48, 100000 + 9000u * 48u, true);
+    runGo(&R, &board, "hop 2 55 600");
+    pkInvariants(&R, "hop-search");
+    fake_t *f = &R.f;
+    CHECK(countLines(f, "P,") == 3, "hop-search: %d P lines", countLines(f, "P,"));
+    long long c, sl;
+    CHECK(hopP(f, 0, &c, &sl) && c == 0 && sl == 0, "hop-search: first");
+    CHECK(strstr(f->lines[findLine(f, "P,0,", 0)], ",0,") != NULL && strstr(f->lines[findLine(f, "E,", 0)], ",LOCK,slot=0;chan=0") != NULL, "hop-search: LOCK on second packet");
+    CHECK(hopP(f, 1, &c, &sl) && c == 0 && sl == 0 && hopP(f, 2, &c, &sl) && c == hopTab(1, 2, 55) && sl == 1, "hop-search: chan/slot after lock");
+    fakeFree(f);
+}
+
+static void testHopArgs(void)
+{
+    const char *bad[] = { "hop", "hop 2", "hop 2 55", "hop 256 55 100", "hop 2 256 100", "hop 2 55 0", "hop 2 55 60001", "hop 2 55 x",
+                          "hop 2 55 100 1", "hop 2 55 100 2404000 1", "hop x 55 100" };
+    for (size_t i = 0; i < sizeof bad / sizeof bad[0]; i++) {
+        run_t R; pkSetup(&R);
+        runGo(&R, &board, bad[i]);
+        CHECK(R.res == RXDIAG_ERR_ARG && R.f.frames == 0, "hop bad args '%s': res %d frames %llu", bad[i], R.res, (unsigned long long)R.f.frames);
+        fakeFree(&R.f);
+    }
+    // optional base frequency (E8 offset) reaches FREQ2/1/0
+    run_t R; hopSetup(&R);
+    runGo(&R, &board, "hop 2 55 100 2404100");
+    int h = findLine(&R.f, "H,proto=6", 0);
+    char v[64];
+    CHECK(R.res == RXDIAG_DONE && h >= 0 && field(R.f.lines[h], "base_khz", v, sizeof v) && !strcmp(v, "2404100"), "hop base arg");
+    CHECK(R.f.reg[0x0D] == 0x5C && R.f.reg[0x0E] == 0x77 && R.f.reg[0x0F] == 0x23, "hop base regs %02X%02X%02X", R.f.reg[0x0D], R.f.reg[0x0E], R.f.reg[0x0F]);
+    pkInvariants(&R, "hop-base");
+    fakeFree(&R.f);
+    // motor gate, no FIFO hal
+    rxdiagBoard_t b2 = board; b2.motorDevNull = false;
+    run_t M; pkSetup(&M);
+    runGo(&M, &b2, "hop 2 55 100");
+    CHECK(M.res == RXDIAG_ERR_REFUSED && M.f.frames == 0, "hop motor gate");
+    fakeFree(&M.f);
+    run_t H; pkSetup(&H);
+    fakeHal(&H.f, &H.hal);
+    H.hal.spiReadFifo = NULL;
+    H.res = rxdiagRun(&H.hal, &board, "hop 2 55 100");
+    CHECK(H.res == RXDIAG_ERR_REFUSED && H.f.frames == 0, "hop nofifo hal");
+    fakeFree(&H.f);
+}
+
+static void testHopHostStop(void)
+{
+    run_t R; hopSetup(&R);
+    setHook(&R, "H", 1, actStop);   // host byte right after the header
+    runGo(&R, &board, "hop 2 55 60000");
+    pkInvariants(&R, "hop-stop");
+    CHECK(R.res == RXDIAG_EXIT_HOST && R.f.now < 200000, "hop-stop res %d now %llu", R.res, (unsigned long long)R.f.now);
+    fakeFree(&R.f);
+}
+
 int main(int argc, char **argv)
 {
     const char *vec = argc > 1 ? argv[1] : "vectors-v1.txt";
@@ -1200,9 +1460,16 @@ int main(int argc, char **argv)
     testPktGood();
     testPktBack2Back();
     testPktIncomplete();
+    testPktSplit();
     testPktOverflow();
     testPktTimeoutCleanup();
     testPktArgs();
+    testHopFollow();
+    testHopMiss();
+    testHopResync();
+    testHopSearch();
+    testHopArgs();
+    testHopHostStop();
     printf("%d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

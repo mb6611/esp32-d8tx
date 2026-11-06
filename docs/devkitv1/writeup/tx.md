@@ -2,7 +2,7 @@
 
 *Private TX research note · November 2026 · companion to the RX write-up, [A 2.4 GHz SDR on a $5 ESP32](README.md)*
 
-The RX write-up ended with a board that could listen: record a FrSky D8 transmitter, decode it, follow its hops. That is a long way from talking. Nothing in it showed that the same chip could produce a packet a real D8 receiver chip would accept. This note covers the first time that happened, on a bench, once: an ESP32 DevKit V1 transmitted a hand-built D8 packet and an independent CC2500 reported it with a valid hardware CRC. The first try got 7 of 10; after fixing a receiver-side bug, 140 more attempts got about 94%, the same rate the real E8 transmitter gets on that receiver. It is not hopping, not control, and not a calibrated transmitter.
+The RX write-up ended with a board that could listen: record a FrSky D8 transmitter, decode it, follow its hops. That is a long way from talking. Nothing in it showed that the same chip could produce a packet a real D8 receiver chip would accept. This note covers the first time that happened, on a bench, once: an ESP32 DevKit V1 transmitted a hand-built D8 packet and an independent CC2500 reported it with a valid hardware CRC. The first try got 7 of 10; after fixing a receiver-side bug, 140 more attempts got about 94%, the same rate the real E8 transmitter gets on that receiver. Then it hopped all 47 D8 channels at about 98%, slightly better than the E8 on the same receiver. It is not yet bound to a real flight controller, not control, and not a calibrated transmitter.
 
 The short version of what worked: the ESP32's Wi-Fi PHY has a test-tone generator whose frequency can be stepped by a ROM function. Switching that tone between two steps at 31 kbaud is a crude 2-FSK modulator. A CC2500 listening on the channel decoded it. Most of the effort went into finding out where the tone actually lands, because the first attempts saw nothing.
 
@@ -125,9 +125,40 @@ Seven of ten is not a reliability figure, and Section 4 already suspected the re
 
 **What this shows and does not show.** On a fixed channel, on one bench with one receiver position, the ESP32 packet is received CRC-valid about 94% of the time, close to what the real E8 achieves on the same receiver, and a received packet is never corrupt. It does not give an ESP32 loss rate, because receiver loss and send-side loss are not separated: the E8 baseline is about as lossy. Nor does it say why the roughly 6% are missing. The receiver would need to log every sync detect, or the ESP32 keyings would need to be captured with an SDR beside it. FREQEST cannot settle carrier accuracy. Hopping and flight are untested, and the RSSI of received packets stepped down by about 5 dB between batches 3 and 4 when the setup was touched, which did not change the loss pattern.
 
+### 6. Hopping: all 47 channels at ~98%
+
+The tone generator's frequency steps only reach about ±20 MHz around the LO, and the D8 hop table spans 2404–2478 MHz, so a hop cannot be made by stepping the tone. Each hop retunes the LO instead (fast-hop mode 1, one retune per slot). The firmware measured the retune at at most 0.39 ms (363 µs in run A, 389 µs in run B) inside an 8.994 ms slot, with the keying start at most 81 µs late.
+
+**Retune gate.** Before hopping, a 150 ms tone was keyed after retuning to 2404, 2412, 2441 and 2478 MHz, and the receiver diagnostic watched each. All four passed, with the tone's FREQEST within 13 kHz of nominal (the 2441 MHz window had a steady in-band interferer; the tone still stood 23–31 counts above it). The receiver diagnostic was then told to follow the hop table (`rxdiag hop`), the same as a bound receiver would.
+
+**Runs.** The real E8 was recorded first as a control, then the ESP32 sent 556 slots (run A) and 940 slots (run B), always hop-counter-ordered, sticks at 1500 µs.
+
+| | E8 control (20 s) | ESP32 run A | ESP32 run B |
+|---|---|---|---|
+| Slots | 2204 | 556 | 940 |
+| CRC-valid | 2133 (96.8%) | 543 (97.7%) | 921 (98.0%) |
+| Longest loss run | 1 | 1 | 2 |
+| Counter discontinuities | 0 | 0 | 0 |
+| Channels decoding | 47 of 47 | 47 of 47 | 47 of 47 |
+| Sticks decoded | 1500 µs | 1500 µs | 1500 µs |
+
+Channel and ID mismatches were zero throughout (ID 42B2). The one RESYNC in each ESP32 run came after the ESP32 stopped sending, so it is not a loss.
+
+![Left: hop map of ESP32 run B, slot against channel, coloured by RSSI, red crosses unreceived slots. Right: per-channel received fraction, near 100% everywhere.](img/tx-evidence/hop-esp-runB-map.png)
+
+*Figure 8. ESP32 run B, 921 of 940 slots. The 19 misses are scattered with no channel losing more than two. Source: `results/hop/esp_hop/runB_hop_map.png`.*
+
+![The same hop map for the real E8 control; two channels are visibly weaker.](img/tx-evidence/hop-e8-map.png)
+
+*Figure 9. The real E8 over 20 s, 2133 of 2204 slots. Channels 25 (2411.5 MHz) and 133 are weak, at 29/47 and 22/47. Source: `results/hop/e8_control/e8_hop_map.png`.*
+
+**The weak channels.** The E8's 96.8% hides two poor channels, ch25 and ch133. The RX write-up had already noticed ch25 and suspected the transmitter. The ESP32 decodes the same two channels fine (19/20 each in run B, 12/12 each in run A) on the same receiver. That is consistent with an E8 transmitter quirk on those channels, but it is not proof: different time, different packet content and a small count.
+
+**What this shows and does not show.** On this bench the ESP32 hops through the full 47-channel table, with a continuous counter, and a CC2500 following the table receives about 98% of slots, at least as well as the E8. It does not show binding, a stock Betaflight receiver accepting it, range, or flight.
+
 ## What this does not show
 
-- **Not hopping, control or flight.** One packet, one fixed frequency, one hop-counter value (0). No bound receiver was involved: the proof is that a CC2500 with the D8 settings and an independent CRC accepted it, not that a model aircraft would.
+- **Not binding, control or flight.** Hopping works against the diagnostic receiver, which was given the hop table directly. No bind exchange and no stock Betaflight receiver were involved: the proof is that a CC2500 with the D8 settings and an independent CRC accepted the packets, not that a model aircraft would.
 - **Not a calibrated transmitter.** The ±1-step deviation (≈39 kHz) is 23% wider than the stock 31.7 kHz, there is no Gaussian shaping, and the power setting has no verified output level. The packet was radiated within bench range; there is no distance or attenuation information. Frequency accuracy rests on the 100 kHz-granularity scan and a coarse FREQEST. That the packet works says the receiver is tolerant, not that the ESP32 is accurate.
 - **7/10 was one batch, and partly the receiver.** Section 5 repeats the measurement with the fixed receiver (about 94%); the cause of the remaining misses is open.
 - **The ESP32's readback is not RF evidence.** `late_bits=207` of 208, `max_late_ns=1266` is timing of the CPU loop. It is small compared with a bit time (~32 µs) but I did not verify it on air.

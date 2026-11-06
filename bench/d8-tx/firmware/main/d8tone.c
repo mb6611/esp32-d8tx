@@ -15,6 +15,18 @@
  *   PKT hex [pwr]             18-byte length+payload (CRC appended) or 20-byte full U3
  *                             packet including CRC (transmitted verbatim), pwr default 127.
  *                             Example: PKT 1142b2000001cacacaca8888cacacaca8888
+ *   RETUNE khz                 move the LO to khz (2404000..2478000) with the fast retune (capacitor-code
+ *                              release + rom_set_rf_freq_offset, ~0.27 ms, no recalibration); no keying.
+ *                              Afterwards TONE/ALT (tone offset f=0 is the LO) are capped at 150 ms until
+ *                              RETUNE 2412000 restores the boot LO. Refused while keyed.
+ *   STICKS c1..c8              eight stick values in us (800..2200) for HOP packets (default 1500 each)
+ *   HOP n_slots [pwr]          (n<=940) stream D8 data packets, one per ~8.994 ms slot, on the E8 hop table
+ *                              (start 2, step 55, entry 0 = 0; channel n = 2404 MHz + n*299.93 kHz), packet
+ *                              counter (byte 4) +1 per packet, id 42 b2, byte-identical to host d8hop
+ *                              build(counter_index=4). Per slot: retune, key, 208 bits, unkey (one
+ *                              critical section), then WDT feed + UART poll; any UART byte aborts. LO is
+ *                              restored to 2412 MHz afterwards. Reply:
+ *                              K,hop,slots=N,late_max_us=X,retune_max_us=Y then OK. ERR -> unkeyed.
  * Results are printed only after unkey:
  *   K,<mode>,fa,fb,half_us,req_us,pwr,on_us,key_total_us,key_cycles,unkey_cycles,b8_on,b8_end,b8_off,a8_on,a8_off,ntrans
  *   T,<i>,<due_us>,<actual_us>,<b8_readback>        one per transition (time since tone on, 240 MHz cycles/240)
@@ -37,6 +49,7 @@
 #include "esp_cpu.h"
 #include "nvs_flash.h"
 #include "soc/soc.h"
+#include "soc/rtc.h"
 #include "hal/wdt_hal.h"
 #include "driver/uart.h"
 #include "driver/uart_vfs.h"
@@ -57,6 +70,9 @@ extern void rom_stop_tx_tone(int which);
 extern void rom_pbus_force_test(int row, int col, int val);
 extern void txcal_debuge_mode(int);
 extern void **g_phyFuns;
+extern unsigned ram_chip_i2c_readReg(unsigned, unsigned, unsigned);
+extern void ram_chip_i2c_writeReg(unsigned, unsigned, unsigned, unsigned);
+extern void rom_set_rf_freq_offset(unsigned crystal, unsigned mhz, int offset);
 
 static wdt_hal_context_t rwdt = RWDT_HAL_CONTEXT_DEFAULT();
 static portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
@@ -224,6 +240,67 @@ static void run_packet(const cmd_t *c) {
            b8_on, b8_end, b8_off, a8_on, a8_off);
 }
 
+static volatile bool lo_off; /* LO moved off the boot 2412 MHz */
+static uint16_t sticks_raw[D8_STICKS] = {2250, 2250, 2250, 2250, 2250, 2250, 2250, 2250};
+
+/* Fast retune to f10 (10 Hz units): capacitor-code release, then ROM offset (1/1024 MHz). */
+static void lo_retune(uint32_t f10) {
+    unsigned mhz = f10 / 100000u, rem = f10 % 100000u;
+    int offset = (int)((rem * 1024u + 50000u) / 100000u);
+    unsigned xtal = rtc_clk_xtal_freq_get();
+    unsigned cap = ram_chip_i2c_readReg(0x62, 1, 0);
+    ram_chip_i2c_writeReg(0x62, 1, 0, cap & ~0x80u);
+    rom_set_rf_freq_offset(xtal == 26 ? 1 : xtal == 24 ? 2 : 0, mhz, offset);
+}
+
+#define HOP_SLOT_CYC (8994u * CYC_PER_US)
+
+static void run_hop(const cmd_t *c) {
+    uint8_t tab[D8_HOP_CHANNELS], body[D8_BODY_BYTES], air[D8_AIR_BYTES];
+    d8_hop_table(2, 55, tab);
+    uint32_t late_max = 0, rt_max = 0;
+    unsigned sent = 0;
+    bool abort = false;
+    feed();
+    uint32_t base = cyc();
+    uint32_t slot_start = base; /* scheduled start of the current slot */
+    for (unsigned k = 0; k < c->n_slots && !abort; k++) {
+        d8_build_body(D8_TXID0, D8_TXID1, (uint8_t)k, sticks_raw, body);
+        if (!d8_air_bytes(body, D8_BODY_BYTES, air)) { printf("ERR packet\n"); abort = true; break; }
+        uint32_t f10 = d8_channel_f10(tab[k % D8_HOP_CHANNELS]);
+        while ((int32_t)(cyc() - slot_start) < 0) { } /* wait for the slot (interrupts on) */
+        uint32_t late = cyc() - slot_start;
+        if (late > HOP_SLOT_CYC) slot_start = cyc(); /* overran a whole slot: resync, don't burst */
+        if (late > late_max) late_max = late;
+        feed();
+        portENTER_CRITICAL(&mux);
+        uint32_t r0 = cyc();
+        lo_retune(f10);
+        uint32_t r1 = cyc() - r0;
+        if (r1 > rt_max) rt_max = r1;
+        keyed = true;
+        key((air[0] & 0x80) ? 1 : -1, c->pwr);
+        uint32_t t0 = cyc();
+        for (unsigned i = 1; i < D8_AIR_BITS; i++) {
+            uint32_t due = i * D8_BIT_CYCLES;
+            while ((int32_t)(cyc() - t0 - due) < 0) { }
+            tone_set((air[i >> 3] & (0x80u >> (i & 7))) ? 1 : -1);
+        }
+        while ((int32_t)(cyc() - t0 - D8_AIR_BITS * D8_BIT_CYCLES) < 0) { }
+        unkey();
+        portEXIT_CRITICAL(&mux);
+        sent++;
+        slot_start += HOP_SLOT_CYC;
+        uint8_t b;
+        if (uart_read_bytes(UART_NUM_0, &b, 1, 0) == 1) abort = true;
+    }
+    if (keyed) unkey();
+    lo_retune(241200000u); /* 2412 MHz = 241,200,000 x 10 Hz */
+    lo_off = false;
+    printf("K,hop,slots=%u,late_max_us=%" PRIu32 ",retune_max_us=%" PRIu32 "\nOK\n", sent,
+           late_max / CYC_PER_US, rt_max / CYC_PER_US);
+}
+
 /* Bounded 10 ms read straight from the UART driver (not stdin): returns -1 when idle. */
 static int rd_byte(void *ctx) {
     (void)ctx;
@@ -263,7 +340,26 @@ void app_main(void) {
             break;
         case CMD_UNKEY: unkey(); printf("OK\n"); break;
         case CMD_TONE:
-        case CMD_ALT: run_window(&c); break;
+        case CMD_ALT:
+            if (lo_off && c.dur_us > RETUNE_TONE_MAX_US) { printf("ERR retuned_dur\n"); break; }
+            /* after RETUNE only the bare LO (f=0) is allowed, so keying stays on the retuned D8 channel */
+            if (lo_off && (c.f_a != 0 || (c.kind == CMD_ALT && c.f_b != 0))) { printf("ERR retuned_f\n"); break; }
+            run_window(&c);
+            break;
+        case CMD_RETUNE:
+            if (keyed) { printf("ERR keyed\n"); break; }
+            lo_retune((uint32_t)c.khz * 100u);
+            lo_off = c.khz != 2412000;
+            printf("OK\n");
+            break;
+        case CMD_STICKS:
+            for (unsigned i = 0; i < D8_STICKS; i++) sticks_raw[i] = d8_us_to_raw(c.sticks[i]);
+            printf("OK\n");
+            break;
+        case CMD_HOP:
+            if (keyed) { printf("ERR keyed\n"); break; }
+            run_hop(&c);
+            break;
         case CMD_PKT: run_packet(&c); break;
         }
         fflush(stdout);

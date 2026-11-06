@@ -24,3 +24,28 @@ int d8_air_bytes(const uint8_t *p, size_t n, uint8_t out[D8_AIR_BYTES]) {
     }
     return 1;
 }
+
+void d8_hop_table(unsigned start, unsigned step, uint8_t out[D8_HOP_CHANNELS]) {
+    out[0] = 0;
+    for (unsigned i = 1; i < D8_HOP_CHANNELS; i++) out[i] = (uint8_t)(start + step * i);
+}
+
+uint32_t d8_channel_f10(unsigned n) { return 240400000u + n * 29993u; }
+
+uint16_t d8_us_to_raw(int us) {
+    int v = (us * 3 + 1) / 2; /* us >= 0 */
+    return (uint16_t)(v < 0 ? 0 : v > 4095 ? 4095 : v);
+}
+
+void d8_build_body(uint8_t id0, uint8_t id1, uint8_t counter, const uint16_t raw[D8_STICKS],
+                   uint8_t out[D8_BODY_BYTES]) {
+    static const uint8_t lo[8] = {6, 7, 8, 9, 12, 13, 14, 15};
+    static const uint8_t hi[8] = {10, 10, 11, 11, 16, 16, 17, 17};
+    static const uint8_t sh[8] = {0, 4, 0, 4, 0, 4, 0, 4};
+    memset(out, 0, D8_BODY_BYTES);
+    out[0] = 0x11; out[1] = id0; out[2] = id1; out[3] = 0x00; out[4] = counter; out[5] = 0x01; /* observed E8 layout, as d8_vectors.build */
+    for (unsigned i = 0; i < 8; i++) {
+        out[lo[i]] = (uint8_t)(raw[i] & 0xff);
+        out[hi[i]] |= (uint8_t)(((raw[i] >> 8) & 0xf) << sh[i]);
+    }
+}
