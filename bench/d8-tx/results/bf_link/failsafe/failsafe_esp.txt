@@ -1,0 +1,7 @@
+K,hop,s=112
+K,hop,s=224
+K,hop,s=336
+K,hop,s=448
+K,hop,s=560
+K,hop,slots=646,late_max_us=254,retune_max_us=416,why=timeout
+OK

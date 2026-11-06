@@ -194,7 +194,7 @@ Everything so far used a diagnostic receiver. This section points the ESP32 at t
 
 *Video 1 ([mp4, 2.5 MB](media/esp32-first-takeoff.mp4)). The takeoff, 34 s, recompressed to 720p from the owner's phone recording.*
 
-**What this does not show.** It is a scripted open-loop 1 s throttle pulse from a bench script, not piloted flight. No range test was done. The ESP32 side of the host-death failsafe is verified (the 300 ms timeout unkeys, `ab_test/timeout2`), but the Betaflight failsafe run was not completed, so what the drone does when the link drops is unverified here.
+**What this does not show.** It is a scripted open-loop 1 s throttle pulse from a bench script, not piloted flight. No range test was done. **Failsafe** was tested with props off: armed at idle, then the Mac stopped sending without a stop command, as if it had crashed. The ESP32 stopped transmitting 0.30 s later (`why=timeout`), Betaflight entered RX failsafe about 0.46 s after that, and it **disarmed 1.25 s after the host died** (`bench/d8-tx/results/bf_link/failsafe/`). A dead ESP32 or a lost radio link ends the same way, because Betaflight only sees the packets stop.
 
 ## What this does not show
 
