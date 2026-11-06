@@ -209,7 +209,8 @@ class D8Link:
 
     def status(self):
         with self._state:
-            return {"link": int(self._linked), "allow_arm": int(self._allow_arm), **self._st}
+            ch = fmt_sticks(list(self._ch), self._allow_arm)[1]  # exactly what the sender puts on air
+            return {"link": int(self._linked), "allow_arm": int(self._allow_arm), "ch": ch, **self._st}
 
     def close(self):
         if self._linked:

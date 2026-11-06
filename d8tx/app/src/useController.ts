@@ -5,6 +5,7 @@ import type { StartOptions, Telemetry, WsState } from './types'
 export const MOCK = new URLSearchParams(location.search).has('mock')
 const SEND_HZ = 120
 const ARM_HOLD_MS = 1000
+const ARM_THROTTLE_HOLD_MS = 500
 
 export interface Sticks {
   throttle: number // 0..1
@@ -296,7 +297,14 @@ export function useController() {
       if (armedRef.current && !allowArm.current) armedRef.current = false
 
       // disarmed: the stick shows a preview, but 1000 is what is sent
-      const sendThr = armedRef.current ? thrUs : 1000
+      // Betaflight arms only if throttle is at minimum when the arm switch goes high: hold 1000 for
+      // ARM_THROTTLE_HOLD_MS after arming, then the normal (eased) throttle takes over
+      const inArmHold = armedRef.current && now - armTrack.current.at < ARM_THROTTLE_HOLD_MS
+      if (inArmHold) {
+        st.current.throttle = 0
+        s.throttle = 0
+      }
+      const sendThr = armedRef.current && !inArmHold ? thrUs : 1000
       const ch = [
         us(sendThr),
         us(1500 + s.roll * 500),
