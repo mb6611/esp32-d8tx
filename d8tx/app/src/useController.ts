@@ -31,21 +31,11 @@ export function useController() {
   const [error, setError] = useState<string | null>(null)
 
   const st = useRef({ throttle: 0, yaw: 0, pitch: 0, roll: 0 })
-  const [mode, setMode] = useState<'fly' | 'sticks'>('fly')
-  const [hover, setHover] = useState(1350)
-  const [tilt, setTilt] = useState(60)
   const [maxThr, setMaxThr] = useState(100)
-  const [upSec, setUpSec] = useState(1.5)
-  const [downSec, setDownSec] = useState(1.0)
-  const [relSec, setRelSec] = useState(0.4)
-  const [mouseYawOn, setMouseYawOn] = useState(false)
-  const settings = useRef({ mode, hover, tilt: tilt / 100, maxThr: maxThr / 100, upSec, downSec, relSec, mouseYaw: mouseYawOn })
+  const settings = useRef({ maxThr: maxThr / 100 })
   useEffect(() => {
-    settings.current = { mode, hover, tilt: tilt / 100, maxThr: maxThr / 100, upSec, downSec, relSec, mouseYaw: mouseYawOn }
+    settings.current = { maxThr: maxThr / 100 }
   })
-  const fphase = useRef({ pitch: 0, roll: 0, yaw: 0, thr: 0 })
-  const fthr = useRef({ dir: 0, t: 0, start: 0, us: 0 })
-  const mouseYaw = useRef(0)
   const keys = useRef(new Set<string>())
   const mouseL = useRef<{ x: number; y: number } | null>(null)
   const mouseR = useRef<{ x: number; y: number } | null>(null)
@@ -125,7 +115,7 @@ export function useController() {
 
   // keyboard
   useEffect(() => {
-    const WATCH = ['w', 's', 'a', 'd', 'q', 'e', ' ', 'shift', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright']
+    const WATCH = ['w', 's', 'a', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright']
     const kd = (e: KeyboardEvent) => {
       const t = e.target as HTMLInputElement | null
       const typing = t?.tagName === 'TEXTAREA' || (t?.tagName === 'INPUT' && !['checkbox', 'radio', 'button'].includes(t.type))
@@ -142,10 +132,6 @@ export function useController() {
         if (!e.repeat && allowArm.current && !armedRef.current) armStart.current = performance.now()
         return
       }
-      if (k === '[' || k === ']') {
-        setHover((h) => clamp(h + (k === ']' ? 10 : -10), 1000, 1700))
-        return
-      }
       if (WATCH.includes(k)) {
         e.preventDefault()
         keys.current.add(k)
@@ -159,18 +145,13 @@ export function useController() {
     const blur = () => {
       keys.current.clear()
     }
-    const mm = (e: MouseEvent) => {
-      if (document.pointerLockElement) mouseYaw.current = clamp(mouseYaw.current + e.movementX * 0.012, -1, 1)
-    }
     window.addEventListener('keydown', kd)
     window.addEventListener('keyup', ku)
     window.addEventListener('blur', blur)
-    window.addEventListener('mousemove', mm)
     return () => {
       window.removeEventListener('keydown', kd)
       window.removeEventListener('keyup', ku)
       window.removeEventListener('blur', blur)
-      window.removeEventListener('mousemove', mm)
     }
   }, [disarm])
 
@@ -186,72 +167,31 @@ export function useController() {
       const k = keys.current
       const s = st.current
       const cfg = settings.current
-      const shift = k.has('shift')
-      const gain = shift ? 0.3 : 1
       const axis = (pos: string, neg: string) => (k.has(pos) ? 1 : 0) - (k.has(neg) ? 1 : 0)
       // keys move a spring axis toward its target at a limited rate, so holding a key ramps the stick
-      // (0 -> full in ~0.45 s) and releasing eases it back to centre (~0.3 s), like a thumb on a gimbal
+      // and releasing eases it back to centre, like a thumb on a gimbal
       const ramp = (cur: number, target: number) => {
         const rate = target === 0 ? 3.3 : 2.2
         const step = rate * dt
         return Math.abs(target - cur) <= step ? target : cur + Math.sign(target - cur) * step
       }
-      // fly mode: phase p in -1..1 moves linearly in time; output is an ease-out curve of p
-      const ph = fphase.current
-      const phase = (cur: number, target: number, tIn: number, tOut: number) => {
-        let rate = tIn
-        if (target === 0 || Math.sign(cur) * Math.sign(target) < 0) rate = tOut
-        const step = dt / rate
-        return Math.abs(target - cur) <= step ? target : cur + Math.sign(target - cur) * step
-      }
-      const eo = (p: number) => Math.sign(p) * (1 - (1 - Math.abs(p)) ** 2)
-      const hover = cfg.hover
-      let thrUs: number
-
-      if (cfg.mode === 'fly') {
-        ph.pitch = phase(ph.pitch, axis('w', 's'), 0.4, 0.25)
-        ph.roll = phase(ph.roll, axis('d', 'a'), 0.4, 0.25)
-        ph.yaw = phase(ph.yaw, axis('e', 'q'), 0.4, 0.25)
-        const ft = fthr.current
-        const dir = (k.has(' ') ? 1 : 0) - (shift ? 1 : 0)
-        if (ft.us === 0) ft.us = hover
-        if (dir !== ft.dir) {
-          ft.dir = dir
-          ft.t = 0
-          ft.start = ft.us
-        }
-        ft.t += dt
-        if (dir === 0) {
-          const u = Math.min(1, ft.t / cfg.relSec)
-          ft.us = ft.start + (hover - ft.start) * (1 - (1 - u) ** 2)
-        } else {
-          const goal = dir > 0 ? 1000 + cfg.maxThr * 1000 : 1000
-          const u = Math.min(1, ft.t / (dir > 0 ? cfg.upSec : cfg.downSec))
-          ft.us = ft.start + (goal - ft.start) * u * u
-        }
-        s.pitch = eo(ph.pitch) * cfg.tilt
-        s.roll = eo(ph.roll) * cfg.tilt
-        mouseYaw.current *= Math.max(0, 1 - 6 * dt)
-        s.yaw = clamp(eo(ph.yaw) + (cfg.mouseYaw ? mouseYaw.current : 0), -1, 1)
-        thrUs = ft.us
-        s.throttle = (clamp(thrUs, 1000, 2000) - 1000) / 1000
+      const cap = cfg.maxThr
+      // non-centering throttle: 0 unless armed; W raises (ease-in, ~2 s to 100%), S lowers (~1.5 s), stays where left
+      const dir = axis('w', 's')
+      if (!armedRef.current) s.throttle = 0
+      else if (mouseL.current) s.throttle = clamp((mouseL.current.y + 1) / 2, 0, cap)
+      else if (dir > 0) s.throttle = Math.min(cap, (Math.sqrt(s.throttle) + dt / 2) ** 2)
+      else if (dir < 0) s.throttle = Math.max(0, s.throttle - dt / 1.5)
+      else s.throttle = Math.min(s.throttle, cap)
+      s.yaw = mouseL.current ? mouseL.current.x : ramp(s.yaw, axis('d', 'a'))
+      if (mouseR.current) {
+        s.roll = mouseR.current.x
+        s.pitch = mouseR.current.y
       } else {
-        if (mouseL.current) {
-          s.throttle = (mouseL.current.y + 1) / 2
-          s.yaw = mouseL.current.x
-        } else {
-          s.throttle = clamp(s.throttle + axis('w', 's') * dt * (shift ? 0.15 : 0.6), 0, 1)
-          s.yaw = ramp(s.yaw, axis('d', 'a') * gain)
-        }
-        if (mouseR.current) {
-          s.roll = mouseR.current.x
-          s.pitch = mouseR.current.y
-        } else {
-          s.roll = ramp(s.roll, axis('arrowright', 'arrowleft') * gain)
-          s.pitch = ramp(s.pitch, axis('arrowup', 'arrowdown') * gain)
-        }
-        thrUs = 1000 + s.throttle * 1000
+        s.roll = ramp(s.roll, axis('arrowright', 'arrowleft'))
+        s.pitch = ramp(s.pitch, axis('arrowup', 'arrowdown'))
       }
+      let thrUs = 1000 + s.throttle * 1000
 
       // arm hold
       if (armStart.current !== null) {
@@ -381,7 +321,7 @@ export function useController() {
     canArm,
     startLink,
     stopLink,
-    mode, setMode, hover, setHover, tilt, setTilt, maxThr, setMaxThr, upSec, setUpSec, downSec, setDownSec, relSec, setRelSec, mouseYawOn, setMouseYawOn,
+    maxThr, setMaxThr,
     disarm: () => {
       st.current.throttle = 0
       disarm()

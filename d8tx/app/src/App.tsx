@@ -37,8 +37,8 @@ function Row({ k, v, cls = '' }: { k: string; v: React.ReactNode; cls?: string }
   )
 }
 
-type Tab = 'fly' | 'sticks' | 'stats'
-const tabFromHash = (): Tab => (location.hash === '#sticks' ? 'sticks' : location.hash === '#stats' ? 'stats' : 'fly')
+type Tab = 'sticks' | 'stats'
+const tabFromHash = (): Tab => (location.hash === '#stats' ? 'stats' : 'sticks')
 
 const REASONS: Record<string, string> = {
   ANGLE: 'drone not level',
@@ -55,16 +55,9 @@ export default function App() {
   const [opts, setOpts] = useState<StartOptions>({ power: 127, fofs_hz: -63000, timeout_ms: 300, allow_arm: true })
   const [tab, setTabState] = useState<Tab>(tabFromHash)
   const setTab = (t: Tab) => {
-    window.history.replaceState(null, '', t === 'fly' ? location.pathname + location.search : '#' + t)
+    window.history.replaceState(null, '', t === 'sticks' ? location.pathname + location.search : '#' + t)
     setTabState(t)
-    if (t !== 'stats') c.setMode(t)
   }
-  useEffect(() => {
-    if (tab !== 'stats') c.setMode(tab)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const fly = c.mode === 'fly'
   const esp = c.tel?.esp
   const fc = c.tel?.fc
   const linked = !!esp?.link
@@ -126,7 +119,7 @@ export default function App() {
     </button>
   )
 
-  const tabs: [Tab, string][] = [['fly', 'Fly'], ['sticks', 'Sticks'], ['stats', 'Stats for nerds']]
+  const tabs: [Tab, string][] = [['sticks', 'Sticks'], ['stats', 'Stats for nerds']]
 
   return (
     <div className="mx-auto max-w-[900px] px-5 pt-10 pb-16">
@@ -153,29 +146,20 @@ export default function App() {
             {linked && <button className="btn text-muted" onClick={c.stopLink}>Stop link</button>}
           </div>
 
-          {fly && (
-            <div className="text-center font-sans">
-              <div className="text-xs font-semibold text-muted">Hover throttle, µs ( [ down, ] up )</div>
-              <div className="font-mono text-6xl tabular-nums">{c.hover}</div>
-            </div>
-          )}
+          <div className="text-center font-sans">
+            <div className="text-xs font-semibold text-muted">Throttle, %</div>
+            <div className="font-mono text-6xl tabular-nums">{Math.round(c.sticks.throttle * 100)}</div>
+          </div>
 
-          <div
-            className="flex flex-wrap justify-center gap-6"
-            onClick={() => {
-              if (fly && c.mouseYawOn && !document.pointerLockElement) void (document.body.requestPointerLock() as unknown)
-            }}
-          >
+          <div className="flex flex-wrap justify-center gap-6">
             <Stick label="Left, mode 2" xLabel="yaw" yLabel={thrLabel} x={c.sticks.yaw} y={c.sticks.throttle * 2 - 1} yPct={c.sticks.throttle * 100} yUs={c.channels[0]}
-              onDrag={(x, y) => !fly && c.setMouseL({ x, y })} onRelease={() => c.setMouseL(null)} />
+              onDrag={(x, y) => c.setMouseL({ x, y })} onRelease={() => c.setMouseL(null)} />
             <Stick label="Right" xLabel="roll" yLabel="pitch" x={c.sticks.roll} y={c.sticks.pitch}
-              onDrag={(x, y) => !fly && c.setMouseR({ x, y })} onRelease={() => c.setMouseR(null)} />
+              onDrag={(x, y) => c.setMouseR({ x, y })} onRelease={() => c.setMouseR(null)} />
           </div>
 
           <p className="m-0 text-center font-sans text-xs leading-snug text-muted">
-            {fly
-              ? 'W/S pitch · A/D roll · Q/E yaw · hold Space climb · hold Shift descend · [ ] hover · hold R arm · X disarm'
-              : 'W/S throttle · A/D yaw · arrows pitch/roll · Shift fine · hold R arm · X disarm · or drag the sticks'}
+            {'W/S throttle (stays where left) · A/D yaw · arrows pitch/roll · hold R arm · X disarm · or drag the sticks'}
           </p>
 
           <details className="w-full font-sans text-sm">
@@ -184,15 +168,7 @@ export default function App() {
               <label>Power (0–127)<input type="number" min={0} max={127} value={opts.power} onChange={num('power')} disabled={linked} /></label>
               <label>FOFS, Hz<input type="number" min={-200000} max={200000} step={1000} value={opts.fofs_hz} onChange={num('fofs_hz')} disabled={linked} /></label>
               <label>Timeout, ms<input type="number" min={50} max={2000} step={50} value={opts.timeout_ms} onChange={num('timeout_ms')} disabled={linked} /></label>
-              <label>Max tilt, %<input type="number" min={10} max={100} value={c.tilt} onChange={(e) => c.setTilt(Number(e.target.value))} /></label>
               <label>Max throttle, %<input type="number" min={0} max={100} value={c.maxThr} onChange={(e) => c.setMaxThr(Number(e.target.value))} /></label>
-              <label>Climb ramp, s<input type="number" min={0.2} max={5} step={0.1} value={c.upSec} onChange={(e) => c.setUpSec(Number(e.target.value))} /></label>
-              <label>Descend ramp, s<input type="number" min={0.2} max={5} step={0.1} value={c.downSec} onChange={(e) => c.setDownSec(Number(e.target.value))} /></label>
-              <label>Release to hover, s<input type="number" min={0.1} max={3} step={0.1} value={c.relSec} onChange={(e) => c.setRelSec(Number(e.target.value))} /></label>
-              <label className="flex items-center gap-2">
-                <input type="checkbox" className="!w-auto" checked={c.mouseYawOn} onChange={(e) => c.setMouseYawOn(e.target.checked)} />
-                Mouse X yaw (click sticks to capture, Esc releases)
-              </label>
             </div>
           </details>
         </main>
