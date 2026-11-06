@@ -3,6 +3,8 @@ import queue
 import threading
 import time
 
+ARM_THROTTLE_HOLD_S = 0.5
+
 from .protocol import (ARM_CH, check_line, LO, MID, SLOT_S, ProtocolError, fmt_sticks, parse_line)
 
 SPIN_S = 0.001
@@ -169,6 +171,7 @@ class D8Link:
         spin = clock is time.perf_counter
         t0 = nxt = clock()
         last = None
+        arm_prev, arm_edge_t = False, None
         sent = skipped = 0
         max_gap = 0.0
         while self._linked and not self._closed:
@@ -189,6 +192,15 @@ class D8Link:
             else:
                 with self._state:
                     ch, allow = list(self._ch), self._allow_arm
+                # Arm-edge guard: Betaflight only arms with throttle at minimum, and an arm switch that
+                # stays high after a refused arm blocks re-arming. Whenever ARM goes low->high, send
+                # throttle 1000 for ARM_THROTTLE_HOLD_S regardless of what the caller asks.
+                arm_hi = allow and ch[ARM_CH] > 1300
+                if arm_hi and not arm_prev:
+                    arm_edge_t = now
+                arm_prev = arm_hi
+                if arm_hi and arm_edge_t is not None and now - arm_edge_t < ARM_THROTTLE_HOLD_S:
+                    ch[0] = LO
                 line, _ = fmt_sticks(ch, allow)
                 try:
                     self._p.write(line.encode())

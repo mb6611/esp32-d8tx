@@ -22,11 +22,15 @@ def test_link_pacing_events_stop(port):
     l.start(power=100, timeout_ms=300, allow_arm=True, fofs_hz=500)
     assert "ARMOK" in port.lines and "LINK 100 300" in port.lines and "FOFS 500" in port.lines
     l.set_sticks([1100, 1500, 1500, 1500, 1500, 1500, 2000, 1500])
-    time.sleep(0.5)
+    time.sleep(0.8)
     st = l.status()
     assert st["link"] == 1 and st["keyed"] == 1
     assert 100 <= st["sender_hz"] <= 115, st
-    assert any(x.startswith("S 1100") and " 2000 1500" in x for x in port.lines)
+    armed = [x for x in port.lines if x.startswith("S ") and " 2000 1500" in x]
+    # arm-edge guard: first ~0.5 s of the arm edge sends throttle 1000, then the requested 1100
+    assert armed[0].startswith("S 1000") and any(x.startswith("S 1100") for x in armed)
+    n_hold = next(i for i, x in enumerate(armed) if x.startswith("S 1100"))
+    assert 45 <= n_hold <= 60, n_hold
     l.stop()
     assert l.status()["link"] == 0
     assert any(e["name"] == "link_end" for e in evs)
@@ -91,3 +95,4 @@ def test_link_end_clears_keyed_and_no_stray_ok(port):
         assert l.info()["proto"] == 1
         assert l.stat()["keyed"] == 0
     l.close()
+
