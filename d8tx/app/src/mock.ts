@@ -32,7 +32,7 @@ export class MockBackend {
       const target = this.link ? (i === 6 && !this.allowArm ? 1000 : this.ch[i]) : v
       return v + (target - v) * k
     })
-    const armed = this.link && this.allowArm && this.rc[6] > 1700 && this.rc[0] < 1900
+    const armed = this.link && this.allowArm && this.slots >= 170 && this.rc[6] > 1700 && this.rc[0] < 1900
     return {
       esp: {
         connected: true,
@@ -49,7 +49,7 @@ export class MockBackend {
         connected: true,
         rc: this.rc.map(Math.round),
         armed,
-        failsafe: !this.link && this.slots > 0,
+        failsafe: this.link ? this.slots < 170 : this.slots > 0, // clears ~1.5 s after the link starts
         arming_disable: armed ? [] : this.link ? ['ARMSWITCH'] : ['RXLOSS'],
         rssi: this.link ? 90 + Math.round(Math.random() * 8) : 0,
       },

@@ -208,7 +208,6 @@ export function useController() {
         s.yaw = clamp(eo(ph.yaw) + (cfg.mouseYaw ? mouseYaw.current : 0), -1, 1)
         const e = eo(ph.thr)
         thrUs = hover + (e >= 0 ? e * cfg.climb : e * cfg.descend)
-        if (!armedRef.current) thrUs = 1000
         s.throttle = (clamp(thrUs, 1000, 2000) - 1000) / 1000
       } else {
         if (mouseL.current) {
@@ -239,8 +238,10 @@ export function useController() {
       }
       if (armedRef.current && !allowArm.current) armedRef.current = false
 
+      // disarmed: the stick shows a preview, but 1000 is what is sent
+      const sendThr = armedRef.current ? thrUs : 1000
       const ch = [
-        us(thrUs),
+        us(sendThr),
         us(1500 + s.roll * 500),
         us(1500 + s.pitch * 500),
         us(1500 + s.yaw * 500),
@@ -287,9 +288,10 @@ export function useController() {
 
   const startLink = useCallback(
     (o: StartOptions) => {
-      startedAllow.current = o.allow_arm
-      if (MOCK) mock.current?.start(o.allow_arm, o.fofs_hz)
-      else void post('/api/link/start', o)
+      // starting a link always allows arming; the 1 s hold is the deliberate gate
+      startedAllow.current = true
+      if (MOCK) mock.current?.start(true, o.fofs_hz)
+      else void post('/api/link/start', { ...o, allow_arm: true })
     },
     [post],
   )
