@@ -1,0 +1,39 @@
+diff --git a/src/main/cli/cli.c b/src/main/cli/cli.c
+index 378e469c3..2820dace4 100644
+--- a/src/main/cli/cli.c
++++ b/src/main/cli/cli.c
+@@ -152,6 +152,9 @@ bool cliMode = false;
+ #include "pg/vtx_table.h"
+ 
+ #include "rx/rx_bind.h"
++#if defined(USE_RXDIAG_CC2500)
++#include "rx/rxdiag_cc2500.h"
++#endif
+ #include "rx/rx_spi.h"
+ 
+ #include "scheduler/scheduler.h"
+@@ -6356,6 +6359,14 @@ typedef struct {
+ static void cliHelp(const char *cmdName, char *cmdline);
+ 
+ // should be sorted a..z for bsearch()
++#if defined(USE_RXDIAG_CC2500)
++static void cliRxDiag(const char *cmdName, char *cmdline)
++{
++    UNUSED(cmdName);
++    rxdiagCliRun(cliPort, cmdline);
++}
++#endif
++
+ const clicmd_t cmdTable[] = {
+     CLI_COMMAND_DEF("adjrange", "configure adjustment ranges", "<index> <unused> <range channel> <start> <end> <function> <select channel> [<center> <scale>]", cliAdjustmentRange),
+     CLI_COMMAND_DEF("aux", "configure modes", "<index> <mode> <aux> <start> <end> <logic>", cliAux),
+@@ -6466,6 +6477,9 @@ const clicmd_t cmdTable[] = {
+ #endif // USE_RC_SMOOTHING_FILTER
+ #ifdef USE_RESOURCE_MGMT
+     CLI_COMMAND_DEF("resource", "show/set resources", "<> | <resource name> <index> [<pin>|none] | show [all]", cliResource),
++#endif
++#if defined(USE_RXDIAG_CC2500)
++    CLI_COMMAND_DEF("rxdiag", "CC2500 receive-only RSSI diagnostic", "info | stream <freq_khz> [window_ms] [bw] | events <freq_khz> [window_ms] [bw] [agc2] [agc1] [ant] | freq <freq_khz> [window_ms] [bw] [agc2] [agc1] [duration_ms]", cliRxDiag),
+ #endif
+     CLI_COMMAND_DEF("rxfail", "show/set rx failsafe settings", NULL, cliRxFailsafe),
+     CLI_COMMAND_DEF("rxrange", "configure rx channel ranges", NULL, cliRxRange),

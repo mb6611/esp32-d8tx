@@ -1,0 +1,85 @@
+# rxdiag proto=1 test vectors v1 (frozen; see interface-v1.md). Whitespace-separated. '#' = comment.
+# freq <freq_khz> <ok|EFREQ> [<word_hex6> <set_hz> <spur>]
+freq 2399999 EFREQ
+freq 2400000 ok 0x5C4EC5 2400000030 0
+freq 2400001 ok 0x5C4EC7 2400000823 0
+freq 2402000 ok 0x5C6276 2401999938 0
+freq 2404000 ok 0x5C7627 2403999847 0
+freq 2404499 ok 0x5C7B11 2404498931 0
+freq 2404500 ok 0x5C7B14 2404500122 1
+freq 2405000 ok 0x5C8000 2405000000 1
+freq 2405500 ok 0x5C84EC 2405499877 1
+freq 2405501 ok 0x5C84EF 2405501068 0
+freq 2412000 ok 0x5CC4EC 2411999877 0
+freq 2418000 ok 0x5D0000 2418000000 1
+freq 2426000 ok 0x5D4EC5 2426000030 0
+freq 2440000 ok 0x5DD89E 2440000183 0
+freq 2480000 ok 0x5F6276 2479999938 0
+freq 2483000 ok 0x5F8000 2483000000 1
+freq 2483500 ok 0x5F84EC 2483499877 1
+freq 2483501 EFREQ
+freq 0 EFREQ
+freq 4294967 EFREQ
+# bw <label_khz> <ok|EARG> [<mdmcfg4_hex2> <bw_hz>]   (MDMCFG4 = E<<6 | M<<4 | 0x0D; bw_hz = floor(26e6/(8*(4+M)*2^E)))
+bw 812 ok 0x0D 812500
+bw 650 ok 0x1D 650000
+bw 541 ok 0x2D 541666
+bw 464 ok 0x3D 464285
+bw 406 ok 0x4D 406250
+bw 325 ok 0x5D 325000
+bw 270 ok 0x6D 270833
+bw 232 ok 0x7D 232142
+bw 203 ok 0x8D 203125
+bw 162 ok 0x9D 162500
+bw 135 ok 0xAD 135416
+bw 116 ok 0xBD 116071
+bw 102 ok 0xCD 101562
+bw 81 ok 0xDD 81250
+bw 68 ok 0xED 67708
+bw 58 ok 0xFD 58035
+bw 0 EARG
+bw 813 EARG
+bw 100 EARG
+bw 500 EARG
+bw 59 EARG
+bw 57 EARG
+# window <window_ms> <ok|EARG>
+window 0 EARG
+window 1 ok
+window 10 ok
+window 1000 ok
+window 1001 EARG
+# status <addr_hex2> <header_hex2>   (header = 0xC0|addr; only 0x30..0x3D valid)
+status 0x30 0xF0
+status 0x31 0xF1
+status 0x32 0xF2
+status 0x33 0xF3
+status 0x34 0xF4
+status 0x35 0xF5
+status 0x36 0xF6
+status 0x37 0xF7
+status 0x38 0xF8
+status 0x39 0xF9
+status 0x3A 0xFA
+status 0x3B 0xFB
+status 0x3C 0xFC
+status 0x3D 0xFD
+# status_invalid <addr_hex2>  (helper must refuse; no SPI traffic)
+status_invalid 0x00
+status_invalid 0x2F
+status_invalid 0x3E
+status_invalid 0x3F
+# micros64 <prev64> <now32> <expected64>
+micros64 0 0 0
+micros64 0 5 5
+micros64 4294967280 4294967295 4294967295
+micros64 4294967280 16 4294967312
+micros64 8589934576 5 8589934597
+micros64 4294967296 256 4294967552
+# drate_baud for MDMCFG3=0x3B DRATE_E=13: floor((256+59)*2^13*26e6/2^28)
+drate 0x3B 13 249938
+# S-line golden: window samples (raw signed bytes, in order) -> exact line; seq t_us marc flags given
+# sline <seq> <t_us> <marc> <flags> <samples comma-separated> => <line>
+sline 0 1010123 13 8 -100,-100,20,5,-128,127 => S,0,1010123,6,4,-128,127,127,-176,13,8
+sline 4294967295 18446744073709551615 13 0 -90 => S,4294967295,18446744073709551615,1,0,-90,-90,-90,-90,13,0
+sline 7 4294968296 13 6 -80,-80,-80 => S,7,4294968296,3,0,-80,-80,-80,-240,13,6

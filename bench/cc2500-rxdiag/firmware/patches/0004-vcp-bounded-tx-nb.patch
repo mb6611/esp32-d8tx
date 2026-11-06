@@ -1,0 +1,87 @@
+diff --git a/src/main/vcpf4/usbd_cdc_vcp.c b/src/main/vcpf4/usbd_cdc_vcp.c
+index dccf0eddb..fb1c09680 100644
+--- a/src/main/vcpf4/usbd_cdc_vcp.c
++++ b/src/main/vcpf4/usbd_cdc_vcp.c
+@@ -197,6 +197,31 @@ uint32_t CDC_Send_FreeBytes(void)
+     return ((APP_Rx_ptr_out - APP_Rx_ptr_in) + (-((int)(APP_Rx_ptr_out <= APP_Rx_ptr_in)) & APP_RX_DATA_SIZE)) - 1;
+ }
+ 
++#if defined(MATEKF411RXDIAG)
++// All-or-nothing, non-blocking write of len bytes. Returns false without touching the ring
++// unless USB is connected+configured, the IN endpoint is idle and len bytes fit.
++bool CDC_Send_DATA_NB(const uint8_t *ptrBuffer, uint32_t sendLength)
++{
++    if (!usbIsConnected() || !usbIsConfigured()) {
++        return false;
++    }
++    if (USB_Tx_State != 0) {
++        return false;
++    }
++    if (CDC_Send_FreeBytes() < sendLength) {
++        return false;
++    }
++    uint32_t in = APP_Rx_ptr_in;
++    for (uint32_t i = 0; i < sendLength; i++) {
++        APP_Rx_Buffer[in] = ptrBuffer[i];
++        in = (in + 1) % APP_RX_DATA_SIZE;
++    }
++    __asm volatile ("" ::: "memory");
++    APP_Rx_ptr_in = in;    // publish once
++    return true;
++}
++#endif
++
+ /**
+  * @brief  VCP_DataTx
+  *         CDC data to be sent to the Host (app) over USB
+@@ -211,15 +236,35 @@ static uint16_t VCP_DataTx(const uint8_t* Buf, uint32_t Len)
+         could just check for: USB_CDC_ZLP, but better to be safe
+         and wait for any existing transmission to complete.
+     */
++#if defined(MATEKF411RXDIAG)
++    {
++        const uint32_t waitStart = millis();
++        while (USB_Tx_State != 0) {
++            if ((uint32_t)(millis() - waitStart) >= 50U) {
++                return USBD_FAIL;   // bounded: drop instead of hanging the CLI
++            }
++        }
++    }
++#else
+     while (USB_Tx_State != 0);
++#endif
+ 
+     for (uint32_t i = 0; i < Len; i++) {
+         APP_Rx_Buffer[APP_Rx_ptr_in] = Buf[i];
+         APP_Rx_ptr_in = (APP_Rx_ptr_in + 1) % APP_RX_DATA_SIZE;
+ 
++#if defined(MATEKF411RXDIAG)
++        for (uint32_t waited = 0; CDC_Send_FreeBytes() == 0; waited++) {
++            if (waited >= 50U) {
++                return USBD_FAIL;   // bounded: <= 50 x 1 ms
++            }
++            delay(1);
++        }
++#else
+         while (CDC_Send_FreeBytes() == 0) {
+             delay(1);
+         }
++#endif
+     }
+ 
+     return USBD_OK;
+diff --git a/src/main/vcpf4/usbd_cdc_vcp.h b/src/main/vcpf4/usbd_cdc_vcp.h
+index fc27a6d98..07d07c0e5 100644
+--- a/src/main/vcpf4/usbd_cdc_vcp.h
++++ b/src/main/vcpf4/usbd_cdc_vcp.h
+@@ -38,6 +38,10 @@ extern USB_OTG_CORE_HANDLE USB_OTG_dev;
+ 
+ uint32_t CDC_Send_DATA(const uint8_t *ptrBuffer, uint32_t sendLength);
+ uint32_t CDC_Send_FreeBytes(void);
++#if defined(MATEKF411RXDIAG)
++#include <stdbool.h>
++bool CDC_Send_DATA_NB(const uint8_t *ptrBuffer, uint32_t sendLength);
++#endif
+ uint32_t CDC_Receive_DATA(uint8_t* recvBuf, uint32_t len);       // HJI
+ uint32_t CDC_Receive_BytesAvailable(void);
+ 

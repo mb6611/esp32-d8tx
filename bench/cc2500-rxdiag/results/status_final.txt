@@ -1,0 +1,15 @@
+status
+MCU F411 Clock=108MHz (PLLP-HSE), Vref=3.29V, Core temp=42degC
+Stack size: 2048, Stack address: 0x2001fff0
+Config size: 3924, Max available config: 16384
+Gyros detected: gyro 1
+GYRO=ICM20689, ACC=ICM20689
+OSD: MAX7456
+System Uptime: 14 seconds
+CPU:9%, cycle time: 125, GYRO rate: 8000, RX rate: 33, System rate: 9
+Voltage: 1 * 0.01V (0S battery - NOT PRESENT)
+I2C Errors: 0
+SD card: Not configured
+Arming disable flags: RXLOSS CLI
+
+# 

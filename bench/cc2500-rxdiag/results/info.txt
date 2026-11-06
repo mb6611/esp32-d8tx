@@ -1,0 +1,23 @@
+rxdiag info
+I,proto=1,fw=4cd0deab,bf=948ba63,build=MATEKF411RXDIAG,board=M41R,usb=MATEKF411RX-RXDIAG,reset_ok=1,rb_ok=1,part=0x80,ver=0x03,cs=A15,exti=C14,txen=A8,lna=A13,ant=A14,spi=3,spidiv=32,spi_hz=3375000,motor_proto=DISABLED,motor_dev=null,vbat_cv=1
+
+# 
+status
+MCU F411 Clock=108MHz (PLLP-HSE), Vref=3.28V, Core temp=44degC
+Stack size: 2048, Stack address: 0x2001fff0
+Config size: 3670, Max available config: 16384
+Gyros detected:
+
+OSD: NONE
+System Uptime: 38 seconds
+CPU:1%, cycle time: 0, GYRO rate: 0, RX rate: 33, System rate: 9
+Voltage: 1 * 0.01V (0S battery - NOT PRESENT)
+I2C Errors: 0
+Arming disable flags: NOGYRO RXLOSS CLI MOTOR_PROTO
+
+# 
+get motor_pwm_protocol
+motor_pwm_protocol = DISABLED
+Allowed values: PWM, ONESHOT125, ONESHOT42, MULTISHOT, BRUSHED, DSHOT150, DSHOT300, DSHOT600, PROSHOT1000, DISABLED
+
+# 

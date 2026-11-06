@@ -1,0 +1,6 @@
+# Local test executables and Python/macOS build byproducts
+test_core
+rxdiag_sim
+*.dSYM/
+__pycache__/
+*.pyc

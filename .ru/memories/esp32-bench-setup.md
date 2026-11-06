@@ -10,6 +10,8 @@ The bench setup that stages 0–2 share. Exact commands live in `stage0/README.m
 - Board: ESP32 DevKit V1 (ESP32-D0WD-V3 rev 3.0, 40 MHz XTAL, 4 MB flash) on
   `/dev/cu.usbserial-0001`. Its USB-UART is an original CP2102: **921600 is the ceiling**,
   2 Mbaud silently fails (board never answers). Pass `-b 921600` to `idf.py flash`.
+- `esptool read-flash` (full-flash backup) failed at 921600 and 460800 with "Invalid head of packet"; 230400
+  worked (2 MB in ~95 s, Nov 2026). Writing at 921600 is fine.
 - Toolchain pins: ESP-IDF at `~/esp/esp-idf` @ `25fe69f946311abdaf9ad56591f25fedbc20ac98`
   (`v6.1-dev-6376`, the commit esp-sdr's `firmware-targets.json` pins for profile `esp32`),
   xtensa-esp-elf esp-16.1.0_20260609, esp-sdr at `vendor/esp-sdr` @ `9b61e74`. Always

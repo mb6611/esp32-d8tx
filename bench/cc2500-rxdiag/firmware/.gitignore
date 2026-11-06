@@ -1,0 +1,7 @@
+# generated build state (clone, toolchains, artifacts)
+work/
+out/*/build.log
+out/*/*.bin
+out/*/*.hex
+out/*/*.elf
+out/*/*.map
