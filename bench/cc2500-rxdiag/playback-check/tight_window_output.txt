@@ -1,0 +1,37 @@
+== pilot2-km0: window [t_send+1.5, t_send+4.5] ms
+  idle   slots  6 hit  0 | per-slot max dur med/min/max None peak None | all bursts n=0 dur None peak None npk 0 | keyed_us None
+  unkey  slots  6 hit  0 | per-slot max dur med/min/max None peak None | all bursts n=0 dur None peak None npk 0 | keyed_us (0, 0)
+  tone   slots  6 hit  6 | per-slot max dur med/min/max (310.5, 256, 661) peak (21.5, 20, 24) | all bursts n=15 dur (138, 20, 661) peak (20, -14, 24) npk 11 | keyed_us (322, 448)
+-- pilot2-km0: excluding slots with keyed_us > 440
+  idle   slots  6 hit  0 | per-slot max dur med/min/max None peak None | all bursts n=0 dur None peak None npk 0 | keyed_us None
+  unkey  slots  6 hit  0 | per-slot max dur med/min/max None peak None | all bursts n=0 dur None peak None npk 0 | keyed_us (0, 0)
+  tone   slots  5 hit  5 | per-slot max dur med/min/max (266, 256, 661) peak (21, 20, 22) | all bursts n=14 dur (123.5, 20, 661) peak (8.5, -14, 22) npk 10 | keyed_us (322, 323)
+   overlong slots (cond, i, keyed_us): [('tone', 7, 448)]
+   slots where longest in-window detection > keyed_us (cond,i,keyed,det,nbursts): [('tone', 13, 322, 375, 4), ('tone', 15, 322, 661, 6)]
+   slots with >1 in-window burst: [('tone', 10, 2), ('tone', 13, 4), ('tone', 15, 6)]
+== A-km0-p127: window [t_send+1.5, t_send+4.5] ms
+  zero   slots 20 hit 20 | per-slot max dur med/min/max (246.0, 168, 355) peak (-6.0, -9, 6) | all bursts n=22 dur (246.0, 59, 355) peak (-6, -9, 6) npk 21 | keyed_us (309, 483)
+  pat    slots 20 hit 20 | per-slot max dur med/min/max (247.0, 236, 266) peak (-5.0, -9, -1) | all bursts n=20 dur (247.0, 236, 266) peak (-5.0, -9, -1) npk 20 | keyed_us (309, 322)
+  unkey  slots 20 hit  0 | per-slot max dur med/min/max None peak None | all bursts n=0 dur None peak None npk 0 | keyed_us (0, 0)
+  idle   slots 20 hit  1 | per-slot max dur med/min/max (79, 79, 79) peak (0, 0, 0) | all bursts n=1 dur (79, 79, 79) peak (0, 0, 0) npk 1 | keyed_us None
+  tone   slots 20 hit 20 | per-slot max dur med/min/max (251.5, 217, 552) peak (22.0, -6, 27) | all bursts n=45 dur (138, 19, 552) peak (20, -17, 27) npk 33 | keyed_us (309, 322)
+-- A-km0-p127: excluding slots with keyed_us > 440
+  zero   slots 19 hit 19 | per-slot max dur med/min/max (246, 168, 247) peak (-6, -9, -3) | all bursts n=21 dur (246, 59, 247) peak (-6.0, -9, -3) npk 20 | keyed_us (309, 313)
+  pat    slots 20 hit 20 | per-slot max dur med/min/max (247.0, 236, 266) peak (-5.0, -9, -1) | all bursts n=20 dur (247.0, 236, 266) peak (-5.0, -9, -1) npk 20 | keyed_us (309, 322)
+  unkey  slots 20 hit  0 | per-slot max dur med/min/max None peak None | all bursts n=0 dur None peak None npk 0 | keyed_us (0, 0)
+  idle   slots 20 hit  1 | per-slot max dur med/min/max (79, 79, 79) peak (0, 0, 0) | all bursts n=1 dur (79, 79, 79) peak (0, 0, 0) npk 1 | keyed_us None
+  tone   slots 20 hit 20 | per-slot max dur med/min/max (251.5, 217, 552) peak (22.0, -6, 27) | all bursts n=45 dur (138, 19, 552) peak (20, -17, 27) npk 33 | keyed_us (309, 322)
+   overlong slots (cond, i, keyed_us): [('zero', 0, 483)]
+   slots where longest in-window detection > keyed_us (cond,i,keyed,det,nbursts): [('tone', 10, 322, 325, 1), ('tone', 56, 310, 443, 10), ('tone', 90, 321, 552, 1), ('tone', 99, 321, 345, 1)]
+   slots with >1 in-window burst: [('tone', 27, 3), ('zero', 39, 2), ('tone', 51, 3), ('tone', 56, 10), ('tone', 74, 3), ('tone', 77, 9), ('tone', 87, 3), ('zero', 91, 2)]
+== B-km0-p127-dc: window [t_send+1.5, t_send+4.5] ms
+  dc     slots 20 hit 20 | per-slot max dur med/min/max (207.0, 197, 315) peak (-2.0, -4, 4) | all bursts n=21 dur (207, 79, 315) peak (-2.0, -4, 4) npk 20 | keyed_us (271, 445)
+  zero   slots 20 hit 20 | per-slot max dur med/min/max (202.5, 197, 208) peak (-1.0, -3, 6) | all bursts n=22 dur (198.0, 79, 208) peak (-1.0, -5, 6) npk 22 | keyed_us (271, 272)
+  idle   slots 20 hit  0 | per-slot max dur med/min/max None peak None | all bursts n=0 dur None peak None npk 0 | keyed_us None
+-- B-km0-p127-dc: excluding slots with keyed_us > 440
+  dc     slots 19 hit 19 | per-slot max dur med/min/max (207, 197, 208) peak (-2, -4, 4) | all bursts n=20 dur (207.0, 79, 208) peak (-2, -4, 4) npk 19 | keyed_us (271, 271)
+  zero   slots 20 hit 20 | per-slot max dur med/min/max (202.5, 197, 208) peak (-1.0, -3, 6) | all bursts n=22 dur (198.0, 79, 208) peak (-1.0, -5, 6) npk 22 | keyed_us (271, 272)
+  idle   slots 20 hit  0 | per-slot max dur med/min/max None peak None | all bursts n=0 dur None peak None npk 0 | keyed_us None
+   overlong slots (cond, i, keyed_us): [('dc', 0, 445)]
+   slots where longest in-window detection > keyed_us (cond,i,keyed,det,nbursts): []
+   slots with >1 in-window burst: [('zero', 30, 2), ('dc', 46, 2), ('zero', 48, 2)]

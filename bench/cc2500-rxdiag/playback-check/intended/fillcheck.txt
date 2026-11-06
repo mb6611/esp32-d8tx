@@ -1,0 +1,86 @@
+{
+ "pat156": {
+  "args": [
+   1,
+   16384,
+   200,
+   32
+  ],
+  "peak_hz": 156250.0,
+  "peak_frac_power": 0.6665556101953577,
+  "I_range": [
+   -200,
+   200
+  ],
+  "Q_range": [
+   -200,
+   200
+  ],
+  "rms": 200.03284886488018,
+  "words_0_3": [
+   "0xc8",
+   "0x8c8",
+   "0x14c8",
+   "0x1cc8"
+  ],
+  "period_samples": 512.0,
+  "whole_cycles_in_6144": 12.0,
+  "zero_all": false
+ },
+ "pat": {
+  "args": [
+   1,
+   16384,
+   200,
+   256
+  ],
+  "peak_hz": 1250000.0,
+  "peak_frac_power": 0.6665556834156972,
+  "I_range": [
+   -200,
+   200
+  ],
+  "Q_range": [
+   -200,
+   200
+  ],
+  "rms": 199.894034428244,
+  "words_0_3": [
+   "0xc8",
+   "0x50c7",
+   "0x9cc4",
+   "0xe8bf"
+  ],
+  "period_samples": 64.0,
+  "whole_cycles_in_6144": 96.0,
+  "zero_all": false
+ },
+ "zero": {
+  "args": [
+   0,
+   16384,
+   0,
+   0
+  ],
+  "peak_hz": -40000000.0,
+  "peak_frac_power": 0,
+  "I_range": [
+   0,
+   0
+  ],
+  "Q_range": [
+   0,
+   0
+  ],
+  "rms": 0.0,
+  "words_0_3": [
+   "0x0",
+   "0x0",
+   "0x0",
+   "0x0"
+  ],
+  "period_samples": null,
+  "whole_cycles_in_6144": null,
+  "zero_all": true
+ }
+}

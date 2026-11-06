@@ -1,0 +1,3 @@
+ready boot-lines: 1
+reading1 V,bbpll,reg10=10,reg11=c2,div_dac=0,bbcfg=10000002 | OK | 
+reading2 V,bbpll,reg10=10,reg11=c2,div_dac=0,bbcfg=10000002 | OK | 

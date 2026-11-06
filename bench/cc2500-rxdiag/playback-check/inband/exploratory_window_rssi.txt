@@ -1,0 +1,5 @@
+C windows 131 overall max raw -4 min -74
+unkey window max raw [-34, -35, -33, -9, -34] median -34
+idle window max raw [-12, -34, -35, -33, -35] median -34
+zero window max raw [-33, -35, -35, -35, -32] median -35
+pat window max raw [-33, -6, -35, -33, -9] median -33

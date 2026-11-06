@@ -1,0 +1,9 @@
+chip      ESP32SDR protocol 6 mode burst
+max_n     16380
+firmware  549bdce9be75b9d135f2b3ba95d75546508d5c18-dirty (esp32-devkitv1, 2026-11-05)
+transport UART 921600
+rates     80 40 16 MS/s
+bits      8 10
+gain      index 0..81 (step 1), hardware AGC default
+tuning    1850-2500 MHz (host limit)
+caps      VERSION GPIO SPEC SPECN SPECCAPS SPECSTAT DCT UARTBAUD RXLIMITS SERIALLEASE TUNEEXT RX40 RX16 LPFANA GAIN HWAGC IQ8 IQS FOFS HOPF

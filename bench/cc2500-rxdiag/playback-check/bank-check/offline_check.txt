@@ -1,0 +1,13 @@
+PASS samples base 0x3ffe8000 
+PASS MAC_DUMP_MODE at bits [6:5] 
+PASS grant(m) writes (m&3)<<S, clears old field 
+PASS cmd_tx applies grant(gmode) after key, before run; restores owner afterwards 
+PASS fill releases grant (mode 0) while the CPU writes, restores owner 
+PASS vendor get_txdumpaddr returns 0x3ffe8000 (=txeng sample base) size arg ['12']
+PASS vendor clear_txdumpmem spans 0x3ffe8000 + 0x3fff words (16384 words = 64 KiB) 
+PASS measured (capture side) bank map: mode2=lower, mode1=upper, offsets 0..8191 land in the bank, >=8192 dropped 
+PASS count 6143 -> 6144 words = 0x3ffe8000..0x3ffee000, inside lower bank 0x3ffe8000..0x3fff0000 
+PASS gmode 2: engine offsets 0..6143 inside offsets 0..8191 that map to the granted (lower) bank 
+PASS gmode 1: same offsets map to UPPER bank 0x3fff0000..0x3fff8000; fill writes all 16384 words so upper holds the same data (F 0 16384 ..) 
+ASSUMPTION (not proven offline): playback reads follow the capture-side bank map (same engine, same DPORT field).
+OFFLINE RESULT: CONSISTENT

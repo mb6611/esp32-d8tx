@@ -1,0 +1,59 @@
+version
+# Betaflight / STM32F411 (S411) 4.2.11 Nov  9 2021 / 20:28:23 (948ba6339) MSP API: 1.43
+###ERROR: version: NO CONFIG FOUND###
+# status
+MCU F411 Clock=108MHz (PLLP-HSI), Vref=3.29V, Core temp=40degC
+Stack size: 2048, Stack address: 0x2001fff0
+Config size: 3924, Max available config: 16384
+Gyros detected:
+
+OSD: NONE
+System Uptime: 9 seconds
+CPU:1%, cycle time: 0, GYRO rate: 0, RX rate: 33, System rate: 9
+Voltage: 0 * 0.01V (0S battery - NOT PRESENT)
+I2C Errors: 0
+SD card: Not configured
+Arming disable flags: NOGYRO RXLOSS CLI MOTOR_PROTO
+
+# diff all
+###WARNING: NO CUSTOM DEFAULTS FOUND###
+
+# version
+# Betaflight / STM32F411 (S411) 4.2.11 Nov  9 2021 / 20:28:23 (948ba6339) MSP API: 1.43
+###ERROR: diff: NO CONFIG FOUND###
+# start the command batch
+batch start
+
+# reset configuration to default settings
+defaults nosave
+
+mcu_id 004b00363132510531373731
+signature 
+
+profile 0
+
+profile 1
+
+profile 2
+
+# restore original profile selection
+profile 0
+
+rateprofile 0
+
+rateprofile 1
+
+rateprofile 2
+
+rateprofile 3
+
+rateprofile 4
+
+rateprofile 5
+
+# restore original rateprofile selection
+rateprofile 0
+
+# save configuration
+save
+# 

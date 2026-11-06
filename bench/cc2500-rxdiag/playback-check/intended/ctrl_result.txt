@@ -1,0 +1,120 @@
+{
+ "rx_khz": 2412000,
+ "expected_word": "0x5cc4ec",
+ "invalid": [],
+ "clock": {
+  "slope_ppm": -1723.5,
+  "lat_p50_ms": 8.43,
+  "lat_p90_ms": 14.99,
+  "nC": 124
+ },
+ "cond": {
+  "tone": {
+   "n": 5,
+   "hits": 5,
+   "peaks": [
+    23,
+    18,
+    23,
+    23,
+    20
+   ],
+   "peak_median": 23,
+   "durs": [
+    237,
+    237,
+    118,
+    158,
+    119
+   ],
+   "keyed_us": [
+    368,
+    206,
+    194,
+    198,
+    205
+   ]
+  },
+  "unkey": {
+   "n": 5,
+   "hits": 0,
+   "peaks": [
+    -128,
+    -128,
+    -128,
+    -128,
+    -128
+   ],
+   "peak_median": -128,
+   "durs": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "keyed_us": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  "idle": {
+   "n": 5,
+   "hits": 0,
+   "peaks": [
+    -128,
+    -128,
+    -128,
+    -128,
+    -128
+   ],
+   "peak_median": -128,
+   "durs": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "keyed_us": [
+    null,
+    null,
+    null,
+    null,
+    null
+   ]
+  },
+  "zero": {
+   "n": 5,
+   "hits": 5,
+   "peaks": [
+    -5,
+    -4,
+    -3,
+    -4,
+    -6
+   ],
+   "peak_median": -4,
+   "durs": [
+    118,
+    118,
+    119,
+    118,
+    118
+   ],
+   "keyed_us": [
+    194,
+    194,
+    194,
+    198,
+    194
+   ]
+  }
+ },
+ "saturated": false,
+ "control_pass": true,
+ "outcome": "CONTROL-PASS"
+}

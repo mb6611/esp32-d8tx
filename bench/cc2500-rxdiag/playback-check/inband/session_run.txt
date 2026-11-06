@@ -1,0 +1,2 @@
+preflight: worst-case keyed 391 us (observed overhead 291 + tmo 100), abort above 400 us
+{"Q": ["V,freq,2412,xtal=40,cap_reg=b0"], "K": ["V,key_mode,0,-1,gain_max=72"], "pb51_before": ["V,pbus,5,1,0"], "pb51_after": ["V,pbus,5,1,0"], "got_x": true, "hangs": 0, "abort": null}

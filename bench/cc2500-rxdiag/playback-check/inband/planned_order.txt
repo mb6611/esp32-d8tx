@@ -1,0 +1,1 @@
+['unkey', 'idle', 'unkey', 'zero', 'unkey', 'pat', 'unkey', 'pat', 'idle', 'idle', 'idle', 'pat', 'zero', 'pat', 'zero', 'zero', 'pat', 'idle', 'zero', 'unkey']

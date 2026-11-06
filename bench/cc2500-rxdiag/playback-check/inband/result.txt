@@ -1,0 +1,133 @@
+{
+ "expected_word": "0x5cd13b",
+ "H": {
+  "freq_req_khz": "2413250",
+  "freq_set_hz": "2413249969",
+  "freq_word": "0x5CD13B",
+  "freq_rb": "0x5CD13B",
+  "bw_hz": "203125",
+  "agcctrl2": "0xCB",
+  "agcctrl1": "0x42",
+  "gdo_ok": "1",
+  "fscal1": "0x1C"
+ },
+ "clock": {
+  "slope_ppm": -1845.1,
+  "lat_p50_ms": 7.84,
+  "lat_p90_ms": 14.65,
+  "nC": 131
+ },
+ "invalid": [],
+ "cond": {
+  "pat": {
+   "n": 5,
+   "hits": 0,
+   "peaks": [
+    -128,
+    -128,
+    -128,
+    -128,
+    -128
+   ],
+   "peak_median": -128,
+   "keyed_us": [
+    198,
+    194,
+    194,
+    206,
+    206
+   ],
+   "durs": [
+    [],
+    [],
+    [],
+    [],
+    []
+   ]
+  },
+  "zero": {
+   "n": 5,
+   "hits": 0,
+   "peaks": [
+    -128,
+    -128,
+    -128,
+    -128,
+    -128
+   ],
+   "peak_median": -128,
+   "keyed_us": [
+    320,
+    195,
+    194,
+    195,
+    194
+   ],
+   "durs": [
+    [],
+    [],
+    [],
+    [],
+    []
+   ]
+  },
+  "unkey": {
+   "n": 5,
+   "hits": 0,
+   "peaks": [
+    -128,
+    -128,
+    -128,
+    -128,
+    -128
+   ],
+   "peak_median": -128,
+   "keyed_us": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "durs": [
+    [],
+    [],
+    [],
+    [],
+    []
+   ]
+  },
+  "idle": {
+   "n": 5,
+   "hits": 0,
+   "peaks": [
+    -128,
+    -128,
+    -128,
+    -128,
+    -128
+   ],
+   "peak_median": -128,
+   "keyed_us": [
+    null,
+    null,
+    null,
+    null,
+    null
+   ],
+   "durs": [
+    [],
+    [],
+    [],
+    [],
+    []
+   ]
+  }
+ },
+ "fisher_p": 1.0,
+ "mwu_p": 1.0,
+ "median_peak_diff": 0,
+ "primary": false,
+ "secondary": false,
+ "outcome": "NO-DIFF"
+}

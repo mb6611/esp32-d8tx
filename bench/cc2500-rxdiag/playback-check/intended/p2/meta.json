@@ -1,0 +1,75 @@
+{
+ "args": {
+  "out": "p2",
+  "conds": "pat156,zero,unkey,idle",
+  "n": 8,
+  "km": 0,
+  "pwr": 127,
+  "gmode": 3,
+  "agc2": 203,
+  "agc1": 66,
+  "seed": 1003,
+  "count": 6143,
+  "tmo": 100,
+  "rx_khz": 2411844,
+  "rx_bw": 203
+ },
+ "order": [
+  "pat156",
+  "unkey",
+  "unkey",
+  "idle",
+  "zero",
+  "pat156",
+  "unkey",
+  "idle",
+  "pat156",
+  "unkey",
+  "zero",
+  "zero",
+  "pat156",
+  "pat156",
+  "idle",
+  "unkey",
+  "idle",
+  "unkey",
+  "zero",
+  "pat156",
+  "zero",
+  "pat156",
+  "zero",
+  "idle",
+  "idle",
+  "idle",
+  "zero",
+  "unkey",
+  "pat156",
+  "zero",
+  "unkey",
+  "idle"
+ ],
+ "ready": "I,ready,ahb_sel=00000000 txe=00000000 tone0=2003a020",
+ "abort": null,
+ "Q": [
+  "V,freq,2412,xtal=40,cap_reg=b0"
+ ],
+ "K": [
+  "V,key_mode,0,-1,gain_max=72"
+ ],
+ "pb51_before": [
+  "V,pbus,5,1,0"
+ ],
+ "rx_cmd": "rxdiag events 2411844 100 203 203 66 1",
+ "t_rx_cmd": 871622.395137416,
+ "Q_after_rx_start": [
+  "V,freq,2412,xtal=40,cap_reg=b0"
+ ],
+ "pb51_after": [
+  "V,pbus,5,1,0"
+ ],
+ "Q_after": [
+  "V,freq,2412,xtal=40,cap_reg=b0"
+ ],
+ "got_x": true,
+ "hangs": 0
+}

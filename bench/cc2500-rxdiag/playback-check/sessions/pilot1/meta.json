@@ -1,0 +1,53 @@
+{
+ "args": {
+  "out": "sessions/pilot1",
+  "conds": "tone,unkey,idle",
+  "n": 6,
+  "km": 1,
+  "pwr": 127,
+  "gmode": 3,
+  "agc2": 251,
+  "agc1": 64,
+  "seed": 11
+ },
+ "order": [
+  "tone",
+  "tone",
+  "unkey",
+  "tone",
+  "idle",
+  "unkey",
+  "tone",
+  "unkey",
+  "unkey",
+  "idle",
+  "tone",
+  "tone",
+  "unkey",
+  "idle",
+  "unkey",
+  "idle",
+  "idle",
+  "idle"
+ ],
+ "ready": "I,ready,ahb_sel=00000000 txe=00000000 tone0=2003a020",
+ "Q": [
+  "V,freq,2412,xtal=40,cap_reg=b0"
+ ],
+ "K": [
+  "V,key_mode,1,-1,gain_max=72"
+ ],
+ "pb51_before": [
+  "V,pbus,5,1,0"
+ ],
+ "rx_cmd": "rxdiag events 2412000 100 812 251 64 1",
+ "t_rx_cmd": 862209.215256083,
+ "pb51_after": [
+  "V,pbus,5,1,0"
+ ],
+ "Q_after": [
+  "V,freq,2412,xtal=40,cap_reg=b0"
+ ],
+ "got_x": true,
+ "hangs": 0
+}

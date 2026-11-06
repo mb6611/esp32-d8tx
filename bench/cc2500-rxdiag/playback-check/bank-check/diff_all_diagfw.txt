@@ -1,0 +1,58 @@
+version
+# Betaflight / MATEKF411RXDIAG (M41R) 4.2.11 Nov  6 2026 / 00:13:07 () MSP API: 1.43
+
+# status
+MCU F411 Clock=108MHz (PLLP-HSE), Vref=3.28V, Core temp=43degC
+Stack size: 2048, Stack address: 0x2001fff0
+Config size: 3670, Max available config: 16384
+Gyros detected:
+
+OSD: NONE
+System Uptime: 152 seconds
+CPU:1%, cycle time: 0, GYRO rate: 0, RX rate: 33, System rate: 10
+Voltage: 1 * 0.01V (0S battery - NOT PRESENT)
+I2C Errors: 0
+Arming disable flags: NOGYRO RXLOSS CLI MOTOR_PROTO
+
+# diff all
+
+# version
+# Betaflight / MATEKF411RXDIAG (M41R) 4.2.11 Nov  6 2026 / 00:13:07 () MSP API: 1.43
+
+# start the command batch
+batch start
+
+# reset configuration to default settings
+defaults nosave
+
+board_name MATEKF411RXDIAG
+mcu_id 004b00363132510531373731
+signature 
+
+profile 0
+
+profile 1
+
+profile 2
+
+# restore original profile selection
+profile 0
+
+rateprofile 0
+
+rateprofile 1
+
+rateprofile 2
+
+rateprofile 3
+
+rateprofile 4
+
+rateprofile 5
+
+# restore original rateprofile selection
+rateprofile 0
+
+# save configuration
+save
+# 

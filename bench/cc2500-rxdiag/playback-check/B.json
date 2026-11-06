@@ -1,0 +1,1658 @@
+{
+ "window": [
+  -0.01,
+  0.03
+ ],
+ "sessions": [
+  {
+   "dir": "sessions/B-km0-p127-dc",
+   "H": {
+    "freq_req_khz": "2412000",
+    "freq_word": "0x5CC4EC",
+    "freq_rb": "0x5CC4EC",
+    "agcctrl2": "0xCB",
+    "agcctrl1": "0x42",
+    "gdo_ok": "1",
+    "fscal1": "0x1B",
+    "ant": "1"
+   },
+   "clock": {
+    "slope_ppm": -1740.6,
+    "lat_p50_ms": 8.45,
+    "lat_p90_ms": 15.02,
+    "nC": 312
+   },
+   "bursts_total": 187,
+   "B_records": 186,
+   "ring_lost": 0,
+   "B_tx_fail": 1,
+   "seconds": 31.21,
+   "ambient_rate_per_s": 5.99,
+   "rssi_maxLow": 7,
+   "rssi_minHigh": -32,
+   "km": 0,
+   "pwr": 127,
+   "gmode": 3,
+   "pb51_before": [
+    "V,pbus,5,1,0"
+   ],
+   "pb51_after": [
+    "V,pbus,5,1,0"
+   ],
+   "Q": [
+    "V,freq,2412,xtal=40,cap_reg=b0"
+   ],
+   "Q_after": [
+    "V,freq,2412,xtal=40,cap_reg=b0"
+   ],
+   "hangs": 0,
+   "slots": [
+    {
+     "i": 0,
+     "cond": "dc",
+     "keyed_us": 445,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862492.3475,
+     "cmd_ms": 10.1,
+     "hits": [
+      [
+       0.0021,
+       315,
+       -1,
+       8
+      ]
+     ],
+     "near_lags": [
+      -0.1508,
+      -0.1506,
+      0.0021
+     ]
+    },
+    {
+     "i": 1,
+     "cond": "dc",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862492.897,
+     "cmd_ms": 10.5,
+     "hits": [
+      [
+       0.0022,
+       207,
+       -2,
+       4
+      ]
+     ],
+     "near_lags": [
+      0.0022
+     ]
+    },
+    {
+     "i": 2,
+     "cond": "dc",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862493.3047,
+     "cmd_ms": 9.7,
+     "hits": [
+      [
+       0.0021,
+       207,
+       -1,
+       8
+      ]
+     ],
+     "near_lags": [
+      0.0021
+     ]
+    },
+    {
+     "i": 3,
+     "cond": "zero",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862493.7461,
+     "cmd_ms": 10.5,
+     "hits": [
+      [
+       0.0022,
+       207,
+       -3,
+       4
+      ]
+     ],
+     "near_lags": [
+      0.0022
+     ]
+    },
+    {
+     "i": 4,
+     "cond": "idle",
+     "keyed_us": null,
+     "ndone": null,
+     "pb51": null,
+     "tone_before": null,
+     "tone_after": null,
+     "t_send": 862494.358,
+     "cmd_ms": 0.0,
+     "hits": [],
+     "near_lags": []
+    },
+    {
+     "i": 5,
+     "cond": "zero",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862495.012,
+     "cmd_ms": 10.5,
+     "hits": [
+      [
+       0.0023,
+       197,
+       3,
+       5
+      ]
+     ],
+     "near_lags": [
+      0.0023
+     ]
+    },
+    {
+     "i": 6,
+     "cond": "dc",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862495.4351,
+     "cmd_ms": 10.5,
+     "hits": [
+      [
+       0.0022,
+       197,
+       0,
+       6
+      ]
+     ],
+     "near_lags": [
+      0.0022
+     ]
+    },
+    {
+     "i": 7,
+     "cond": "dc",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862495.8928,
+     "cmd_ms": 9.8,
+     "hits": [
+      [
+       0.0021,
+       207,
+       4,
+       3
+      ]
+     ],
+     "near_lags": [
+      0.0021
+     ]
+    },
+    {
+     "i": 8,
+     "cond": "dc",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862496.2641,
+     "cmd_ms": 10.5,
+     "hits": [
+      [
+       0.0021,
+       198,
+       -1,
+       3
+      ]
+     ],
+     "near_lags": [
+      0.0021
+     ]
+    },
+    {
+     "i": 9,
+     "cond": "dc",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862496.6734,
+     "cmd_ms": 10.2,
+     "hits": [
+      [
+       0.0021,
+       207,
+       -4,
+       3
+      ]
+     ],
+     "near_lags": [
+      -0.0766,
+      -0.0764,
+      0.0021
+     ]
+    },
+    {
+     "i": 10,
+     "cond": "idle",
+     "keyed_us": null,
+     "ndone": null,
+     "pb51": null,
+     "tone_before": null,
+     "tone_after": null,
+     "t_send": 862497.1429,
+     "cmd_ms": 0.0,
+     "hits": [],
+     "near_lags": [
+      -0.0461,
+      -0.0459
+     ]
+    },
+    {
+     "i": 11,
+     "cond": "idle",
+     "keyed_us": null,
+     "ndone": null,
+     "pb51": null,
+     "tone_before": null,
+     "tone_after": null,
+     "t_send": 862497.6494,
+     "cmd_ms": 0.0,
+     "hits": [],
+     "near_lags": []
+    },
+    {
+     "i": 12,
+     "cond": "dc",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862498.1723,
+     "cmd_ms": 10.3,
+     "hits": [
+      [
+       0.0022,
+       207,
+       -2,
+       7
+      ]
+     ],
+     "near_lags": [
+      0.0022
+     ]
+    },
+    {
+     "i": 13,
+     "cond": "dc",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862498.6284,
+     "cmd_ms": 10.2,
+     "hits": [
+      [
+       0.0022,
+       207,
+       -4,
+       1
+      ]
+     ],
+     "near_lags": [
+      0.0022
+     ]
+    },
+    {
+     "i": 14,
+     "cond": "dc",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862499.0312,
+     "cmd_ms": 10.3,
+     "hits": [
+      [
+       0.0021,
+       197,
+       -3,
+       3
+      ]
+     ],
+     "near_lags": [
+      0.0021,
+      0.1656,
+      0.1658
+     ]
+    },
+    {
+     "i": 15,
+     "cond": "idle",
+     "keyed_us": null,
+     "ndone": null,
+     "pb51": null,
+     "tone_before": null,
+     "tone_after": null,
+     "t_send": 862499.5482,
+     "cmd_ms": 0.0,
+     "hits": [],
+     "near_lags": []
+    },
+    {
+     "i": 16,
+     "cond": "dc",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862500.003,
+     "cmd_ms": 9.6,
+     "hits": [
+      [
+       0.002,
+       208,
+       -1,
+       3
+      ]
+     ],
+     "near_lags": [
+      0.002
+     ]
+    },
+    {
+     "i": 17,
+     "cond": "zero",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862500.4626,
+     "cmd_ms": 10.0,
+     "hits": [
+      [
+       0.0021,
+       197,
+       1,
+       7
+      ]
+     ],
+     "near_lags": [
+      0.0021
+     ]
+    },
+    {
+     "i": 18,
+     "cond": "zero",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862501.1071,
+     "cmd_ms": 10.4,
+     "hits": [
+      [
+       0.0022,
+       208,
+       4,
+       2
+      ]
+     ],
+     "near_lags": [
+      0.0022,
+      0.2897,
+      0.2899
+     ]
+    },
+    {
+     "i": 19,
+     "cond": "zero",
+     "keyed_us": 272,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862501.6343,
+     "cmd_ms": 10.3,
+     "hits": [
+      [
+       0.0021,
+       208,
+       0,
+       5
+      ]
+     ],
+     "near_lags": [
+      0.0021
+     ]
+    },
+    {
+     "i": 20,
+     "cond": "idle",
+     "keyed_us": null,
+     "ndone": null,
+     "pb51": null,
+     "tone_before": null,
+     "tone_after": null,
+     "t_send": 862501.9923,
+     "cmd_ms": 0.0,
+     "hits": [],
+     "near_lags": []
+    },
+    {
+     "i": 21,
+     "cond": "dc",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862502.6327,
+     "cmd_ms": 10.0,
+     "hits": [
+      [
+       0.0021,
+       208,
+       -3,
+       3
+      ]
+     ],
+     "near_lags": [
+      0.0021
+     ]
+    },
+    {
+     "i": 22,
+     "cond": "zero",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862503.2753,
+     "cmd_ms": 10.3,
+     "hits": [
+      [
+       0.0021,
+       207,
+       -1,
+       7
+      ]
+     ],
+     "near_lags": [
+      0.0021
+     ]
+    },
+    {
+     "i": 23,
+     "cond": "dc",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862503.7434,
+     "cmd_ms": 10.3,
+     "hits": [
+      [
+       0.0021,
+       207,
+       -2,
+       6
+      ]
+     ],
+     "near_lags": [
+      0.0021
+     ]
+    },
+    {
+     "i": 24,
+     "cond": "dc",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862504.3877,
+     "cmd_ms": 9.8,
+     "hits": [
+      [
+       0.0022,
+       207,
+       -2,
+       3
+      ]
+     ],
+     "near_lags": [
+      0.0022,
+      0.1091,
+      0.1093
+     ]
+    },
+    {
+     "i": 25,
+     "cond": "dc",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862504.7711,
+     "cmd_ms": 10.5,
+     "hits": [
+      [
+       0.0022,
+       207,
+       -2,
+       4
+      ]
+     ],
+     "near_lags": [
+      0.0022
+     ]
+    },
+    {
+     "i": 26,
+     "cond": "zero",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862505.399,
+     "cmd_ms": 10.6,
+     "hits": [
+      [
+       0.0021,
+       197,
+       -2,
+       7
+      ]
+     ],
+     "near_lags": [
+      0.0021
+     ]
+    },
+    {
+     "i": 27,
+     "cond": "idle",
+     "keyed_us": null,
+     "ndone": null,
+     "pb51": null,
+     "tone_before": null,
+     "tone_after": null,
+     "t_send": 862505.8014,
+     "cmd_ms": 0.0,
+     "hits": [],
+     "near_lags": [
+      0.0701,
+      0.0901,
+      0.2001,
+      0.2201
+     ]
+    },
+    {
+     "i": 28,
+     "cond": "idle",
+     "keyed_us": null,
+     "ndone": null,
+     "pb51": null,
+     "tone_before": null,
+     "tone_after": null,
+     "t_send": 862506.4161,
+     "cmd_ms": 0.0,
+     "hits": [],
+     "near_lags": [
+      -0.1746,
+      -0.1546,
+      -0.0446,
+      -0.0246,
+      0.0654,
+      0.0854,
+      0.1054,
+      0.1954,
+      0.2154
+     ]
+    },
+    {
+     "i": 29,
+     "cond": "zero",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862506.9693,
+     "cmd_ms": 10.2,
+     "hits": [
+      [
+       0.0022,
+       208,
+       6,
+       3
+      ],
+      [
+       0.0121,
+       79,
+       -1,
+       2
+      ],
+      [
+       0.0321,
+       79,
+       -2,
+       3
+      ]
+     ],
+     "near_lags": [
+      -0.1179,
+      -0.0979,
+      -0.0779,
+      0.0022,
+      0.0121,
+      0.0321,
+      0.1421,
+      0.1621,
+      0.2521,
+      0.2721,
+      0.2921
+     ]
+    },
+    {
+     "i": 30,
+     "cond": "zero",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862507.6076,
+     "cmd_ms": 10.0,
+     "hits": [
+      [
+       0.0021,
+       198,
+       -2,
+       3
+      ],
+      [
+       0.0039,
+       99,
+       -2,
+       5
+      ],
+      [
+       0.0239,
+       98,
+       -3,
+       3
+      ]
+     ],
+     "near_lags": [
+      -0.1261,
+      -0.1061,
+      -0.0161,
+      0.0021,
+      0.0039,
+      0.0239,
+      0.1139,
+      0.1339,
+      0.2439,
+      0.2639
+     ]
+    },
+    {
+     "i": 31,
+     "cond": "zero",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862508.0522,
+     "cmd_ms": 10.4,
+     "hits": [
+      [
+       0.0021,
+       197,
+       -1,
+       4
+      ],
+      [
+       0.0393,
+       89,
+       -2,
+       3
+      ]
+     ],
+     "near_lags": [
+      -0.1807,
+      -0.0907,
+      -0.0707,
+      -0.0507,
+      0.0021,
+      0.0393,
+      0.0593,
+      0.1693,
+      0.1893,
+      0.2793,
+      0.2993
+     ]
+    },
+    {
+     "i": 32,
+     "cond": "idle",
+     "keyed_us": null,
+     "ndone": null,
+     "pb51": null,
+     "tone_before": null,
+     "tone_after": null,
+     "t_send": 862508.603,
+     "cmd_ms": 0.0,
+     "hits": [
+      [
+       0.0085,
+       78,
+       -7,
+       1
+      ]
+     ],
+     "near_lags": [
+      -0.1415,
+      -0.1215,
+      -0.0115,
+      0.0085,
+      0.0985,
+      0.1185,
+      0.1385,
+      0.2485
+     ]
+    },
+    {
+     "i": 33,
+     "cond": "dc",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862509.2398,
+     "cmd_ms": 10.7,
+     "hits": [
+      [
+       0.0021,
+       207,
+       0,
+       4
+      ]
+     ],
+     "near_lags": [
+      -0.1683,
+      -0.1483,
+      -0.1283,
+      -0.0383,
+      -0.0183,
+      0.0021,
+      0.0917,
+      0.1117,
+      0.2017,
+      0.2217,
+      0.2417
+     ]
+    },
+    {
+     "i": 34,
+     "cond": "idle",
+     "keyed_us": null,
+     "ndone": null,
+     "pb51": null,
+     "tone_before": null,
+     "tone_after": null,
+     "t_send": 862509.6341,
+     "cmd_ms": 0.0,
+     "hits": [],
+     "near_lags": [
+      -0.1926,
+      -0.1726,
+      -0.1526,
+      -0.0626,
+      -0.0426,
+      0.0674,
+      0.0874,
+      0.1774,
+      0.1974,
+      0.2174
+     ]
+    },
+    {
+     "i": 35,
+     "cond": "idle",
+     "keyed_us": null,
+     "ndone": null,
+     "pb51": null,
+     "tone_before": null,
+     "tone_after": null,
+     "t_send": 862510.0451,
+     "cmd_ms": 0.0,
+     "hits": [
+      [
+       0.0264,
+       89,
+       -3,
+       3
+      ]
+     ],
+     "near_lags": [
+      -0.1936,
+      -0.1036,
+      -0.0836,
+      0.0264,
+      0.0464,
+      0.1364,
+      0.1564,
+      0.1764,
+      0.1957,
+      0.2664,
+      0.2864,
+      0.287,
+      0.2874
+     ]
+    },
+    {
+     "i": 36,
+     "cond": "idle",
+     "keyed_us": null,
+     "ndone": null,
+     "pb51": null,
+     "tone_before": null,
+     "tone_after": null,
+     "t_send": 862510.5668,
+     "cmd_ms": 0.0,
+     "hits": [
+      [
+       0.0047,
+       88,
+       -1,
+       3
+      ],
+      [
+       0.0247,
+       89,
+       -28,
+       2
+      ]
+     ],
+     "near_lags": [
+      -0.1253,
+      -0.1053,
+      -0.0153,
+      0.0047,
+      0.0247,
+      0.1147,
+      0.1347,
+      0.2301,
+      0.2303,
+      0.2447
+     ]
+    },
+    {
+     "i": 37,
+     "cond": "idle",
+     "keyed_us": null,
+     "ndone": null,
+     "pb51": null,
+     "tone_before": null,
+     "tone_after": null,
+     "t_send": 862510.9586,
+     "cmd_ms": 0.0,
+     "hits": [],
+     "near_lags": [
+      -0.1618,
+      -0.1615,
+      -0.1472
+     ]
+    },
+    {
+     "i": 38,
+     "cond": "idle",
+     "keyed_us": null,
+     "ndone": null,
+     "pb51": null,
+     "tone_before": null,
+     "tone_after": null,
+     "t_send": 862511.3311,
+     "cmd_ms": 0.0,
+     "hits": [],
+     "near_lags": [
+      -0.0509,
+      0.1696
+     ]
+    },
+    {
+     "i": 39,
+     "cond": "zero",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862511.691,
+     "cmd_ms": 10.6,
+     "hits": [
+      [
+       0.0021,
+       208,
+       -1,
+       5
+      ]
+     ],
+     "near_lags": [
+      -0.1902,
+      0.0021
+     ]
+    },
+    {
+     "i": 40,
+     "cond": "idle",
+     "keyed_us": null,
+     "ndone": null,
+     "pb51": null,
+     "tone_before": null,
+     "tone_after": null,
+     "t_send": 862512.149,
+     "cmd_ms": 0.0,
+     "hits": [],
+     "near_lags": [
+      0.1918
+     ]
+    },
+    {
+     "i": 41,
+     "cond": "zero",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862512.6967,
+     "cmd_ms": 9.7,
+     "hits": [
+      [
+       0.0022,
+       208,
+       -1,
+       5
+      ]
+     ],
+     "near_lags": [
+      0.0022
+     ]
+    },
+    {
+     "i": 42,
+     "cond": "dc",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862513.1895,
+     "cmd_ms": 10.1,
+     "hits": [
+      [
+       0.0021,
+       207,
+       -2,
+       4
+      ]
+     ],
+     "near_lags": [
+      0.0021
+     ]
+    },
+    {
+     "i": 43,
+     "cond": "idle",
+     "keyed_us": null,
+     "ndone": null,
+     "pb51": null,
+     "tone_before": null,
+     "tone_after": null,
+     "t_send": 862513.7256,
+     "cmd_ms": 0.0,
+     "hits": [],
+     "near_lags": []
+    },
+    {
+     "i": 44,
+     "cond": "zero",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862514.0836,
+     "cmd_ms": 10.9,
+     "hits": [
+      [
+       0.0022,
+       197,
+       0,
+       7
+      ]
+     ],
+     "near_lags": [
+      0.0022
+     ]
+    },
+    {
+     "i": 45,
+     "cond": "zero",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862514.4671,
+     "cmd_ms": 9.7,
+     "hits": [
+      [
+       0.002,
+       207,
+       -1,
+       7
+      ]
+     ],
+     "near_lags": [
+      0.002
+     ]
+    },
+    {
+     "i": 46,
+     "cond": "dc",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862514.9892,
+     "cmd_ms": 10.3,
+     "hits": [
+      [
+       0.002,
+       207,
+       -2,
+       5
+      ],
+      [
+       0.0023,
+       79,
+       -128,
+       0
+      ],
+      [
+       0.0223,
+       98,
+       -30,
+       1
+      ]
+     ],
+     "near_lags": [
+      -0.1077,
+      -0.0877,
+      0.002,
+      0.0023,
+      0.0223,
+      0.0423,
+      0.1323,
+      0.1523,
+      0.2623,
+      0.2823
+     ]
+    },
+    {
+     "i": 47,
+     "cond": "idle",
+     "keyed_us": null,
+     "ndone": null,
+     "pb51": null,
+     "tone_before": null,
+     "tone_after": null,
+     "t_send": 862515.3923,
+     "cmd_ms": 0.0,
+     "hits": [
+      [
+       0.0092,
+       78,
+       -3,
+       3
+      ]
+     ],
+     "near_lags": [
+      -0.1408,
+      -0.1208,
+      -0.0308,
+      -0.0108,
+      0.0092,
+      0.0992,
+      0.1192,
+      0.2292,
+      0.2492
+     ]
+    },
+    {
+     "i": 48,
+     "cond": "zero",
+     "keyed_us": 272,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862515.7489,
+     "cmd_ms": 10.7,
+     "hits": [
+      [
+       0.002,
+       197,
+       -2,
+       4
+      ],
+      [
+       0.0026,
+       79,
+       -5,
+       2
+      ],
+      [
+       0.0226,
+       79,
+       -128,
+       0
+      ]
+     ],
+     "near_lags": [
+      -0.1274,
+      -0.1074,
+      -0.0174,
+      0.002,
+      0.0026,
+      0.0226
+     ]
+    },
+    {
+     "i": 49,
+     "cond": "zero",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862516.1186,
+     "cmd_ms": 10.0,
+     "hits": [
+      [
+       0.0021,
+       197,
+       -2,
+       7
+      ]
+     ],
+     "near_lags": [
+      0.0021
+     ]
+    },
+    {
+     "i": 50,
+     "cond": "dc",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862516.6682,
+     "cmd_ms": 10.4,
+     "hits": [
+      [
+       0.0021,
+       197,
+       -3,
+       6
+      ]
+     ],
+     "near_lags": [
+      0.0021
+     ]
+    },
+    {
+     "i": 51,
+     "cond": "zero",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862517.3094,
+     "cmd_ms": 10.1,
+     "hits": [
+      [
+       0.0021,
+       197,
+       -1,
+       2
+      ]
+     ],
+     "near_lags": [
+      0.0021
+     ]
+    },
+    {
+     "i": 52,
+     "cond": "idle",
+     "keyed_us": null,
+     "ndone": null,
+     "pb51": null,
+     "tone_before": null,
+     "tone_after": null,
+     "t_send": 862517.8126,
+     "cmd_ms": 0.0,
+     "hits": [],
+     "near_lags": []
+    },
+    {
+     "i": 53,
+     "cond": "idle",
+     "keyed_us": null,
+     "ndone": null,
+     "pb51": null,
+     "tone_before": null,
+     "tone_after": null,
+     "t_send": 862518.1675,
+     "cmd_ms": 0.0,
+     "hits": [],
+     "near_lags": []
+    },
+    {
+     "i": 54,
+     "cond": "dc",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862518.5773,
+     "cmd_ms": 10.3,
+     "hits": [
+      [
+       0.0021,
+       207,
+       -3,
+       4
+      ]
+     ],
+     "near_lags": [
+      0.0021
+     ]
+    },
+    {
+     "i": 55,
+     "cond": "zero",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862519.1377,
+     "cmd_ms": 9.9,
+     "hits": [
+      [
+       0.0021,
+       207,
+       -1,
+       5
+      ]
+     ],
+     "near_lags": [
+      0.0021
+     ]
+    },
+    {
+     "i": 56,
+     "cond": "zero",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862519.7283,
+     "cmd_ms": 10.3,
+     "hits": [
+      [
+       0.0022,
+       207,
+       -3,
+       4
+      ]
+     ],
+     "near_lags": [
+      0.0022
+     ]
+    },
+    {
+     "i": 57,
+     "cond": "idle",
+     "keyed_us": null,
+     "ndone": null,
+     "pb51": null,
+     "tone_before": null,
+     "tone_after": null,
+     "t_send": 862520.142,
+     "cmd_ms": 0.0,
+     "hits": [],
+     "near_lags": []
+    },
+    {
+     "i": 58,
+     "cond": "zero",
+     "keyed_us": 271,
+     "ndone": 1,
+     "pb51": 127,
+     "tone_before": 537265152,
+     "tone_after": 537003008,
+     "t_send": 862520.6381,
+     "cmd_ms": 10.5,
+     "hits": [
+      [
+       0.0021,
+       198,
+       -2,
+       4
+      ]
+     ],
+     "near_lags": [
+      0.0021
+     ]
+    },
+    {
+     "i": 59,
+     "cond": "idle",
+     "keyed_us": null,
+     "ndone": null,
+     "pb51": null,
+     "tone_before": null,
+     "tone_after": null,
+     "t_send": 862521.0004,
+     "cmd_ms": 0.0,
+     "hits": [],
+     "near_lags": []
+    }
+   ]
+  }
+ ],
+ "per_condition": {
+  "dc": {
+   "slots": 20,
+   "slots_with_hit": 20,
+   "hit_frac": 1.0,
+   "hit_frac_95ci": [
+    0.839,
+    1.0
+   ],
+   "bursts_in_0.5s_around_per_slot": 2.35,
+   "hit_lag_s": [
+    0.002,
+    0.002,
+    0.0021,
+    0.0021,
+    0.0021,
+    0.0021,
+    0.0021,
+    0.0021,
+    0.0021,
+    0.0021,
+    0.0021,
+    0.0021,
+    0.0021,
+    0.0021,
+    0.0022,
+    0.0022,
+    0.0022,
+    0.0022,
+    0.0022,
+    0.0022,
+    0.0023,
+    0.0223
+   ],
+   "hit_dur_us": [
+    79,
+    98,
+    197,
+    197,
+    197,
+    198,
+    207,
+    207,
+    207,
+    207,
+    207,
+    207,
+    207,
+    207,
+    207,
+    207,
+    207,
+    207,
+    207,
+    208,
+    208,
+    315
+   ],
+   "hit_peak_raw": [
+    -1,
+    -2,
+    -1,
+    0,
+    4,
+    -1,
+    -4,
+    -2,
+    -4,
+    -3,
+    -1,
+    -3,
+    -2,
+    -2,
+    -2,
+    0,
+    -2,
+    -2,
+    null,
+    -30,
+    -3,
+    -3
+   ],
+   "keyed_us_min_max": [
+    271,
+    445
+   ],
+   "engine_done": 20,
+   "pb51_values": [
+    127
+   ]
+  },
+  "zero": {
+   "slots": 20,
+   "slots_with_hit": 20,
+   "hit_frac": 1.0,
+   "hit_frac_95ci": [
+    0.839,
+    1.0
+   ],
+   "bursts_in_0.5s_around_per_slot": 2.85,
+   "hit_lag_s": [
+    0.002,
+    0.002,
+    0.0021,
+    0.0021,
+    0.0021,
+    0.0021,
+    0.0021,
+    0.0021,
+    0.0021,
+    0.0021,
+    0.0021,
+    0.0021,
+    0.0021,
+    0.0022,
+    0.0022,
+    0.0022,
+    0.0022,
+    0.0022,
+    0.0022,
+    0.0023,
+    0.0026,
+    0.0039,
+    0.0121,
+    0.0226,
+    0.0239,
+    0.0321,
+    0.0393
+   ],
+   "hit_dur_us": [
+    79,
+    79,
+    79,
+    79,
+    89,
+    98,
+    99,
+    197,
+    197,
+    197,
+    197,
+    197,
+    197,
+    197,
+    197,
+    198,
+    198,
+    207,
+    207,
+    207,
+    207,
+    207,
+    208,
+    208,
+    208,
+    208,
+    208
+   ],
+   "hit_peak_raw": [
+    -3,
+    3,
+    1,
+    4,
+    0,
+    -1,
+    -2,
+    6,
+    -1,
+    -2,
+    -2,
+    -2,
+    -3,
+    -1,
+    -2,
+    -1,
+    -1,
+    0,
+    -1,
+    -2,
+    -5,
+    null,
+    -2,
+    -1,
+    -1,
+    -3,
+    -2
+   ],
+   "keyed_us_min_max": [
+    271,
+    272
+   ],
+   "engine_done": 20,
+   "pb51_values": [
+    127
+   ]
+  },
+  "idle": {
+   "slots": 20,
+   "slots_with_hit": 4,
+   "hit_frac": 0.2,
+   "hit_frac_95ci": [
+    0.081,
+    0.416
+   ],
+   "bursts_in_0.5s_around_per_slot": 3.55,
+   "hit_lag_s": [
+    0.0047,
+    0.0085,
+    0.0092,
+    0.0247,
+    0.0264
+   ],
+   "hit_dur_us": [
+    78,
+    78,
+    88,
+    89,
+    89
+   ],
+   "hit_peak_raw": [
+    -7,
+    -3,
+    -1,
+    -28,
+    -3
+   ],
+   "keyed_us_min_max": null,
+   "engine_done": 0,
+   "pb51_values": null
+  }
+ }
+}

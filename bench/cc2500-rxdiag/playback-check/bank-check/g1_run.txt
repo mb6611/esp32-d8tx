@@ -1,0 +1,3 @@
+/Users/1unoe/Developer/personal/auto-drone/stage0/.venv/bin/python ../pbcheck.py --out g1 --conds tone,dc,zero,unkey,idle --n 8 --seed 2002 --count 6143 --tmo 100 --km 0 --pwr 127 --gmode 1 --agc2 203 --agc1 66 --rx-khz 2412000 --rx-bw 203
+preflight: worst-case keyed 391 us (observed overhead 291 + tmo 100), abort above 400 us
+{"Q": ["V,freq,2412,xtal=40,cap_reg=b0"], "K": ["V,key_mode,0,-1,gain_max=72"], "pb51_before": ["V,pbus,5,1,0"], "pb51_after": ["V,pbus,5,1,0"], "got_x": true, "hangs": 0, "abort": null}

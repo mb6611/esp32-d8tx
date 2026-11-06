@@ -1,0 +1,4 @@
+pat n 20 maxdur med/min/max 247.0 236 266 sumdur med 247.0 peak med/max -5.0 -1 npk 20 keyed_us [321, 321, 322]
+zero n 20 maxdur med/min/max 246.0 168 355 sumdur med 246.0 peak med/max -6 6 npk 21 keyed_us [313, 313, 483]
+tone n 20 maxdur med/min/max 251.5 217 552 sumdur med 286.0 peak med/max 20 27 npk 33 keyed_us [321, 321, 322]
+[(0, 483)]

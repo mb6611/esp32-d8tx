@@ -1,0 +1,4 @@
+{'clock': {'slope_ppm': -1740.6, 'lat_p50_ms': 8.45, 'lat_p90_ms': 15.02, 'nC': 312}, 'bursts_total': 187, 'ring_lost': 0, 'seconds': 31.21, 'ambient_rate_per_s': 5.99, 'pb51_before': ['V,pbus,5,1,0'], 'pb51_after': ['V,pbus,5,1,0'], 'hangs': 0, 'Q_after': ['V,freq,2412,xtal=40,cap_reg=b0']}
+dc n 20 hit 20 maxdur med/min/max 207.0 197 315 peak med/min/max (-2.0, -4, 4) npk 20 keyed_us (271, 445)
+zero n 20 hit 20 maxdur med/min/max 202.5 197 208 peak med/min/max (-1.0, -5, 6) npk 22 keyed_us (271, 272)
+idle n 20 hit 0 maxdur med/min/max 0.0 0 0 peak med/min/max None npk 0 keyed_us None
