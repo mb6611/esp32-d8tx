@@ -127,9 +127,13 @@ Seven of ten is not a reliability figure, and Section 4 already suspected the re
 
 ### 6. Hopping: all 47 channels at ~98%
 
-The tone generator's frequency steps only reach about ±20 MHz around the LO, and the D8 hop table spans 2404–2478 MHz, so a hop cannot be made by stepping the tone. Each hop retunes the LO instead (fast-hop mode 1, one retune per slot). The firmware measured the retune at at most 0.39 ms (363 µs in run A, 389 µs in run B) inside an 8.994 ms slot, with the keying start at most 81 µs late.
+**Why the tone cannot hop by itself.** The tone generator's frequency steps only reach about ±20 MHz around the LO, and the D8 hop table spans 2404–2478 MHz. The 39.06 kHz step also does not divide the 299.93 kHz channel spacing, so even a reachable channel would be off-grid. So each hop retunes the LO instead (fast-hop mode 1, one retune per slot), and the tone steps only carry the data bits. The firmware measured the retune at at most 0.39 ms (363 µs in run A, 389 µs in run B) of an 8.994 ms slot, and the keying start was at most 81 µs late, so slot timing holds to about 80 µs.
 
-**Retune gate.** Before hopping, a 150 ms tone was keyed after retuning to 2404, 2412, 2441 and 2478 MHz, and the receiver diagnostic watched each. All four passed, with the tone's FREQEST within 13 kHz of nominal (the 2441 MHz window had a steady in-band interferer; the tone still stood 23–31 counts above it). The receiver diagnostic was then told to follow the hop table (`rxdiag hop`), the same as a bound receiver would.
+**Retune gate.** Before hopping, a 150 ms tone was keyed after retuning to 2404, 2412, 2441 and 2478 MHz, and the receiver diagnostic watched each. All four passed, with the tone's FREQEST within 13 kHz of nominal (the 2441 MHz window had a steady in-band interferer; the tone still stood 23–31 counts above it). The receiver diagnostic was then given the hop table directly (`rxdiag hop`); there was no bind, so it followed the table a bound receiver would have learned.
+
+![Retune gate: maximum RSSI per window with the tone off and keyed, at four retuned LO frequencies, with the carrier offset estimate.](img/tx-evidence/hop-retune-gate.png)
+
+*Figure 8 ([SVG](img/tx-evidence/hop-retune-gate.svg)). Grey: baseline RSSI with the tone off. Green: the three keyed 150 ms tones. The label is the largest FREQEST offset of the three. The 2441 MHz baseline had a steady in-band interferer, so its rise is smaller. Source: `results/hop/retune_gate/summary.md`; `plot_hop.py`.*
 
 **Runs.** The real E8 was recorded first as a control, then the ESP32 sent 556 slots (run A) and 940 slots (run B), always hop-counter-ordered, sticks at 1500 µs.
 
@@ -146,15 +150,25 @@ Channel and ID mismatches were zero throughout (ID 42B2). The one RESYNC in each
 
 ![Hop map of ESP32 run B: time against RF frequency, cyan line the expected hop sequence, blue dots received, red crosses unreceived, zoom of the first 47-hop cycle below, per-channel received fraction on the right (red below 90%).](img/tx-evidence/hop-esp-runB-map.png)
 
-*Figure 8. ESP32 run B, 921 of 940 slots. The 19 misses are scattered with no channel losing more than two. Source: `results/hop/esp_hop/runB_hop_map.png`.*
+*Figure 9. The ESP32 (run B), 921 of 940 slots. Cyan line: the expected hop sequence. Blue dots: slots received CRC-valid, at their expected frequency. Red X: slots with no valid packet. The 19 misses are scattered, and no channel lost more than two. Source: `results/hop/esp_hop/runB_*`.*
 
-![The same hop map for the real E8 control; weak channels (red bars) show in the per-channel panel.](img/tx-evidence/hop-e8-map.png)
+![The same hop map for the real E8 control, drawn the same way; its weak channels show as red bars in the per-channel panel.](img/tx-evidence/hop-e8-map.png)
 
-*Figure 9. The real E8 over 20 s, 2133 of 2204 slots. Channels 25 (2411.5 MHz) and 133 are weak, at 29/47 and 22/47. Source: `results/hop/e8_control/e8_hop_map.png`.*
+*Figure 10. The real FrSky E8, same receiver and drawing as Figure 9 (line, dots and red X mean the same), 2133 of 2204 slots over 20 s. Channels 25 (2411.5 MHz) and 133 (2443.9 MHz) are weak, at 29/47 and 22/47. Source: `results/hop/e8_control/`.*
 
-**The weak channels.** The E8's 96.8% hides two poor channels, ch25 and ch133. The RX write-up had already noticed ch25 and suspected the transmitter. The ESP32 decodes the same two channels fine (19/20 each in run B, 12/12 each in run A) on the same receiver. That is consistent with an E8 transmitter quirk on those channels, but it is not proof: different time, different packet content and a small count.
+**The weak channels.** The E8's 96.8% hides two poor channels, ch25 and ch133. The RX write-up had already noticed ch25 and suspected the transmitter. The ESP32 decodes the same two channels fine (19/20 each in run B, 12/12 each in run A) on the same receiver.
 
-**What this shows and does not show.** On this bench the ESP32 hops through the full 47-channel table, with a continuous counter, and a CC2500 following the table receives about 98% of slots, at least as well as the E8. It does not show binding, a stock Betaflight receiver accepting it, range, or flight.
+![Per-channel received percentage against RF frequency for the real E8 and the ESP32 run B; channels 25 and 133 are labelled.](img/tx-evidence/hop-per-channel.png)
+
+*Figure 11 ([SVG](img/tx-evidence/hop-per-channel.svg)). One point per channel. The E8 has 47 visits per channel and the ESP32 20, so one ESP32 miss is 5%. Only the E8 drops on ch25 and ch133. Source: `results/hop/e8_control/summary.md`, `results/hop/esp_hop/runB_stats.txt`; `plot_hop.py`.*
+
+That is consistent with an E8 transmitter quirk on those channels, but it is not proof: different time, different packet content and a small count.
+
+**Two loose ends.** The roughly 5% of fixed-channel misses from Section 5 were parked as a receiver or bench effect; the hopping runs (2.0–2.3% missing) did not reopen them. The E8 packet layout also puts the hop counter in byte 4 of the frame (the length byte is byte 0), which matters for the coming bind with stock Betaflight.
+
+**What this shows and does not show.** On this bench the ESP32 hops through the full 47-channel table, with a continuous counter, and a CC2500 following the table receives about 98% of slots, at least as well as the E8. It does not show binding, a stock Betaflight receiver accepting it, range, or flight, and it does not show why the E8 is weak on two channels.
+
+**Next:** bind to stock Betaflight. The bind exchange and the hop counter in byte 4 are the first things to get right.
 
 ## What this does not show
 
