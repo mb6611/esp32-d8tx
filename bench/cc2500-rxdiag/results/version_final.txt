@@ -1,0 +1,5 @@
+version
+# Betaflight / STM32F411 (S411) 4.2.11 Nov  9 2021 / 20:28:23 (948ba6339) MSP API: 1.43
+###ERROR: version: NO CONFIG FOUND#### board: manufacturer_id: MTKS, board_name: MATEKF411RX
+
+# 

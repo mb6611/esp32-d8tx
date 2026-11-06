@@ -1,0 +1,2 @@
+# Local-only preserved raw flash backups (never commit)
+/.local-backups/
