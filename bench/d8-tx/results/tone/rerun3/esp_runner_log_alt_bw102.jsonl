@@ -1,0 +1,8 @@
+{"event": "phase", "t": 1793985747.4637032, "phase": "esp32-test"}
+{"event": "cmd", "text": "PING", "t": 1793985747.463773, "phase": "esp32-test"}
+{"event": "reply_line", "text": "P,d8tone,1", "t": 1793985747.465035, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985747.465065, "phase": "esp32-test"}
+{"event": "cmd", "text": "STAT", "t": 1793985747.4650838, "phase": "esp32-test"}
+{"event": "reply_line", "text": "S,keyed=0,b8=20000000,a8=00000000", "t": 1793985747.4670599, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985747.467077, "phase": "esp32-test"}
+{"event": "envelope", "envelope": {"test": "U4 rerun3 pwr127", "max_duration_us": 150000, "max_abs_offset": 16, "max_power": 127, "max_transitions": 20, "max_commands": 12}, "t": 1793985747.467099, "phase": "esp32-test"}

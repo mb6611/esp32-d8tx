@@ -1,0 +1,11 @@
+vector20 1142b2000001cacacaca8888cacacaca8888afa7 body18 1142b2000001cacacaca8888cacacaca8888
+0 match18 crc_ok=0 rssi=0 lqi=0
+2 match18 crc_ok=1 rssi=12 lqi=51
+3 match18 crc_ok=1 rssi=12 lqi=51
+4 match18 crc_ok=1 rssi=13 lqi=51
+8 match18 crc_ok=0 rssi=0 lqi=0
+12 match18 crc_ok=1 rssi=11 lqi=51
+14 match18 crc_ok=1 rssi=12 lqi=51
+15 match18 crc_ok=1 rssi=13 lqi=51
+17 match18 crc_ok=1 rssi=13 lqi=51
+body18-equal records 9 of which crc_ok=1: 7

@@ -1,0 +1,7 @@
+{"event": "phase", "t": 1793985602.6567419, "phase": "esp32-test"}
+{"event": "cmd", "text": "PING", "t": 1793985602.656807, "phase": "esp32-test"}
+{"event": "reply_line", "text": "P,d8tone,1", "t": 1793985602.657899, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985602.657933, "phase": "esp32-test"}
+{"event": "cmd", "text": "STAT", "t": 1793985602.657953, "phase": "esp32-test"}
+{"event": "reply_line", "text": "S,keyed=0,b8=20000000,a8=00000000", "t": 1793985602.659914, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985602.659932, "phase": "esp32-test"}

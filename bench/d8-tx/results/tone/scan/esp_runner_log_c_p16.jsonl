@@ -1,0 +1,20 @@
+{"event": "phase", "t": 1793986572.600081, "phase": "esp32-test"}
+{"event": "cmd", "text": "PING", "t": 1793986572.600158, "phase": "esp32-test"}
+{"event": "reply_line", "text": "P,d8tone,1", "t": 1793986572.601759, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793986572.601783, "phase": "esp32-test"}
+{"event": "cmd", "text": "STAT", "t": 1793986572.6017962, "phase": "esp32-test"}
+{"event": "reply_line", "text": "S,keyed=0,b8=20000000,a8=00000000", "t": 1793986572.6037, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793986572.6037152, "phase": "esp32-test"}
+{"event": "envelope", "envelope": {"test": "U4 scan pwr127", "max_duration_us": 150000, "max_abs_offset": 16, "max_power": 127, "max_transitions": 20, "max_commands": 2}, "t": 1793986572.603734, "phase": "esp32-test"}
+{"event": "cmd", "text": "TONE 16 150000 127", "t": 1793986573.0830889, "phase": "esp32-test"}
+{"event": "reply_line", "text": "K,tone,16,16,0,150000,127,150000,150057,8922,4486,20060404,20060404,20000000,00000000,00000000,0", "t": 1793986573.236004, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793986573.2366972, "phase": "esp32-test"}
+{"event": "cmd", "text": "STAT", "t": 1793986575.095268, "phase": "esp32-test"}
+{"event": "reply_line", "text": "S,keyed=0,b8=20000000,a8=00000000", "t": 1793986575.096805, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793986575.096836, "phase": "esp32-test"}
+{"event": "cmd", "text": "TONE 16 150000 127", "t": 1793986576.587002, "phase": "esp32-test"}
+{"event": "reply_line", "text": "K,tone,16,16,0,150000,127,150000,150060,8922,5434,20060404,20060404,20000000,00000000,00000000,0", "t": 1793986576.74072, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793986576.740798, "phase": "esp32-test"}
+{"event": "cmd", "text": "STAT", "t": 1793986578.645347, "phase": "esp32-test"}
+{"event": "reply_line", "text": "S,keyed=0,b8=20000000,a8=00000000", "t": 1793986578.646801, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793986578.646831, "phase": "esp32-test"}

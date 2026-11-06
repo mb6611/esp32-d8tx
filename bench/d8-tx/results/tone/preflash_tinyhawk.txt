@@ -1,0 +1,28 @@
+# preflash Tinyhawk Fri Nov  6 05:34:50 UTC 2026
+True
+> version
+version
+# Betaflight / STM32F411 (S411) 4.2.11 Nov  9 2021 / 20:28:23 (948ba6339) MSP API: 1.43
+###ERROR: version: NO CONFIG FOUND#### board: manufacturer_id: MTKS, board_name: MATEKF411RX
+
+# 
+> status
+status
+MCU F411 Clock=108MHz (PLLP-HSE), Vref=3.29V, Core temp=45degC
+Stack size: 2048, Stack address: 0x2001fff0
+Config size: 3924, Max available config: 16384
+Gyros detected: gyro 1
+GYRO=ICM20689, ACC=ICM20689
+OSD: MAX7456
+System Uptime: 7034 seconds
+CPU:8%, cycle time: 125, GYRO rate: 8000, RX rate: 33, System rate: 9
+Voltage: 1 * 0.01V (0S battery - NOT PRESENT)
+I2C Errors: 0
+SD card: Not configured
+Arming disable flags: RXLOSS CLI
+
+# 
+> rxdiag info
+rxdiag info
+###ERROR: input: UNKNOWN COMMAND, TRY 'HELP'###
+# 

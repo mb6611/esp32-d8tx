@@ -1,0 +1,7 @@
+{"fc": 2412039, "tone": 1, "rep": 1, "nwin": 12, "ncs_pk": 1971, "rssi_max": 15, "fe_min": -8, "fe_max": 2, "fe_mean_hz": -4148, "stable": false, "base_ncs": 90, "rssi_k": [13, 15, 13]}
+{"fc": 2411961, "tone": -1, "rep": 1, "nwin": 12, "ncs_pk": 1965, "rssi_max": 19, "fe_min": -2, "fe_max": -2, "fe_mean_hz": -3173, "stable": true, "base_ncs": 24, "rssi_k": [19, 13, 12]}
+{"fc": 2412078, "tone": 2, "rep": 1, "nwin": 12, "ncs_pk": 1973, "rssi_max": 18, "fe_min": -4, "fe_max": 3, "fe_mean_hz": 2142, "stable": false, "base_ncs": 135, "rssi_k": [18, 15, 14]}
+{"fc": 2411922, "tone": -2, "rep": 1, "nwin": 12, "ncs_pk": 1981, "rssi_max": 14, "fe_min": -3, "fe_max": -3, "fe_mean_hz": -4760, "stable": true, "base_ncs": 18, "rssi_k": [14, 14, 13]}
+{"fc": 2412156, "tone": 4, "rep": 1, "nwin": 12, "ncs_pk": 1956, "rssi_max": 20, "fe_min": -1, "fe_max": 6, "fe_mean_hz": 3732, "stable": false, "base_ncs": 360, "rssi_k": [20, 17, 14]}
+{"fc": 2411844, "tone": -4, "rep": 1, "nwin": 12, "ncs_pk": 1953, "rssi_max": 21, "fe_min": 7, "fe_max": 7, "fe_mean_hz": 11108, "stable": true, "base_ncs": 94, "rssi_k": [21, 15, 14]}
+{"fc": 2412000, "tone": 1, "rep": 1, "nwin": 12, "ncs_pk": 1765, "rssi_max": 2, "fe_min": -8, "fe_max": 7, "fe_mean_hz": 3904, "stable": false, "base_ncs": 68, "rssi_k": [-1, 2, -6]}

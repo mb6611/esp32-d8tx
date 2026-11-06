@@ -1,0 +1,1 @@
+3698ae6f6bbe0b11bfac103c9f008320d9d90dfe9d22d179d55da0bcd5c60461  firmware/build/d8tone.bin

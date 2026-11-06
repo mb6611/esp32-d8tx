@@ -1,0 +1,5 @@
+passive 12 s observation of d8tone idle (no commands, nothing keyed), boot lines:
+0.3 b'I,boot,reason=1\r\n'
+3.8 b'I,boot,reason=7\r\n'
+7.3 b'I,boot,reason=7\r\n'
+10.8 b'I,boot,reason=7\r\n'

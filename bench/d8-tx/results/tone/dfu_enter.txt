@@ -1,0 +1,11 @@
+True
+dfu
+###ERROR: input: UNKNOWN COMMAND, TRY 'HELP'###
+# 
+True
+Traceback (most recent call last):
+  File "<stdin>", line 5, in <module>
+  File "/Users/1unoe/Developer/personal/esp32-devkitv1-sdr/bench/cc2500-rxdiag/host/rxdiag_events.py", line 28, in rd
+    out += os.read(fd, 65536)
+           ~~~~~~~^^^^^^^^^^^
+OSError: [Errno 6] Device not configured

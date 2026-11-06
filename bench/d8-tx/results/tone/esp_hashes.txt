@@ -1,0 +1,3 @@
+2097686bd1ef3c5ac3f726f0012dcec2450fcb7219057d3efda3b988fbcab704  d8tone.bin
+c8c40a03b6787695a6851de3b05f02c46367bb16724c6ddb6bc2646941d13c24  bootloader/bootloader.bin
+7f00b6c042a89b15b0cac534f82ed988caf29278ff5700b0c511eb1b5bb7c820  partition_table/partition-table.bin

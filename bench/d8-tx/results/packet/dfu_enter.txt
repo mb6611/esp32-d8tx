@@ -1,0 +1,4 @@
+True
+b"dfu\r\n###ERROR: input: UNKNOWN COMMAND, TRY 'HELP'###\r\n# "
+True
+closed [Errno 6] Device not configured

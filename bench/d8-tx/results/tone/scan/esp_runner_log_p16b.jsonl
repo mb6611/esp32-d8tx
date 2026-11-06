@@ -1,0 +1,81 @@
+{"event": "phase", "t": 1793985955.893334, "phase": "esp32-test"}
+{"event": "cmd", "text": "PING", "t": 1793985955.8934221, "phase": "esp32-test"}
+{"event": "reply_line", "text": "P,d8tone,1", "t": 1793985955.894743, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985955.894767, "phase": "esp32-test"}
+{"event": "cmd", "text": "STAT", "t": 1793985955.894782, "phase": "esp32-test"}
+{"event": "reply_line", "text": "S,keyed=0,b8=20000000,a8=00000000", "t": 1793985955.896729, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985955.8967528, "phase": "esp32-test"}
+{"event": "envelope", "envelope": {"test": "U4 scan pwr127", "max_duration_us": 150000, "max_abs_offset": 16, "max_power": 127, "max_transitions": 20, "max_commands": 12}, "t": 1793985955.896777, "phase": "esp32-test"}
+{"event": "cmd", "text": "TONE 16 150000 127", "t": 1793985956.382714, "phase": "esp32-test"}
+{"event": "reply_line", "text": "K,tone,16,16,0,150000,127,150000,150057,8922,4486,20060404,20060404,20000000,00000000,00000000,0", "t": 1793985956.53576, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985956.53582, "phase": "esp32-test"}
+{"event": "cmd", "text": "STAT", "t": 1793985958.408309, "phase": "esp32-test"}
+{"event": "reply_line", "text": "S,keyed=0,b8=20000000,a8=00000000", "t": 1793985958.409798, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985958.409822, "phase": "esp32-test"}
+{"event": "cmd", "text": "TONE 16 150000 127", "t": 1793985959.8870761, "phase": "esp32-test"}
+{"event": "reply_line", "text": "K,tone,16,16,0,150000,127,150000,150060,8922,5437,20060404,20060404,20000000,00000000,00000000,0", "t": 1793985960.0400388, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985960.040101, "phase": "esp32-test"}
+{"event": "cmd", "text": "STAT", "t": 1793985961.907339, "phase": "esp32-test"}
+{"event": "reply_line", "text": "S,keyed=0,b8=20000000,a8=00000000", "t": 1793985961.908829, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985961.9088562, "phase": "esp32-test"}
+{"event": "cmd", "text": "TONE 16 150000 127", "t": 1793985963.391029, "phase": "esp32-test"}
+{"event": "reply_line", "text": "K,tone,16,16,0,150000,127,150000,150056,8919,4489,20060404,20060404,20000000,00000000,00000000,0", "t": 1793985963.544652, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985963.544708, "phase": "esp32-test"}
+{"event": "cmd", "text": "STAT", "t": 1793985965.432492, "phase": "esp32-test"}
+{"event": "reply_line", "text": "S,keyed=0,b8=20000000,a8=00000000", "t": 1793985965.433751, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985965.4338071, "phase": "esp32-test"}
+{"event": "cmd", "text": "TONE 16 150000 127", "t": 1793985966.911047, "phase": "esp32-test"}
+{"event": "reply_line", "text": "K,tone,16,16,0,150000,127,150000,150060,8922,5434,20060404,20060404,20000000,00000000,00000000,0", "t": 1793985967.064692, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985967.064738, "phase": "esp32-test"}
+{"event": "cmd", "text": "STAT", "t": 1793985968.9411259, "phase": "esp32-test"}
+{"event": "reply_line", "text": "S,keyed=0,b8=20000000,a8=00000000", "t": 1793985968.942801, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985968.942822, "phase": "esp32-test"}
+{"event": "cmd", "text": "TONE 16 150000 127", "t": 1793985970.429796, "phase": "esp32-test"}
+{"event": "reply_line", "text": "K,tone,16,16,0,150000,127,150000,150056,8919,4489,20060404,20060404,20000000,00000000,00000000,0", "t": 1793985970.582814, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985970.5828621, "phase": "esp32-test"}
+{"event": "cmd", "text": "STAT", "t": 1793985972.475991, "phase": "esp32-test"}
+{"event": "reply_line", "text": "S,keyed=0,b8=20000000,a8=00000000", "t": 1793985972.477794, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985972.477814, "phase": "esp32-test"}
+{"event": "cmd", "text": "TONE 16 150000 127", "t": 1793985973.98269, "phase": "esp32-test"}
+{"event": "reply_line", "text": "K,tone,16,16,0,150000,127,150000,150060,8922,5437,20060404,20060404,20000000,00000000,00000000,0", "t": 1793985974.1357582, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985974.135817, "phase": "esp32-test"}
+{"event": "cmd", "text": "STAT", "t": 1793985976.001479, "phase": "esp32-test"}
+{"event": "reply_line", "text": "S,keyed=0,b8=20000000,a8=00000000", "t": 1793985976.0028212, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985976.002841, "phase": "esp32-test"}
+{"event": "cmd", "text": "TONE 16 150000 127", "t": 1793985977.4870348, "phase": "esp32-test"}
+{"event": "reply_line", "text": "K,tone,16,16,0,150000,127,150000,150056,8922,4486,20060404,20060404,20000000,00000000,00000000,0", "t": 1793985977.639932, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985977.6407108, "phase": "esp32-test"}
+{"event": "cmd", "text": "STAT", "t": 1793985979.5212002, "phase": "esp32-test"}
+{"event": "reply_line", "text": "S,keyed=0,b8=20000000,a8=00000000", "t": 1793985979.522796, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985979.522816, "phase": "esp32-test"}
+{"event": "cmd", "text": "TONE 16 150000 127", "t": 1793985981.022934, "phase": "esp32-test"}
+{"event": "reply_line", "text": "K,tone,16,16,0,150000,127,150000,150061,8922,5434,20060404,20060404,20000000,00000000,00000000,0", "t": 1793985981.175832, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985981.1767192, "phase": "esp32-test"}
+{"event": "cmd", "text": "STAT", "t": 1793985983.039778, "phase": "esp32-test"}
+{"event": "reply_line", "text": "S,keyed=0,b8=20000000,a8=00000000", "t": 1793985983.041833, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985983.041854, "phase": "esp32-test"}
+{"event": "cmd", "text": "TONE 16 150000 127", "t": 1793985984.526946, "phase": "esp32-test"}
+{"event": "reply_line", "text": "K,tone,16,16,0,150000,127,150000,150060,8919,5437,20060404,20060404,20000000,00000000,00000000,0", "t": 1793985984.680765, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985984.6808279, "phase": "esp32-test"}
+{"event": "cmd", "text": "STAT", "t": 1793985986.5581, "phase": "esp32-test"}
+{"event": "reply_line", "text": "S,keyed=0,b8=20000000,a8=00000000", "t": 1793985986.5597591, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985986.559788, "phase": "esp32-test"}
+{"event": "cmd", "text": "TONE 16 150000 127", "t": 1793985988.0469592, "phase": "esp32-test"}
+{"event": "reply_line", "text": "K,tone,16,16,0,150000,127,150000,150057,8916,4489,20060404,20060404,20000000,00000000,00000000,0", "t": 1793985988.19985, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985988.200684, "phase": "esp32-test"}
+{"event": "cmd", "text": "STAT", "t": 1793985990.046551, "phase": "esp32-test"}
+{"event": "reply_line", "text": "S,keyed=0,b8=20000000,a8=00000000", "t": 1793985990.047817, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985990.048686, "phase": "esp32-test"}
+{"event": "cmd", "text": "TONE 16 150000 127", "t": 1793985991.534962, "phase": "esp32-test"}
+{"event": "reply_line", "text": "K,tone,16,16,0,150000,127,150000,150060,8895,5437,20060404,20060404,20000000,00000000,00000000,0", "t": 1793985991.687883, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985991.68869, "phase": "esp32-test"}
+{"event": "cmd", "text": "STAT", "t": 1793985993.570026, "phase": "esp32-test"}
+{"event": "reply_line", "text": "S,keyed=0,b8=20000000,a8=00000000", "t": 1793985993.5718021, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985993.5718231, "phase": "esp32-test"}
+{"event": "cmd", "text": "TONE 16 150000 127", "t": 1793985995.05504, "phase": "esp32-test"}
+{"event": "reply_line", "text": "K,tone,16,16,0,150000,127,150000,150056,8922,4489,20060404,20060404,20000000,00000000,00000000,0", "t": 1793985995.208655, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985995.208711, "phase": "esp32-test"}
+{"event": "cmd", "text": "STAT", "t": 1793985997.0733929, "phase": "esp32-test"}
+{"event": "reply_line", "text": "S,keyed=0,b8=20000000,a8=00000000", "t": 1793985997.074785, "phase": "esp32-test"}
+{"event": "reply_line", "text": "OK", "t": 1793985997.0748081, "phase": "esp32-test"}
+{"event": "refused", "text": "TONE 16 150000 127", "error": "envelope command budget exhausted", "t": 1793985998.574867, "phase": "esp32-test"}

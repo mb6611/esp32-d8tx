@@ -1,0 +1,66 @@
+Fri Nov  6 05:35:01 UTC 2026
+esptool v5.6.0
+Serial port /dev/cu.usbserial-0001:
+Connecting.....
+Detecting chip type... ESP32
+Connected to ESP32 on /dev/cu.usbserial-0001:
+Chip type:          ESP32-D0WD-V3 (revision v3.0)
+Features:           Wi-Fi, BT, Dual Core + LP Core, 240MHz, Vref calibration in eFuse, Coding Scheme None
+Crystal frequency:  40MHz
+MAC:                cc:db:a7:56:21:64
+
+Uploading stub flasher...
+Running stub flasher...
+Stub flasher running.
+Changing baud rate to 460800...
+Changed.
+
+WARNING: ESP32 has no chip ID. Reading MAC address instead.
+MAC:                cc:db:a7:56:21:64
+
+Hard resetting via RTS pin...
+esptool v5.6.0
+Serial port /dev/cu.usbserial-0001:
+Connecting....
+Detecting chip type... ESP32
+Connected to ESP32 on /dev/cu.usbserial-0001:
+Chip type:          ESP32-D0WD-V3 (revision v3.0)
+Features:           Wi-Fi, BT, Dual Core + LP Core, 240MHz, Vref calibration in eFuse, Coding Scheme None
+Crystal frequency:  40MHz
+MAC:                cc:db:a7:56:21:64
+
+Uploading stub flasher...
+Running stub flasher...
+Stub flasher running.
+
+Flash Memory Information:
+=========================
+Manufacturer: 5e
+Device: 4016
+Detected flash size: 4MB
+Flash voltage set by a strapping pin: 3.3V
+
+Hard resetting via RTS pin...
+esptool v5.6.0
+Serial port /dev/cu.usbserial-0001:
+Connecting....
+Detecting chip type... ESP32
+Connected to ESP32 on /dev/cu.usbserial-0001:
+Chip type:          ESP32-D0WD-V3 (revision v3.0)
+Features:           Wi-Fi, BT, Dual Core + LP Core, 240MHz, Vref calibration in eFuse, Coding Scheme None
+Crystal frequency:  40MHz
+MAC:                cc:db:a7:56:21:64
+
+Uploading stub flasher...
+Running stub flasher...
+Stub flasher running.
+Changing baud rate to 460800...
+Changed.
+
+Configuring flash size...
+Reading from 0x00010020 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100.0% 32B/32B [0s] 
+Read 32 bytes from 0x00010000 in 0.0 seconds (9.2 kbit/s) to '/tmp/appfirst.bin'.
+
+Hard resetting via RTS pin...
+00000000: e906 0210 0012 0840 ee00 0000 0000 0000  .......@........
+00000010: 008f 0100 0000 0001 2000 403f 4840 0100  ........ .@?H@..

@@ -1,0 +1,1 @@
+a62d6c24d7fdccdb534cabc68620002603237d519dac6b0fe5f1740968e40b3c  ../../firmware/build/d8tone.bin

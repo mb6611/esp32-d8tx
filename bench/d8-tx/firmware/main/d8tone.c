@@ -1,0 +1,271 @@
+/* d8tone: bounded tone bench app for the classic ESP32 DevKit V1 (U2).
+ *
+ * PHY bring-up, keying and unkeying are adapted from the read-only reference
+ * auto-drone/stage2/txeng (K 0 keying: txcal_debuge_mode(0) + ROM start_tx_tone_step + PBUS(5,1)).
+ * Boot and idle are RF-silent: nothing keys until a TONE/ALT command arrives.
+ * Channel is the PHY default Wi-Fi ch1 (2412 MHz); the tone offset is added to that.
+ *
+ * Serial 921600 8N1, line commands (decimal only). Every command ends with "OK" or "ERR <why>":
+ *   PING                       -> P,d8tone,1
+ *   STAT                       -> S,keyed=0,b8=XXXXXXXX,a8=XXXXXXXX
+ *   U                          unkey unconditionally (idempotent)
+ *   TONE f dur_us [pwr]        key one tone at step offset f (|f|<=511, 0 = center), for dur_us
+ *                              (50..200000), pwr 0..127 (default 127), then unkey
+ *   ALT fa fb half_us dur_us [pwr]   key at fa, switch fa<->fb every half_us (>=50, <=255 switches)
+ *   PKT hex [pwr]             18-byte length+payload (CRC appended) or 20-byte full U3
+ *                             packet including CRC (transmitted verbatim), pwr default 127.
+ *                             Example: PKT 1142b2000001cacacaca8888cacacaca8888
+ * Results are printed only after unkey:
+ *   K,<mode>,fa,fb,half_us,req_us,pwr,on_us,key_total_us,key_cycles,unkey_cycles,b8_on,b8_end,b8_off,a8_on,a8_off,ntrans
+ *   T,<i>,<due_us>,<actual_us>,<b8_readback>        one per transition (time since tone on, 240 MHz cycles/240)
+ * on_us = device-clock time from end of key() to the start of unkey(). b8_off bit18 must be 0.
+ * All timing is the ESP32 CPU cycle counter; none of this is RF evidence (see plan R2/R3).
+ * The RTC WDT (~3 s, reset-system) is fed every <=10 ms input poll: a hang reboots into the RF-silent state
+ * ("I,boot,reason=N"). The tone window busy-waits with interrupts off, at most 200 ms.
+ */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <inttypes.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_wifi.h"
+#include "esp_event.h"
+#include "esp_system.h"
+#include "esp_timer.h"
+#include "esp_rom_sys.h"
+#include "esp_cpu.h"
+#include "nvs_flash.h"
+#include "soc/soc.h"
+#include "hal/wdt_hal.h"
+#include "driver/uart.h"
+#include "driver/uart_vfs.h"
+#include "cmd_parse.h"
+#include "packet.h"
+#include "line_in.h"
+
+#define TONE0 0x600060b8u /* tone NCO: [27:0] f, bit18 enable, [17:10] -gain */
+#define TONE_FINE 0x600050a8u /* low f bits when TONE0 bit29 set */
+#define CYC_PER_US 240u
+
+extern void rom_pbus_workmode(void);
+extern void rom_pbus_xpd_rx_on(int);
+extern void rom_pbus_xpd_tx_off(void);
+extern void rom_set_rxclk_en(int);
+extern void rom_start_tx_tone_step(int en, int f, int g, int en2, int f2, int g2);
+extern void rom_stop_tx_tone(int which);
+extern void rom_pbus_force_test(int row, int col, int val);
+extern void txcal_debuge_mode(int);
+extern void **g_phyFuns;
+
+static wdt_hal_context_t rwdt = RWDT_HAL_CONTEXT_DEFAULT();
+static portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+static volatile bool keyed;
+
+static void feed(void) {
+    wdt_hal_write_protect_disable(&rwdt);
+    wdt_hal_feed(&rwdt);
+    wdt_hal_write_protect_enable(&rwdt);
+}
+
+static void rwdt_start(void) {
+    wdt_hal_init(&rwdt, WDT_RWDT, 0, false);
+    wdt_hal_write_protect_disable(&rwdt);
+    wdt_hal_config_stage(&rwdt, WDT_STAGE0, 450000, WDT_STAGE_ACTION_RESET_SYSTEM);
+    wdt_hal_enable(&rwdt);
+    wdt_hal_write_protect_enable(&rwdt);
+}
+
+static void rx_mode(void) {
+    rom_pbus_workmode();
+    rom_pbus_xpd_tx_off();
+    rom_pbus_xpd_rx_on(1);
+    rom_set_rxclk_en(1);
+}
+
+static void phy_up(void) {
+    esp_err_t e = nvs_flash_init();
+    if (e == ESP_ERR_NVS_NO_FREE_PAGES || e == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        e = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(e);
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_NULL));
+    ESP_ERROR_CHECK(esp_wifi_start());
+    ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
+    ESP_ERROR_CHECK(esp_wifi_set_promiscuous(true));
+    ESP_ERROR_CHECK(esp_wifi_set_channel(1, WIFI_SECOND_CHAN_NONE));
+    rx_mode();
+}
+
+/* Tone offset f (signed step units) into the ROM call. With b8 bit29 set the ROM splits f into
+ * 2 fine bits (0x600050a8) + f>>2, so the field is 12 bits wide; otherwise 10. Passing a negative
+ * int would sign-extend into the enable/gain bits, so mask first and let the ROM see two's complement. */
+static void tone_set(int f) {
+    int mask = (REG_READ(TONE0) & BIT(29)) ? 0xfff : 0x3ff;
+    rom_start_tx_tone_step(1, f & mask, 127, 0, 0, 0);
+}
+
+static void key(int f, int pwr) {
+    txcal_debuge_mode(0);
+    tone_set(f);
+    rom_pbus_force_test(5, 1, pwr);
+}
+
+/* libphy's stop path (as stage2 txeng unkey), then receive-only PBUS setup. Idempotent. */
+static void unkey(void) {
+    ((void (*)(int, int, int, int, int, int))g_phyFuns[68 / 4])(0, 0, 0, 0, 0, 0);
+    ((void (*)(void))g_phyFuns[0x124 / 4])();
+    rom_stop_tx_tone(1);
+    rx_mode();
+    keyed = false;
+}
+
+typedef struct { uint32_t due, actual, rb; } trans_t;
+static trans_t trans[ALT_MAX_TRANS + 1];
+
+static inline uint32_t cyc(void) { return esp_cpu_get_cycle_count(); }
+
+static void run_window(const cmd_t *c) {
+    unsigned nt = 0;
+    const uint32_t dur = c->dur_us * CYC_PER_US, half = c->half_us * CYC_PER_US;
+    const bool alt = c->kind == CMD_ALT;
+    uint32_t b8_on, b8_end, b8_off, a8_on, a8_off;
+    feed();
+    portENTER_CRITICAL(&mux);
+    int64_t tk0 = esp_timer_get_time();
+    uint32_t c0 = cyc();
+    keyed = true; /* set before key so a fault path always unkeys */
+    key(c->f_a, c->pwr);
+    uint32_t t0 = cyc(); /* tone-on reference */
+    uint32_t key_cyc = t0 - c0;
+    b8_on = REG_READ(TONE0);
+    a8_on = REG_READ(TONE_FINE);
+    uint32_t next = half;
+    bool onb = false;
+    uint32_t el;
+    while ((el = cyc() - t0) < dur) {
+        if (alt && el >= next && nt < ALT_MAX_TRANS) {
+            onb = !onb;
+            tone_set(onb ? c->f_b : c->f_a);
+            trans[nt].due = next;
+            trans[nt].actual = el;
+            trans[nt].rb = REG_READ(TONE0);
+            nt++;
+            next += half;
+        }
+    }
+    b8_end = REG_READ(TONE0);
+    uint32_t u0 = cyc();
+    unkey();
+    uint32_t unkey_cyc = cyc() - u0;
+    int64_t tk1 = esp_timer_get_time();
+    b8_off = REG_READ(TONE0);
+    a8_off = REG_READ(TONE_FINE);
+    portEXIT_CRITICAL(&mux);
+    printf("K,%s,%d,%d,%" PRIu32 ",%" PRIu32 ",%d,%" PRIu32 ",%" PRId64 ",%" PRIu32 ",%" PRIu32
+           ",%08" PRIx32 ",%08" PRIx32 ",%08" PRIx32 ",%08" PRIx32 ",%08" PRIx32 ",%u\n",
+           alt ? "alt" : "tone", c->f_a, c->f_b, c->half_us, c->dur_us, c->pwr, (u0 - t0) / CYC_PER_US,
+           tk1 - tk0, key_cyc, unkey_cyc, b8_on, b8_end, b8_off, a8_on, a8_off, nt);
+    for (unsigned i = 0; i < nt; i++)
+        printf("T,%u,%" PRIu32 ",%" PRIu32 ",%08" PRIx32 "\n", i, trans[i].due / CYC_PER_US,
+               trans[i].actual / CYC_PER_US, trans[i].rb);
+    printf("OK\n");
+}
+
+/* D8 register values in Betaflight cc2500FrskyDConfig (26 MHz XOSC):
+ * MDMCFG4=0xaa, MDMCFG3=0x39: (256+57)*2^10*26MHz/2^28 = 31044.006 baud.
+ * DEVIATN=0x42: (8+2)*2^4*26MHz/2^17 = 31738.281 Hz deviation.
+ * On-chip f step measured 40MHz/1024=39062.5 Hz: f=+1 for bit 1,
+ * f=-1 for bit 0 (closest available signed deviation; f=2 is 78 kHz).
+ * 240MHz / 31044.006 = 7730.961 cycles/bit; rounded 7731, total
+ * phase drift across 208 bits <9 cycles. Hard key window <7ms (<10ms cap).
+ * Hardware GFSK pulse shaping is unavailable via the tone path: this is
+ * abrupt 2-FSK, not the CC2500 Gaussian-filtered modulation. */
+static void run_packet(const cmd_t *c) {
+    uint8_t air[D8_AIR_BYTES];
+    if (!d8_air_bytes(c->packet, c->packet_len, air)) { printf("ERR packet\n"); return; }
+    const uint32_t duration = D8_AIR_BITS * D8_BIT_CYCLES;
+    if (duration > 10000u * CYC_PER_US) { printf("ERR duration\n"); return; }
+    uint32_t b8_on, b8_end, b8_off, a8_on, a8_off, max_late = 0;
+    unsigned late_count = 0;
+    feed();
+    portENTER_CRITICAL(&mux);
+    uint32_t c0 = cyc();
+    keyed = true;
+    key((air[0] & 0x80) ? 1 : -1, c->pwr);
+    uint32_t t0 = cyc();
+    b8_on = REG_READ(TONE0); a8_on = REG_READ(TONE_FINE);
+    for (unsigned i = 1; i < D8_AIR_BITS; i++) {
+        uint32_t due = i * D8_BIT_CYCLES;
+        while ((int32_t)(cyc() - t0 - due) < 0) { }
+        tone_set((air[i >> 3] & (0x80u >> (i & 7))) ? 1 : -1);
+        uint32_t late = cyc() - t0 - due; /* completion, including ROM tone-set latency */
+        if (late) late_count++;
+        if (late > max_late) max_late = late;
+    }
+    while ((int32_t)(cyc() - t0 - duration) < 0) { }
+    b8_end = REG_READ(TONE0);
+    uint32_t u0 = cyc();
+    unkey();
+    uint32_t unkey_cyc = cyc() - u0;
+    b8_off = REG_READ(TONE0); a8_off = REG_READ(TONE_FINE);
+    portEXIT_CRITICAL(&mux);
+    printf("K,pkt,bits=%u,pwr=%d,on_us=%" PRIu32 ",key_cycles=%" PRIu32
+           ",unkey_cycles=%" PRIu32 ",max_late_ns=%" PRIu32 ",late_bits=%u"
+           ",b8_on=%08" PRIx32 ",b8_end=%08" PRIx32 ",b8_off=%08" PRIx32
+           ",a8_on=%08" PRIx32 ",a8_off=%08" PRIx32 "\nOK\n",
+           D8_AIR_BITS, c->pwr, (u0-t0)/CYC_PER_US, t0-c0, unkey_cyc,
+           max_late * 1000u / CYC_PER_US, late_count,
+           b8_on, b8_end, b8_off, a8_on, a8_off);
+}
+
+/* Bounded 10 ms read straight from the UART driver (not stdin): returns -1 when idle. */
+static int rd_byte(void *ctx) {
+    (void)ctx;
+    uint8_t b;
+    return uart_read_bytes(UART_NUM_0, &b, 1, pdMS_TO_TICKS(10)) == 1 ? b : -1;
+}
+static void feed_cb(void *ctx) { (void)ctx; feed(); }
+
+void app_main(void) {
+    printf("\nI,boot,reason=%d\n", (int)esp_reset_reason());
+    fflush(stdout);
+    phy_up();
+    rom_stop_tx_tone(1); /* tone enable off: RF-silent regardless of prior state */
+    vTaskDelay(pdMS_TO_TICKS(100));
+    uart_driver_install(UART_NUM_0, 2048, 0, 0, NULL, 0);
+    uart_vfs_dev_use_driver(UART_NUM_0); /* stdout only; input is polled via uart_read_bytes */
+    rwdt_start();
+    printf("I,ready,b8=%08" PRIx32 "\n", REG_READ(TONE0));
+    fflush(stdout);
+    static line_in_t li;
+    for (;;) {
+        line_res_t r = line_poll(&li, rd_byte, feed_cb, NULL);
+        if (r == LINE_NONE) continue;
+        if (r == LINE_LONG) { printf("ERR long\n"); fflush(stdout); continue; }
+        char *line = li.buf;
+        cmd_t c = cmd_parse(line);
+        switch (c.kind) {
+        case CMD_NONE: break;
+        case CMD_ERR:
+            if (keyed) unkey();
+            printf("ERR %s\n", c.err);
+            break;
+        case CMD_PING: printf("P,d8tone,1\nOK\n"); break;
+        case CMD_STAT:
+            printf("S,keyed=%d,b8=%08" PRIx32 ",a8=%08" PRIx32 "\nOK\n", keyed, REG_READ(TONE0),
+                   REG_READ(TONE_FINE));
+            break;
+        case CMD_UNKEY: unkey(); printf("OK\n"); break;
+        case CMD_TONE:
+        case CMD_ALT: run_window(&c); break;
+        case CMD_PKT: run_packet(&c); break;
+        }
+        fflush(stdout);
+    }
+}
