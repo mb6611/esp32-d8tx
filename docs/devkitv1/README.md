@@ -1,7 +1,7 @@
 # ESP32 DevKit V1 profile
 
 Profile `esp32-devkitv1`: classic ESP32 DevKit V1, CP2102, UART at 921600 baud
-(CP2102 ceiling; 2 Mbaud silently fails and the board never answers). Receive only.
+(CP2102 ceiling; 2 Mbaud silently fails and the board never answers). Receive only for the RX profile and its write-up. The private TX experiment (one D8 packet, separate `d8tone` firmware in `bench/d8-tx/`) is documented in [the TX HTML write-up](writeup/index.html#tx-chapter) ([Markdown](writeup/tx.md), chapter source) and [bench/d8-tx/README.md](../../bench/d8-tx/README.md); it is not part of this profile.
 
 ## Toolchain
 ESP-IDF at commit `25fe69f946311abdaf9ad56591f25fedbc20ac98` (v6.1-dev), installed at `~/esp/esp-idf`.
