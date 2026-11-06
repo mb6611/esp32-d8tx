@@ -19,6 +19,7 @@
  *                              release + rom_set_rf_freq_offset, ~0.27 ms, no recalibration); no keying.
  *                              Afterwards TONE/ALT (tone offset f=0 is the LO) are capped at 150 ms until
  *                              RETUNE 2412000 restores the boot LO. Refused while keyed.
+ *   FOFS hz                    signed LO offset (|hz|<=200000, default 0, RAM only) added to RETUNE and HOP retunes
  *   STICKS c1..c8              eight stick values in us (800..2200) for HOP packets (default 1500 each)
  *   HOP n_slots [pwr]          (n<=940) stream D8 data packets, one per ~8.994 ms slot, on the E8 hop table
  *                              (start 2, step 55, entry 0 = 0; channel n = 2404 MHz + n*299.93 kHz), packet
@@ -240,8 +241,12 @@ static void run_packet(const cmd_t *c) {
            b8_on, b8_end, b8_off, a8_on, a8_off);
 }
 
+static int fofs_hz; /* RAM-only LO offset applied to RETUNE and HOP retunes */
 static volatile bool lo_off; /* LO moved off the boot 2412 MHz */
 static uint16_t sticks_raw[D8_STICKS] = {2250, 2250, 2250, 2250, 2250, 2250, 2250, 2250};
+static bool arm_ok; /* set by ARMOK while idle; cleared when any HOP ends and at boot */
+static int ch7_gate(int us) { return (!arm_ok && us > S_CH7_US_MAX) ? S_CH7_US_MAX : us; }
+
 
 /* Fast retune to f10 (10 Hz units): capacitor-code release, then ROM offset (1/1024 MHz). */
 static void lo_retune(uint32_t f10) {
@@ -255,27 +260,65 @@ static void lo_retune(uint32_t f10) {
 
 #define HOP_SLOT_CYC (8994u * CYC_PER_US)
 
+/* Non-blocking input drain during continuous HOP. Returns 0 = nothing/applied S, 1 = stop (U/STOP
+ * or any other input; *err set for the latter). */
+static int hop_drain(line_in_t *li, const char **err, int64_t *last_s_us) {
+    uint8_t b;
+    while (uart_read_bytes(UART_NUM_0, &b, 1, 0) == 1) {
+        if (b != '\n' && b != '\r') {
+            if (li->len < sizeof li->buf - 1) li->buf[li->len++] = (char)b;
+            else li->len = sizeof li->buf;
+            continue;
+        }
+        if (!li->len) continue;
+        int over = li->len >= sizeof li->buf;
+        li->buf[over ? 0 : li->len] = 0;
+        li->len = 0;
+        if (over) { *err = "long"; return 1; }
+        cmd_t c = cmd_parse(li->buf);
+        if (c.kind == CMD_NONE) continue;
+        if (c.kind == CMD_S) {
+            for (unsigned i = 0; i < D8_STICKS; i++) sticks_raw[i] = d8_us_to_raw(i == 6 ? ch7_gate(c.sticks[i]) : c.sticks[i]);
+            *last_s_us = esp_timer_get_time();
+            continue;
+        }
+        if (c.kind == CMD_UNKEY) return 1;
+        *err = c.kind == CMD_ERR ? c.err : "hop_busy";
+        return 1;
+    }
+    return 0;
+}
+
 static void run_hop(const cmd_t *c) {
     uint8_t tab[D8_HOP_CHANNELS], body[D8_BODY_BYTES], air[D8_AIR_BYTES];
     d8_hop_table(2, 55, tab);
     uint32_t late_max = 0, rt_max = 0;
     unsigned sent = 0;
     bool abort = false;
+    const bool cont = c->n_slots == 0;
+    const char *why = "done", *err = NULL;
+    static line_in_t hli;
+    hli.len = 0;
     feed();
+    int64_t last_s_us = esp_timer_get_time(), last_st_us = last_s_us;
     uint32_t base = cyc();
     uint32_t slot_start = base; /* scheduled start of the current slot */
-    for (unsigned k = 0; k < c->n_slots && !abort; k++) {
+    for (unsigned k = 0; (cont || k < c->n_slots) && !abort; k++) {
         d8_build_body(D8_TXID0, D8_TXID1, (uint8_t)k, sticks_raw, body);
-        if (!d8_air_bytes(body, D8_BODY_BYTES, air)) { printf("ERR packet\n"); abort = true; break; }
+        if (!d8_air_bytes(body, D8_BODY_BYTES, air)) { printf("ERR packet\n"); abort = true; why = "packet"; break; }
         uint32_t f10 = d8_channel_f10(tab[k % D8_HOP_CHANNELS]);
-        while ((int32_t)(cyc() - slot_start) < 0) { } /* wait for the slot (interrupts on) */
+        while ((int32_t)(cyc() - slot_start) < 0) { /* wait for the slot (interrupts on) */
+            if (cont && hop_drain(&hli, &err, &last_s_us)) { abort = true; break; }
+        }
+        if (abort) { why = err ? "err" : "stop"; break; }
         uint32_t late = cyc() - slot_start;
         if (late > HOP_SLOT_CYC) slot_start = cyc(); /* overran a whole slot: resync, don't burst */
         if (late > late_max) late_max = late;
         feed();
+        if (cont && esp_timer_get_time() - last_s_us > (int64_t)c->timeout_ms * 1000) { why = "timeout"; break; }
         portENTER_CRITICAL(&mux);
         uint32_t r0 = cyc();
-        lo_retune(f10);
+        lo_retune(f10 + (uint32_t)(fofs_hz / 10));
         uint32_t r1 = cyc() - r0;
         if (r1 > rt_max) rt_max = r1;
         keyed = true;
@@ -291,14 +334,23 @@ static void run_hop(const cmd_t *c) {
         portEXIT_CRITICAL(&mux);
         sent++;
         slot_start += HOP_SLOT_CYC;
-        uint8_t b;
-        if (uart_read_bytes(UART_NUM_0, &b, 1, 0) == 1) abort = true;
+        if (cont) {
+            int64_t now = esp_timer_get_time();
+            if (now - last_st_us >= 1000000) { /* <=1 short status line per second */
+                last_st_us = now;
+                printf("K,hop,s=%u\n", sent);
+            }
+        } else {
+            uint8_t b;
+            if (uart_read_bytes(UART_NUM_0, &b, 1, 0) == 1) { abort = true; why = "byte"; }
+        }
     }
     if (keyed) unkey();
     lo_retune(241200000u); /* 2412 MHz = 241,200,000 x 10 Hz */
     lo_off = false;
-    printf("K,hop,slots=%u,late_max_us=%" PRIu32 ",retune_max_us=%" PRIu32 "\nOK\n", sent,
-           late_max / CYC_PER_US, rt_max / CYC_PER_US);
+    if (err) printf("ERR %s\n", err);
+    printf("K,hop,slots=%u,late_max_us=%" PRIu32 ",retune_max_us=%" PRIu32 ",why=%s\nOK\n", sent,
+           late_max / CYC_PER_US, rt_max / CYC_PER_US, why);
 }
 
 /* Bounded 10 ms read straight from the UART driver (not stdin): returns -1 when idle. */
@@ -335,8 +387,8 @@ void app_main(void) {
             break;
         case CMD_PING: printf("P,d8tone,1\nOK\n"); break;
         case CMD_STAT:
-            printf("S,keyed=%d,b8=%08" PRIx32 ",a8=%08" PRIx32 "\nOK\n", keyed, REG_READ(TONE0),
-                   REG_READ(TONE_FINE));
+            printf("S,keyed=%d,b8=%08" PRIx32 ",a8=%08" PRIx32 ",fofs=%d\nOK\n", keyed, REG_READ(TONE0),
+                   REG_READ(TONE_FINE), fofs_hz);
             break;
         case CMD_UNKEY: unkey(); printf("OK\n"); break;
         case CMD_TONE:
@@ -348,17 +400,24 @@ void app_main(void) {
             break;
         case CMD_RETUNE:
             if (keyed) { printf("ERR keyed\n"); break; }
-            lo_retune((uint32_t)c.khz * 100u);
-            lo_off = c.khz != 2412000;
+            lo_retune((uint32_t)((int)c.khz * 100 + fofs_hz / 10));
+            lo_off = (int)c.khz * 100 + fofs_hz / 10 != 241200000;
             printf("OK\n");
             break;
         case CMD_STICKS:
-            for (unsigned i = 0; i < D8_STICKS; i++) sticks_raw[i] = d8_us_to_raw(c.sticks[i]);
+        case CMD_S:
+            for (unsigned i = 0; i < D8_STICKS; i++)
+                sticks_raw[i] = d8_us_to_raw(i == 6 && c.sticks[i] > S_CH7_US_MAX ? S_CH7_US_MAX : c.sticks[i]);
             printf("OK\n");
             break;
+        case CMD_FOFS: fofs_hz = c.hz; printf("OK\n"); break;
+        case CMD_ARMOK: arm_ok = true; printf("OK\n"); break;
         case CMD_HOP:
             if (keyed) { printf("ERR keyed\n"); break; }
             run_hop(&c);
+            arm_ok = false;
+            for (unsigned i = 0; i < D8_STICKS; i++) /* never leave ARM high in stored sticks */
+                if (i == 6 && sticks_raw[i] > d8_us_to_raw(S_CH7_US_MAX)) sticks_raw[i] = d8_us_to_raw(1000);
             break;
         case CMD_PKT: run_packet(&c); break;
         }

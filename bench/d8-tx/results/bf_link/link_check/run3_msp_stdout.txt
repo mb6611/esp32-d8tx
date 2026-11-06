@@ -1,0 +1,20 @@
+Traceback (most recent call last):
+  File "/private/tmp/val-venv/lib/python3.15/site-packages/serial/serialposix.py", line 322, in open
+    self.fd = os.open(self.portstr, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
+              ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: [Errno 16] Resource busy: '/dev/cu.usbmodem0x80000001'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/1unoe/Developer/personal/esp32-devkitv1-sdr-tx/bench/d8-tx/host/bf_msp.py", line 150, in <module>
+    main()
+    ~~~~^^
+  File "/Users/1unoe/Developer/personal/esp32-devkitv1-sdr-tx/bench/d8-tx/host/bf_msp.py", line 135, in main
+    port = serial.Serial(a.port, a.baud, timeout=0.05)
+  File "/private/tmp/val-venv/lib/python3.15/site-packages/serial/serialutil.py", line 244, in __init__
+    self.open()
+    ~~~~~~~~~^^
+  File "/private/tmp/val-venv/lib/python3.15/site-packages/serial/serialposix.py", line 325, in open
+    raise SerialException(msg.errno, "could not open port {}: {}".format(self._port, msg))
+serial.serialutil.SerialException: [Errno 16] could not open port /dev/cu.usbmodem0x80000001: [Errno 16] Resource busy: '/dev/cu.usbmodem0x80000001'

@@ -1,0 +1,3 @@
+# link_check summary (partial)
+- Stock BF 4.2.11 MATEKF411RX bin (sha bb32b85a...) flashed via DFU; bin taken from ../auto-drone/stage4/recovery/assets (not in this repo). Config replayed from diff_all_final.txt; `diff all` saved as diff_all_restored.txt: `cmp` IDENTICAL to bench/cc2500-rxdiag/results/diff_all_final.txt (287 lines, tx_id 66,178, offset -32).
+- Link check NOT done. run1: HOP ran (K,... why=done, STAT keyed=0) but MSP only timed out because I had left the FC in CLI mode. After `exit`, port /dev/cu.usbmodem0x80000001 is held by nwjs PID 7051 (Betaflight Configurator?) -> Resource busy. run2/run3 had no MSP data (ESP side only run; HOP runs used: 3 of 4 incl. run1; STAT keyed=0 each).

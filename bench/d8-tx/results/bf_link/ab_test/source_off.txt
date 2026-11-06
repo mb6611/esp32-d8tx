@@ -1,0 +1,8 @@
+# cmd=rxdiag hop 2 55 5000 2403937
+1794000037.3197 rxdiag hop 2 55 5000 2403937
+1794000037.3564 H,proto=6,mode=hop,fw=f39fac05,bf=948ba63,base_khz=2403937,freq_set_hz=2403937164,freq_word=0x5C7589,freq_rb=0x5C7589,start=2,step=55,nchan=47,slot_us=9000,grace_us=500,max_missing=100,cfg_rb_ok=1,bw_hz=135416,sync=0xD391,mdmcfg4=0xAA,mdmcfg3=0x39,mdmcfg2=0x11,deviatn=0x42,pktctrl1=0x04,pktctrl0=0x05,pktlen=0x19,foccfg=0x16,iocfg0=0x2E,cal_total_us=44233,part=0x80,ver=0x03,spur=0,ant=1,lna=1,txen=0,hop=1,spi_hz=3375000,quiet_us=2000,duration_ms=5000,t0_us=1543758736
+1794000037.4663 P,0,1543861122,3,021B52,-67,88,0,-6,0,0
+1794000037.8660 P,1,1544261935,7,06E05026774F30,-74,127,0,-3,0,0
+1794000041.2833 P,2,1547697046,10,09ECB881ACF9AE31105C,-66,127,0,2,0,0
+1794000042.3122 X,3,1548758762,done
+1794000042.3122 

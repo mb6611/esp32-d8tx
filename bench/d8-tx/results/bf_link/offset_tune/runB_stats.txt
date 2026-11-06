@@ -1,0 +1,5 @@
+slots=556 valid=472 rate=0.8489208633093526
+longest loss run=47 (slot 509)
+counter: continuous=471 discontinuities=0
+ids=['42B2'] stick frames=1 chan mismatches=0
+  ch  0  10/ 12

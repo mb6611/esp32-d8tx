@@ -13,9 +13,15 @@
 #define RETUNE_KHZ_MIN  2404000    /* D8 channel span only */
 #define RETUNE_KHZ_MAX  2478000
 #define RETUNE_TONE_MAX_US 150000u /* TONE after RETUNE (off the 2412 baseline) is capped */
+#define FOFS_HZ_MAX     200000     /* LO frequency offset, +/- Hz */
+#define HOP_TIMEOUT_DEF_MS 300
+#define HOP_TIMEOUT_MAX_MS 1000
+#define S_US_MIN        1000   /* live S clamp */
+#define S_US_MAX        2000
+#define S_CH7_US_MAX    1300   /* ch7 (index 6, ARM) forced low unless ARMOK was sent before this HOP */
 #define HOP_SLOTS_MAX   (D8_HOP_CHANNELS * 20u)
 
-typedef enum { CMD_NONE, CMD_PING, CMD_STAT, CMD_UNKEY, CMD_TONE, CMD_ALT, CMD_PKT, CMD_RETUNE, CMD_HOP, CMD_STICKS, CMD_ERR } cmd_kind_t;
+typedef enum { CMD_NONE, CMD_PING, CMD_STAT, CMD_UNKEY, CMD_TONE, CMD_ALT, CMD_PKT, CMD_RETUNE, CMD_HOP, CMD_STICKS, CMD_S, CMD_FOFS, CMD_ARMOK, CMD_ERR } cmd_kind_t;
 
 typedef struct {
     cmd_kind_t kind;
@@ -23,9 +29,11 @@ typedef struct {
     uint32_t half_us, dur_us;
     uint8_t packet[D8_PACKET_BYTES];
     unsigned packet_len; /* length+payload, optionally supplied CRC */
+    int hz;                /* FOFS */
     int khz;               /* RETUNE */
-    unsigned n_slots;      /* HOP */
-    int sticks[D8_STICKS]; /* STICKS, microseconds */
+    unsigned n_slots;      /* HOP; 0 = continuous */
+    unsigned timeout_ms;   /* HOP 0: max gap between S updates */
+    int sticks[D8_STICKS]; /* STICKS/S, microseconds */
     int pwr;               /* PBUS (5,1) value 0..127 */
     const char *err;       /* set for CMD_ERR */
 } cmd_t;

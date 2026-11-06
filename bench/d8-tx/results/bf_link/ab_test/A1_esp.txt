@@ -1,0 +1,11 @@
+FOFS> OK
+
+STAT0> S,keyed=0,b8=2003a020,a8=00000000,fofs=0
+OK
+
+1794000051.8808 >HOP 556 127
+1794000056.9077 K,hop,slots=556,late_max_us=96,retune_max_us=370,why=done
+1794000056.9077 OK
+STAT> S,keyed=0,b8=20000000,a8=00000000,fofs=0
+OK
+

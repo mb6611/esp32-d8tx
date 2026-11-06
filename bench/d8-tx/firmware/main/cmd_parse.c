@@ -35,9 +35,9 @@ cmd_t cmd_parse(char *line) {
     }
     if (!n) return c;
     long v;
-    if (!strcmp(tok[0], "PING") || !strcmp(tok[0], "STAT") || !strcmp(tok[0], "U")) {
+    if (!strcmp(tok[0], "PING") || !strcmp(tok[0], "STAT") || !strcmp(tok[0], "U") || !strcmp(tok[0], "STOP")) {
         if (n != 1) return fail("args");
-        c.kind = tok[0][0] == 'P' ? CMD_PING : tok[0][0] == 'S' ? CMD_STAT : CMD_UNKEY;
+        c.kind = tok[0][0] == 'P' ? CMD_PING : !strcmp(tok[0], "STAT") ? CMD_STAT : CMD_UNKEY;
         return c;
     }
     if (!strcmp(tok[0], "PKT")) { /* PKT <18/20 bytes hex> [pwr]; CRC appended for 18 bytes */
@@ -65,15 +65,48 @@ cmd_t cmd_parse(char *line) {
         c.kind = CMD_RETUNE;
         return c;
     }
-    if (!strcmp(tok[0], "HOP")) { /* HOP n_slots [pwr] */
-        if (n < 2 || n > 3) return fail("args");
-        if (!parse_int(tok[1], 1, HOP_SLOTS_MAX, &v)) return fail("slots");
+    if (!strcmp(tok[0], "FOFS")) { /* FOFS hz: signed LO offset for RETUNE/HOP */
+        if (n != 2) return fail("args");
+        if (!parse_int(tok[1], -FOFS_HZ_MAX, FOFS_HZ_MAX, &v)) return fail("hz");
+        c.hz = (int)v;
+        c.kind = CMD_FOFS;
+        return c;
+    }
+    if (!strcmp(tok[0], "HOP")) { /* HOP n_slots [pwr] | HOP 0 pwr [timeout_ms] (continuous) */
+        if (n < 2 || n > 4) return fail("args");
+        if (!parse_int(tok[1], 0, HOP_SLOTS_MAX, &v)) return fail("slots");
         c.n_slots = (unsigned)v;
-        if (n == 3) {
+        c.timeout_ms = HOP_TIMEOUT_DEF_MS;
+        if (c.n_slots) {
+            if (n > 3) return fail("args");
+        } else if (n < 3) {
+            return fail("args"); /* continuous needs an explicit power */
+        }
+        if (n >= 3) {
             if (!parse_int(tok[2], 0, PWR_MAX, &v)) return fail("pwr");
             c.pwr = (int)v;
         }
+        if (n == 4) {
+            if (!parse_int(tok[3], 1, HOP_TIMEOUT_MAX_MS, &v)) return fail("timeout");
+            c.timeout_ms = (unsigned)v;
+        }
         c.kind = CMD_HOP;
+        return c;
+    }
+    if (!strcmp(tok[0], "ARMOK")) { /* allow ch7 (ARM) high in S during the next HOP only */
+        if (n != 1) return fail("args");
+        c.kind = CMD_ARMOK;
+        return c;
+    }
+    if (!strcmp(tok[0], "S")) { /* S c1..c8 us: clamped to 1000-2000; ch7 gate applied in d8tone.c */
+        if (n != 1 + (int)D8_STICKS) return fail("args");
+        for (unsigned i = 0; i < D8_STICKS; i++) {
+            if (!parse_int(tok[1 + i], -1000000, 1000000, &v)) return fail("stick");
+            if (v < S_US_MIN) v = S_US_MIN;
+            if (v > S_US_MAX) v = S_US_MAX;
+            c.sticks[i] = (int)v;
+        }
+        c.kind = CMD_S;
         return c;
     }
     if (!strcmp(tok[0], "STICKS")) { /* STICKS c1..c8 in microseconds */
