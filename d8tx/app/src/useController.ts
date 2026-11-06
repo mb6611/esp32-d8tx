@@ -33,14 +33,17 @@ export function useController() {
   const [mode, setMode] = useState<'fly' | 'sticks'>('fly')
   const [hover, setHover] = useState(1350)
   const [tilt, setTilt] = useState(60)
-  const [climb, setClimb] = useState(150)
-  const [descend, setDescend] = useState(150)
+  const [maxThr, setMaxThr] = useState(100)
+  const [upSec, setUpSec] = useState(1.5)
+  const [downSec, setDownSec] = useState(1.0)
+  const [relSec, setRelSec] = useState(0.4)
   const [mouseYawOn, setMouseYawOn] = useState(false)
-  const settings = useRef({ mode, hover, tilt: tilt / 100, climb, descend, mouseYaw: mouseYawOn })
+  const settings = useRef({ mode, hover, tilt: tilt / 100, maxThr: maxThr / 100, upSec, downSec, relSec, mouseYaw: mouseYawOn })
   useEffect(() => {
-    settings.current = { mode, hover, tilt: tilt / 100, climb, descend, mouseYaw: mouseYawOn }
+    settings.current = { mode, hover, tilt: tilt / 100, maxThr: maxThr / 100, upSec, downSec, relSec, mouseYaw: mouseYawOn }
   })
   const fphase = useRef({ pitch: 0, roll: 0, yaw: 0, thr: 0 })
+  const fthr = useRef({ dir: 0, t: 0, start: 0, us: 0 })
   const mouseYaw = useRef(0)
   const keys = useRef(new Set<string>())
   const mouseL = useRef<{ x: number; y: number } | null>(null)
@@ -208,13 +211,28 @@ export function useController() {
         ph.pitch = phase(ph.pitch, axis('w', 's'), 0.4, 0.25)
         ph.roll = phase(ph.roll, axis('d', 'a'), 0.4, 0.25)
         ph.yaw = phase(ph.yaw, axis('e', 'q'), 0.4, 0.25)
-        ph.thr = phase(ph.thr, (k.has(' ') ? 1 : 0) - (shift ? 1 : 0), 0.2, 0.2)
+        const ft = fthr.current
+        const dir = (k.has(' ') ? 1 : 0) - (shift ? 1 : 0)
+        if (ft.us === 0) ft.us = hover
+        if (dir !== ft.dir) {
+          ft.dir = dir
+          ft.t = 0
+          ft.start = ft.us
+        }
+        ft.t += dt
+        if (dir === 0) {
+          const u = Math.min(1, ft.t / cfg.relSec)
+          ft.us = ft.start + (hover - ft.start) * (1 - (1 - u) ** 2)
+        } else {
+          const goal = dir > 0 ? 1000 + cfg.maxThr * 1000 : 1000
+          const u = Math.min(1, ft.t / (dir > 0 ? cfg.upSec : cfg.downSec))
+          ft.us = ft.start + (goal - ft.start) * u * u
+        }
         s.pitch = eo(ph.pitch) * cfg.tilt
         s.roll = eo(ph.roll) * cfg.tilt
         mouseYaw.current *= Math.max(0, 1 - 6 * dt)
         s.yaw = clamp(eo(ph.yaw) + (cfg.mouseYaw ? mouseYaw.current : 0), -1, 1)
-        const e = eo(ph.thr)
-        thrUs = hover + (e >= 0 ? e * cfg.climb : e * cfg.descend)
+        thrUs = ft.us
         s.throttle = (clamp(thrUs, 1000, 2000) - 1000) / 1000
       } else {
         if (mouseL.current) {
@@ -355,7 +373,7 @@ export function useController() {
     canArm,
     startLink,
     stopLink,
-    mode, setMode, hover, setHover, tilt, setTilt, climb, setClimb, descend, setDescend, mouseYawOn, setMouseYawOn,
+    mode, setMode, hover, setHover, tilt, setTilt, maxThr, setMaxThr, upSec, setUpSec, downSec, setDownSec, relSec, setRelSec, mouseYawOn, setMouseYawOn,
     disarm: () => {
       st.current.throttle = 0
       disarm()

@@ -6,13 +6,15 @@ interface Props {
   yLabel: string
   x: number // -1..1
   y: number // -1..1, up positive
+  yPct?: number // overrides y caption (0..100)
+  yUs?: number
   onDrag: (x: number, y: number) => void
   onRelease: () => void
 }
 
 const SIZE = 240
 
-export default function Stick({ label, xLabel, yLabel, x, y, onDrag, onRelease }: Props) {
+export default function Stick({ label, xLabel, yLabel, x, y, yPct, yUs, onDrag, onRelease }: Props) {
   const ref = useRef<SVGSVGElement>(null)
   const active = useRef(false)
 
@@ -53,7 +55,8 @@ export default function Stick({ label, xLabel, yLabel, x, y, onDrag, onRelease }
       </svg>
       <figcaption className="mt-2 font-sans text-[.8rem] leading-snug text-muted">
         {label}: {xLabel} <b className="font-mono font-normal text-fg">{(x * 100).toFixed(0)}%</b>, {yLabel}{' '}
-        <b className="font-mono font-normal text-fg">{(y * 100).toFixed(0)}%</b>
+        <b className="font-mono font-normal text-fg">{yPct !== undefined ? yPct.toFixed(0) : (y * 100).toFixed(0)}%</b>
+        {yUs !== undefined && <span title="throttle pulse width"> ({yUs.toFixed(0)} µs)</span>}
       </figcaption>
     </figure>
   )

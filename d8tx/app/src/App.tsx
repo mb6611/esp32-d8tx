@@ -166,7 +166,7 @@ export default function App() {
               if (fly && c.mouseYawOn && !document.pointerLockElement) void (document.body.requestPointerLock() as unknown)
             }}
           >
-            <Stick label="Left, mode 2" xLabel="yaw" yLabel={thrLabel} x={c.sticks.yaw} y={c.sticks.throttle * 2 - 1}
+            <Stick label="Left, mode 2" xLabel="yaw" yLabel={thrLabel} x={c.sticks.yaw} y={c.sticks.throttle * 2 - 1} yPct={c.sticks.throttle * 100} yUs={c.channels[0]}
               onDrag={(x, y) => !fly && c.setMouseL({ x, y })} onRelease={() => c.setMouseL(null)} />
             <Stick label="Right" xLabel="roll" yLabel="pitch" x={c.sticks.roll} y={c.sticks.pitch}
               onDrag={(x, y) => !fly && c.setMouseR({ x, y })} onRelease={() => c.setMouseR(null)} />
@@ -174,7 +174,7 @@ export default function App() {
 
           <p className="m-0 text-center font-sans text-xs leading-snug text-muted">
             {fly
-              ? 'W/S pitch · A/D roll · Q/E yaw · Space climb · Shift descend · [ ] hover · hold R arm · X disarm'
+              ? 'W/S pitch · A/D roll · Q/E yaw · hold Space climb · hold Shift descend · [ ] hover · hold R arm · X disarm'
               : 'W/S throttle · A/D yaw · arrows pitch/roll · Shift fine · hold R arm · X disarm · or drag the sticks'}
           </p>
 
@@ -185,8 +185,10 @@ export default function App() {
               <label>FOFS, Hz<input type="number" min={-200000} max={200000} step={1000} value={opts.fofs_hz} onChange={num('fofs_hz')} disabled={linked} /></label>
               <label>Timeout, ms<input type="number" min={50} max={2000} step={50} value={opts.timeout_ms} onChange={num('timeout_ms')} disabled={linked} /></label>
               <label>Max tilt, %<input type="number" min={10} max={100} value={c.tilt} onChange={(e) => c.setTilt(Number(e.target.value))} /></label>
-              <label>Climb, +µs<input type="number" min={0} max={500} step={10} value={c.climb} onChange={(e) => c.setClimb(Number(e.target.value))} /></label>
-              <label>Descend, −µs<input type="number" min={0} max={500} step={10} value={c.descend} onChange={(e) => c.setDescend(Number(e.target.value))} /></label>
+              <label>Max throttle, %<input type="number" min={0} max={100} value={c.maxThr} onChange={(e) => c.setMaxThr(Number(e.target.value))} /></label>
+              <label>Climb ramp, s<input type="number" min={0.2} max={5} step={0.1} value={c.upSec} onChange={(e) => c.setUpSec(Number(e.target.value))} /></label>
+              <label>Descend ramp, s<input type="number" min={0.2} max={5} step={0.1} value={c.downSec} onChange={(e) => c.setDownSec(Number(e.target.value))} /></label>
+              <label>Release to hover, s<input type="number" min={0.1} max={3} step={0.1} value={c.relSec} onChange={(e) => c.setRelSec(Number(e.target.value))} /></label>
               <label className="flex items-center gap-2">
                 <input type="checkbox" className="!w-auto" checked={c.mouseYawOn} onChange={(e) => c.setMouseYawOn(e.target.checked)} />
                 Mouse X yaw (click sticks to capture, Esc releases)
