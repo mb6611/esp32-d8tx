@@ -1,0 +1,18 @@
+diff --git a/src/main/drivers/motor.c b/src/main/drivers/motor.c
+index e08cd39d3..10ff8c5c5 100644
+--- a/src/main/drivers/motor.c
++++ b/src/main/drivers/motor.c
+@@ -262,6 +262,13 @@ bool isMotorProtocolDshot(void)
+ void motorDevInit(const motorDevConfig_t *motorDevConfig, uint16_t idlePulse, uint8_t motorCount) {
+     memset(motors, 0, sizeof(motors));
+ 
++#if defined(MATEKF411RXDIAG)
++    // Diagnostic build: never create a real motor device (no timers, no DMA, no motor pins).
++    motorNullDevice.vTable = motorNullVTable;
++    motorDevice = &motorNullDevice;
++    return;
++#endif
++
+     bool useUnsyncedPwm = motorDevConfig->useUnsyncedPwm;
+ 
+     if (isMotorProtocolEnabled()) {

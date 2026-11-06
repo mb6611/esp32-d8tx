@@ -1,0 +1,58 @@
+diff --git a/src/main/target/MATEKF411RX/target.h b/src/main/target/MATEKF411RX/target.h
+index c5caac22c..929382059 100644
+--- a/src/main/target/MATEKF411RX/target.h
++++ b/src/main/target/MATEKF411RX/target.h
+@@ -29,6 +29,9 @@
+ #elif defined(CRAZYBEEF4DX)
+ #define TARGET_BOARD_IDENTIFIER "C4DX"
+ #define USBD_PRODUCT_STRING     "CrazyBee F4 DX"
++#elif defined(MATEKF411RXDIAG)
++#define TARGET_BOARD_IDENTIFIER "M41R"
++#define USBD_PRODUCT_STRING     "MATEKF411RX-RXDIAG"
+ #else
+ #define TARGET_BOARD_IDENTIFIER "M41R"
+ #define USBD_PRODUCT_STRING     "MATEKF411RX"
+@@ -118,6 +121,22 @@
+ #define RX_SPI_DEFAULT_PROTOCOL RX_SPI_FRSKY_X
+ #define USE_RX_FRSKY_SPI_TELEMETRY
+ 
++#elif defined(MATEKF411RXDIAG)
++// Receive-only diagnostic: radio pins as stock, no protocol drivers.
++#define USE_RX_CC2500
++#define USE_RXDIAG_CC2500
++#define RX_CC2500_SPI_DISABLE_CHIP_DETECTION
++#define RX_SPI_EXTI_PIN             PC14
++#define RX_SPI_LED_PIN              PB9
++#define RX_SPI_LED_INVERTED
++
++#define USE_RX_CC2500_SPI_PA_LNA
++#define RX_CC2500_SPI_TX_EN_PIN      PA8
++#define RX_CC2500_SPI_LNA_EN_PIN     PA13
++
++#define USE_RX_CC2500_SPI_DIVERSITY
++#define RX_CC2500_SPI_ANT_SEL_PIN    PA14
++
+ #else // MATEKF411RX
+ #define RX_CC2500_SPI_DISABLE_CHIP_DETECTION
+ #define RX_SPI_EXTI_PIN             PC14
+@@ -177,3 +196,20 @@
+ 
+ #define USABLE_TIMER_CHANNEL_COUNT 9
+ #define USED_TIMERS             ( TIM_N(1)|TIM_N(2)|TIM_N(4)|TIM_N(5)|TIM_N(9))
++
++#if defined(MATEKF411RXDIAG)
++// Diagnostic variant: no ESC serial / 4-way passthrough (they drive motor pins without the motor device).
++#undef USE_ESCSERIAL
++#undef USE_ESCSERIAL_SIMONK
++#undef USE_SERIAL_4WAY_BLHELI_BOOTLOADER
++#undef USE_SERIAL_4WAY_SK_BOOTLOADER
++// No serial telemetry either (feature is forced off; removes the FrSky hub code from the image).
++#undef USE_TELEMETRY
++#undef DEFAULT_RX_FEATURE
++#define DEFAULT_RX_FEATURE      FEATURE_RX_MSP
++#undef DEFAULT_FEATURES
++#define DEFAULT_FEATURES        0
++#define USE_TARGET_CONFIG
++#define TARGET_VALIDATECONFIG
++#define TARGET_PREINIT
++#endif

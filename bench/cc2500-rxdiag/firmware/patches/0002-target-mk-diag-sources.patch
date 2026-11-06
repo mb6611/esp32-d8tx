@@ -1,0 +1,19 @@
+diff --git a/src/main/target/MATEKF411RX/target.mk b/src/main/target/MATEKF411RX/target.mk
+index c34e1d2d2..ecbb9664e 100644
+--- a/src/main/target/MATEKF411RX/target.mk
++++ b/src/main/target/MATEKF411RX/target.mk
+@@ -13,6 +13,14 @@ TARGET_SRC = \
+             rx/cc2500_sfhss.c \
+             rx/cc2500_redpine.c
+ 
++ifeq ($(TARGET),MATEKF411RXDIAG)
++# Receive-only diagnostic: drop every stock CC2500 driver/protocol source, add the diagnostic.
++TARGET_SRC := $(filter-out drivers/rx/rx_cc2500.c rx/cc2500_%.c,$(TARGET_SRC))
++TARGET_SRC += \
++            rx/rxdiag_core.c \
++            rx/rxdiag_cc2500.c
++endif
++
+ ifeq ($(TARGET), CRAZYBEEF4FS)
+ TARGET_SRC += \
+             drivers/rx/rx_a7105.c \
