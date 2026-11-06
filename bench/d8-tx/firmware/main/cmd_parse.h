@@ -21,7 +21,7 @@
 #define S_CH7_US_MAX    1300   /* ch7 (index 6, ARM) forced low unless ARMOK was sent before this HOP */
 #define HOP_SLOTS_MAX   (D8_HOP_CHANNELS * 20u)
 
-typedef enum { CMD_NONE, CMD_PING, CMD_STAT, CMD_UNKEY, CMD_TONE, CMD_ALT, CMD_PKT, CMD_RETUNE, CMD_HOP, CMD_STICKS, CMD_S, CMD_FOFS, CMD_ARMOK, CMD_ERR } cmd_kind_t;
+typedef enum { CMD_NONE, CMD_PING, CMD_STAT, CMD_UNKEY, CMD_TONE, CMD_ALT, CMD_PKT, CMD_RETUNE, CMD_HOP, CMD_STICKS, CMD_S, CMD_FOFS, CMD_ARMOK, CMD_INFO, CMD_LINK, CMD_ERR } cmd_kind_t;
 
 typedef struct {
     cmd_kind_t kind;
@@ -35,10 +35,14 @@ typedef struct {
     unsigned timeout_ms;   /* HOP 0: max gap between S updates */
     int sticks[D8_STICKS]; /* STICKS/S, microseconds */
     int pwr;               /* PBUS (5,1) value 0..127 */
-    const char *err;       /* set for CMD_ERR */
+    const char *err;       /* set for CMD_ERR: short reason text */
+    int legacy;            /* CMD_ERR from a legacy bench command: print the old bare "ERR <why>" */
 } cmd_t;
 
 /* Parses one line (modified in place). Never returns a keying command unless every field is valid. */
 cmd_t cmd_parse(char *line);
+
+/* Protocol v1 error code (args|range|busy|keyed|unknown|long) for a parser reason text. */
+const char *err_code(const char *why);
 
 #endif

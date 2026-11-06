@@ -44,6 +44,23 @@ int main(void) {
     assert(P("S 1500 1500 1500 1500 1500 1500 1200 1500").sticks[6] == 1200);
     ERR("S 1500", "args"); ERR("S 1 2 3 4 5 6 7 x", "stick");
     assert(P("STAT").kind == CMD_STAT);
+    /* protocol v1 */
+    assert(P("INFO").kind == CMD_INFO); ERR("INFO 1", "args");
+    c = P("LINK 127"); assert(c.kind == CMD_LINK && c.pwr == 127 && c.n_slots == 0 && c.timeout_ms == 300);
+    c = P("LINK 0 1000"); assert(c.kind == CMD_LINK && c.pwr == 0 && c.timeout_ms == 1000);
+    assert(P("LINK 5 1").timeout_ms == 1);
+    ERR("LINK", "args"); ERR("LINK 1 2 3", "args"); ERR("LINK 128", "pwr"); ERR("LINK -1", "pwr");
+    ERR("LINK 5 0", "timeout"); ERR("LINK 5 1001", "timeout"); ERR("LINK x", "pwr");
+    assert(!P("LINK 128").legacy && !P("FOFS x").legacy && !P("BOGUS").legacy);
+    assert(P("TONE x 1").legacy && P("HOP 0").legacy && P("PKT zz").legacy && P("RETUNE 1").legacy);
+    /* error codes: args range busy keyed unknown long */
+    assert(!strcmp(err_code("args"), "args") && !strcmp(err_code("cmd"), "unknown"));
+    assert(!strcmp(err_code("hz"), "range") && !strcmp(err_code("stick"), "range") && !strcmp(err_code("pwr"), "range"));
+    assert(!strcmp(err_code("timeout"), "range") && !strcmp(err_code("busy"), "busy"));
+    assert(!strcmp(err_code("keyed"), "keyed") && !strcmp(err_code("long"), "long") && !strcmp(err_code("hex"), "args"));
+    assert(P("STOP").kind == CMD_UNKEY);
+    ERR("STOP 1", "args"); ERR("PING 1", "args"); ERR("STAT x", "args"); ERR("ARMOK 1", "args");
+    ERR("NOPE", "cmd");
     puts("cmd_parse tests ok");
     return 0;
 }

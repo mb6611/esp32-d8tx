@@ -1,0 +1,33 @@
+/* Design tokens, taken from the write-up page (docs/devkitv1/writeup/index.html).
+   Tailwind turns each into utilities: text-fg, border-line, bg-paper-2, font-serif, ...
+   Canvas code reads the same values through src/tokens.ts, so change colours here only. */
+@theme static {
+  --color-*: initial;
+  --color-paper: #ffffff;
+  --color-paper-2: #f6f6f7;
+  --color-fg: #1d1d1f;
+  --color-muted: #6b6b70;
+  --color-line: #e3e3e6;
+  --color-grid: #ececef;
+  --color-link: #1a5fb4;
+  --color-ok: #2b7a3d;
+  --color-warn: #a86500;
+  --color-bad: #b3261e;
+
+  /* channel colours: matplotlib's default cycle, as in the write-up's figures */
+  --color-ch1: #1f77b4;
+  --color-ch2: #ff7f0e;
+  --color-ch3: #2ca02c;
+  --color-ch4: #d62728;
+  --color-ch5: #9467bd;
+  --color-ch6: #8c564b;
+  --color-ch7: #e377c2;
+  --color-ch8: #7f7f7f;
+
+  --font-serif: Charter, "Bitstream Charter", "Iowan Old Style", Georgia, serif;
+  --font-sans: -apple-system, system-ui, Helvetica, Arial, sans-serif;
+  --font-mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+
+  --radius-sm: 3px;
+  --radius-md: 4px;
+}

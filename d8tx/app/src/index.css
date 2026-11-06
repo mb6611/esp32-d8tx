@@ -1,0 +1,26 @@
+@import "tailwindcss";
+@import "./theme.css";
+
+@layer base {
+  html {
+    @apply bg-paper font-serif text-fg antialiased;
+    font-size: 17px;
+    line-height: 1.6;
+  }
+  body { user-select: none; }
+  input[type='number'] { @apply w-full rounded-sm border border-line bg-paper px-2 py-1 font-mono text-sm; }
+  input:disabled { @apply bg-paper-2 text-muted; }
+  button { @apply cursor-pointer font-sans; }
+  button:disabled { @apply cursor-not-allowed opacity-40; }
+}
+
+@layer components {
+  .stats { @apply flex flex-wrap gap-x-7 gap-y-2 border-t border-line py-2.5 font-sans; }
+  .stats dt { @apply text-xs font-semibold text-muted; }
+  .stats dd { @apply m-0 font-mono text-sm tabular-nums; }
+  .lede { @apply m-0 mb-4 font-sans text-sm leading-snug text-muted; }
+  .h { @apply mb-2 border-b border-line pb-1 font-sans text-xs font-semibold text-muted; }
+  .row { @apply flex justify-between border-b border-line py-1 font-sans text-sm; }
+  .row span:last-child { @apply font-mono tabular-nums; }
+  .btn { @apply rounded-sm border border-fg bg-paper px-3 py-1.5 text-sm hover:bg-paper-2; }
+}

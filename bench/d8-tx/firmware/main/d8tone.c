@@ -259,6 +259,16 @@ static void lo_retune(uint32_t f10) {
 }
 
 #define HOP_SLOT_CYC (8994u * CYC_PER_US)
+#define FW_ID "d8tx-v1"
+
+static bool v1_link; /* current run_hop was started by LINK (protocol v1 events/replies) */
+
+/* Protocol v1 error line: ERR <code> <text>. */
+static void print_err_v1(const char *why) {
+    const char *code = err_code(why);
+    const char *text = !strcmp(why, "busy") ? "link active" : !strcmp(why, "long") ? "line too long" : why;
+    printf("ERR %s %s\n", code, text);
+}
 
 /* Non-blocking input drain during continuous HOP. Returns 0 = nothing/applied S, 1 = stop (U/STOP
  * or any other input; *err set for the latter). */
@@ -283,7 +293,12 @@ static int hop_drain(line_in_t *li, const char **err, int64_t *last_s_us) {
             continue;
         }
         if (c.kind == CMD_UNKEY) return 1;
-        *err = c.kind == CMD_ERR ? c.err : "hop_busy";
+        if (c.kind == CMD_STAT) {
+            printf("OK keyed=%d link=1 fofs=%d armok=%d\n", keyed, fofs_hz, arm_ok);
+            fflush(stdout);
+            continue;
+        }
+        *err = c.kind == CMD_ERR ? c.err : v1_link ? "busy" : "hop_busy";
         return 1;
     }
     return 0;
@@ -294,18 +309,20 @@ static void run_hop(const cmd_t *c) {
     d8_hop_table(2, 55, tab);
     uint32_t late_max = 0, rt_max = 0;
     unsigned sent = 0;
-    bool abort = false;
-    const bool cont = c->n_slots == 0;
+    bool abort = false, abort_pkt = false;
+    const bool cont = c->kind == CMD_LINK || c->n_slots == 0;
     const char *why = "done", *err = NULL;
     static line_in_t hli;
     hli.len = 0;
+    v1_link = c->kind == CMD_LINK;
+    if (v1_link) { printf("OK\n"); fflush(stdout); }
     feed();
     int64_t last_s_us = esp_timer_get_time(), last_st_us = last_s_us;
     uint32_t base = cyc();
     uint32_t slot_start = base; /* scheduled start of the current slot */
     for (unsigned k = 0; (cont || k < c->n_slots) && !abort; k++) {
         d8_build_body(D8_TXID0, D8_TXID1, (uint8_t)k, sticks_raw, body);
-        if (!d8_air_bytes(body, D8_BODY_BYTES, air)) { printf("ERR packet\n"); abort = true; why = "packet"; break; }
+        if (!d8_air_bytes(body, D8_BODY_BYTES, air)) { printf("ERR packet\n"); abort = true; abort_pkt = true; why = "packet"; break; }
         uint32_t f10 = d8_channel_f10(tab[k % D8_HOP_CHANNELS]);
         while ((int32_t)(cyc() - slot_start) < 0) { /* wait for the slot (interrupts on) */
             if (cont && hop_drain(&hli, &err, &last_s_us)) { abort = true; break; }
@@ -338,7 +355,8 @@ static void run_hop(const cmd_t *c) {
             int64_t now = esp_timer_get_time();
             if (now - last_st_us >= 1000000) { /* <=1 short status line per second */
                 last_st_us = now;
-                printf("K,hop,s=%u\n", sent);
+                if (v1_link) printf("EV link slots=%u late_max_us=%" PRIu32 "\n", sent, late_max / CYC_PER_US);
+                else printf("K,hop,s=%u\n", sent);
             }
         } else {
             uint8_t b;
@@ -348,6 +366,15 @@ static void run_hop(const cmd_t *c) {
     if (keyed) unkey();
     lo_retune(241200000u); /* 2412 MHz = 241,200,000 x 10 Hz */
     lo_off = false;
+    if (v1_link) {
+        const char *w = err || abort_pkt ? "err" : !strcmp(why, "timeout") ? "timeout" : "stop";
+        printf("EV link_end why=%s slots=%u late_max_us=%" PRIu32 " retune_max_us=%" PRIu32 "\n", w, sent,
+               late_max / CYC_PER_US, rt_max / CYC_PER_US);
+        if (err) print_err_v1(err);
+        else if (!strcmp(w, "stop")) printf("OK\n");
+        v1_link = false;
+        return;
+    }
     if (err) printf("ERR %s\n", err);
     printf("K,hop,slots=%u,late_max_us=%" PRIu32 ",retune_max_us=%" PRIu32 ",why=%s\nOK\n", sent,
            late_max / CYC_PER_US, rt_max / CYC_PER_US, why);
@@ -362,7 +389,7 @@ static int rd_byte(void *ctx) {
 static void feed_cb(void *ctx) { (void)ctx; feed(); }
 
 void app_main(void) {
-    printf("\nI,boot,reason=%d\n", (int)esp_reset_reason());
+    printf("\nEV boot reason=%d\n", (int)esp_reset_reason());
     fflush(stdout);
     phy_up();
     rom_stop_tx_tone(1); /* tone enable off: RF-silent regardless of prior state */
@@ -370,25 +397,26 @@ void app_main(void) {
     uart_driver_install(UART_NUM_0, 2048, 0, 0, NULL, 0);
     uart_vfs_dev_use_driver(UART_NUM_0); /* stdout only; input is polled via uart_read_bytes */
     rwdt_start();
-    printf("I,ready,b8=%08" PRIx32 "\n", REG_READ(TONE0));
-    fflush(stdout);
     static line_in_t li;
     for (;;) {
         line_res_t r = line_poll(&li, rd_byte, feed_cb, NULL);
         if (r == LINE_NONE) continue;
-        if (r == LINE_LONG) { printf("ERR long\n"); fflush(stdout); continue; }
+        if (r == LINE_LONG) { print_err_v1("long"); fflush(stdout); continue; }
         char *line = li.buf;
         cmd_t c = cmd_parse(line);
         switch (c.kind) {
         case CMD_NONE: break;
         case CMD_ERR:
             if (keyed) unkey();
-            printf("ERR %s\n", c.err);
+            if (c.legacy) printf("ERR %s\n", c.err); else print_err_v1(c.err);
             break;
-        case CMD_PING: printf("P,d8tone,1\nOK\n"); break;
+        case CMD_PING: printf("OK proto=1\n"); break;
+        case CMD_INFO:
+            printf("OK proto=1 fw=" FW_ID " slot_us=8994 channels=%u pwr_max=%d fofs_max_hz=%d timeout_max_ms=%d\n",
+                   (unsigned)D8_HOP_CHANNELS, PWR_MAX, FOFS_HZ_MAX, HOP_TIMEOUT_MAX_MS);
+            break;
         case CMD_STAT:
-            printf("S,keyed=%d,b8=%08" PRIx32 ",a8=%08" PRIx32 ",fofs=%d\nOK\n", keyed, REG_READ(TONE0),
-                   REG_READ(TONE_FINE), fofs_hz);
+            printf("OK keyed=%d link=0 fofs=%d armok=%d\n", keyed, fofs_hz, arm_ok);
             break;
         case CMD_UNKEY: unkey(); printf("OK\n"); break;
         case CMD_TONE:
@@ -413,7 +441,8 @@ void app_main(void) {
         case CMD_FOFS: fofs_hz = c.hz; printf("OK\n"); break;
         case CMD_ARMOK: arm_ok = true; printf("OK\n"); break;
         case CMD_HOP:
-            if (keyed) { printf("ERR keyed\n"); break; }
+        case CMD_LINK:
+            if (keyed) { if (c.kind == CMD_LINK) print_err_v1("keyed"); else printf("ERR keyed\n"); break; }
             run_hop(&c);
             arm_ok = false;
             for (unsigned i = 0; i < D8_STICKS; i++) /* never leave ARM high in stored sticks */

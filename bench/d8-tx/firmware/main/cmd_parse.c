@@ -20,9 +20,18 @@ static int hex_nibble(char x) {
     return -1;
 }
 
+static int cur_legacy; /* set per cmd_parse call: line starts with a legacy bench command */
+
 static cmd_t fail(const char *why) {
-    cmd_t c = {.kind = CMD_ERR, .err = why};
+    cmd_t c = {.kind = CMD_ERR, .err = why, .legacy = cur_legacy};
     return c;
+}
+
+const char *err_code(const char *why) {
+    if (!strcmp(why, "args") || !strcmp(why, "packet_len") || !strcmp(why, "hex") || !strcmp(why, "length_byte")) return "args";
+    if (!strcmp(why, "cmd")) return "unknown";
+    if (!strcmp(why, "long") || !strcmp(why, "keyed") || !strcmp(why, "busy")) return why;
+    return "range";
 }
 
 cmd_t cmd_parse(char *line) {
@@ -35,6 +44,26 @@ cmd_t cmd_parse(char *line) {
     }
     if (!n) return c;
     long v;
+    cur_legacy = !strcmp(tok[0], "TONE") || !strcmp(tok[0], "ALT") || !strcmp(tok[0], "PKT") ||
+                 !strcmp(tok[0], "RETUNE") || !strcmp(tok[0], "STICKS") || !strcmp(tok[0], "HOP");
+    if (!strcmp(tok[0], "INFO")) {
+        if (n != 1) return fail("args");
+        c.kind = CMD_INFO;
+        return c;
+    }
+    if (!strcmp(tok[0], "LINK")) { /* LINK <pwr> [timeout_ms]: continuous hopping (HOP 0) */
+        if (n < 2 || n > 3) return fail("args");
+        if (!parse_int(tok[1], 0, PWR_MAX, &v)) return fail("pwr");
+        c.pwr = (int)v;
+        c.timeout_ms = HOP_TIMEOUT_DEF_MS;
+        if (n == 3) {
+            if (!parse_int(tok[2], 1, HOP_TIMEOUT_MAX_MS, &v)) return fail("timeout");
+            c.timeout_ms = (unsigned)v;
+        }
+        c.n_slots = 0;
+        c.kind = CMD_LINK;
+        return c;
+    }
     if (!strcmp(tok[0], "PING") || !strcmp(tok[0], "STAT") || !strcmp(tok[0], "U") || !strcmp(tok[0], "STOP")) {
         if (n != 1) return fail("args");
         c.kind = tok[0][0] == 'P' ? CMD_PING : !strcmp(tok[0], "STAT") ? CMD_STAT : CMD_UNKEY;

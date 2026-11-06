@@ -1,0 +1,177 @@
+"""FastAPI backend: REST + WebSocket on top of D8Link / BetaflightMSP."""
+from __future__ import annotations
+
+import argparse
+import asyncio
+import contextlib
+import time
+from pathlib import Path
+from typing import Any, Optional
+
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+
+SILENCE_S = 0.25
+TELEMETRY_HZ = 50
+FC_DEFAULT = {"connected": False, "rc": [], "armed": None, "failsafe": None,
+              "arming_disable": [], "rssi": None, "error": None}
+DEFAULT_DIST = Path(__file__).resolve().parents[2] / "app" / "dist"
+
+
+class StartReq(BaseModel):
+    power: int = 127
+    fofs_hz: Optional[int] = None
+    timeout_ms: int = 300
+    allow_arm: bool = False
+
+
+def create_app(esp: Any, fc: Any = None, dist: Optional[Path] = None) -> FastAPI:
+    state: dict[str, Any] = {"last_msg": time.monotonic(), "info": None,
+                             "fc": dict(FC_DEFAULT)}
+
+    def esp_status() -> dict:
+        try:
+            st = dict(esp.status() or {})
+            st.update(connected=True, info=state["info"])
+            return st
+        except Exception as e:  # noqa: BLE001
+            return {"connected": False, "error": str(e)}
+
+    def fetch_info() -> None:
+        # INFO ends a running link in firmware: only call while not linked.
+        if state["info"] is None:
+            try:
+                if not (esp.status() or {}).get("link"):
+                    state["info"] = esp.info()
+            except Exception:  # noqa: BLE001
+                pass
+
+    def fc_poll() -> dict:
+        out = dict(FC_DEFAULT)
+        if fc is None:
+            return out
+        try:
+            prev = state.get("fc") or FC_DEFAULT
+            state["fc_n"] = state.get("fc_n", 0) + 1
+            out.update(prev)
+            out.update(connected=True, rc=list(fc.rc())[:8], error=None)  # RC every poll (readback latency)
+            if state["fc_n"] % 5 == 1:  # status/RSSI change slowly: every 5th poll
+                s = dict(fc.status())
+                out.update(rssi=fc.rssi(), armed=s.get("armed"), failsafe=s.get("failsafe"),
+                           arming_disable=list(s.get("arming_disable") or []))
+        except Exception as e:  # noqa: BLE001
+            out.update(connected=False, error=str(e))
+        return out
+
+    async def full_status() -> dict:
+        return {"esp": await asyncio.to_thread(esp_status), "fc": dict(state["fc"])}
+
+    def linked() -> bool:
+        try:
+            return bool((esp.status() or {}).get("link"))
+        except Exception:  # noqa: BLE001
+            return False
+
+    def watchdog_tick() -> None:
+        if time.monotonic() - state["last_msg"] > SILENCE_S and linked():
+            with contextlib.suppress(Exception):
+                esp.stop()
+
+    @contextlib.asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        async def watchdog() -> None:
+            while True:
+                await asyncio.sleep(0.05)
+                await asyncio.to_thread(watchdog_tick)
+
+        async def fc_loop() -> None:
+            while True:
+                state["fc"] = await asyncio.to_thread(fc_poll)
+                await asyncio.sleep(0.005)
+
+        await asyncio.to_thread(fetch_info)
+        tasks = [asyncio.create_task(watchdog()), asyncio.create_task(fc_loop())]
+        try:
+            yield
+        finally:
+            for t in tasks:
+                t.cancel()
+            with contextlib.suppress(Exception):
+                await asyncio.to_thread(esp.stop)
+
+    app = FastAPI(title="d8tx", lifespan=lifespan)
+
+    @app.get("/api/status")
+    async def status() -> dict:
+        return await full_status()
+
+    @app.post("/api/link/start")
+    async def link_start(req: StartReq = StartReq()) -> dict:
+        try:
+            state["last_msg"] = time.monotonic()
+            await asyncio.to_thread(fetch_info)
+            await asyncio.to_thread(esp.start, req.power, req.timeout_ms,
+                                    req.allow_arm, req.fofs_hz)
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(409, str(e))
+        return {"ok": True}
+
+    @app.post("/api/link/stop")
+    async def link_stop() -> dict:
+        try:
+            await asyncio.to_thread(esp.stop)
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(409, str(e))
+        return {"ok": True}
+
+    @app.websocket("/api/ws")
+    async def ws(sock: WebSocket) -> None:
+        await sock.accept()
+
+        async def sender() -> None:
+            while True:
+                msg = {"type": "telemetry", **await full_status()}
+                await sock.send_json(msg)
+                await asyncio.sleep(1 / TELEMETRY_HZ)
+
+        task = asyncio.create_task(sender())
+        try:
+            while True:
+                data = await sock.receive_json()
+                state["last_msg"] = time.monotonic()
+                if isinstance(data, dict) and data.get("type") == "sticks":
+                    ch = data.get("ch")
+                    if (isinstance(ch, list) and len(ch) == 8
+                            and all(isinstance(v, (int, float)) for v in ch)):
+                        with contextlib.suppress(Exception):
+                            esp.set_sticks([int(v) for v in ch])
+        except (WebSocketDisconnect, RuntimeError):
+            pass
+        finally:
+            task.cancel()
+
+    dist = DEFAULT_DIST if dist is None else dist
+    if dist.is_dir():
+        app.mount("/", StaticFiles(directory=dist, html=True), name="app")
+    return app
+
+
+def main() -> None:
+    import uvicorn
+    from .link import D8Link
+    p = argparse.ArgumentParser()
+    p.add_argument("--esp-port", required=True)
+    p.add_argument("--fc-port")
+    p.add_argument("--host", default="127.0.0.1")
+    p.add_argument("--port", type=int, default=8000)
+    a = p.parse_args()
+    fc = None
+    if a.fc_port:
+        from .msp import BetaflightMSP
+        fc = BetaflightMSP(a.fc_port)
+    uvicorn.run(create_app(D8Link(a.esp_port), fc), host=a.host, port=a.port)
+
+
+if __name__ == "__main__":
+    main()

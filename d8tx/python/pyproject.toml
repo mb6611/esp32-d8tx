@@ -1,0 +1,20 @@
+[project]
+name = "d8tx"
+version = "0.1.0"
+description = "ESP32 D8 transmitter client (protocol v1) and Betaflight MSP readback"
+requires-python = ">=3.10"
+dependencies = ["pyserial"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+server = ["fastapi", "uvicorn[standard]"]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["d8tx"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
