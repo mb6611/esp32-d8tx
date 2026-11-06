@@ -26,8 +26,9 @@ class StartReq(BaseModel):
     allow_arm: bool = False
 
 
-def create_app(esp: Any, fc: Any = None, dist: Optional[Path] = None) -> FastAPI:
-    state: dict[str, Any] = {"last_msg": time.monotonic(), "info": None,
+def create_app(esp: Any, fc: Any = None, dist: Optional[Path] = None,
+               fc_factory: Any = None, fc_retry_s: float = 1.0) -> FastAPI:
+    state: dict[str, Any] = {"fc_obj": fc, "fc_try": 0.0, "last_msg": time.monotonic(), "info": None,
                              "fc": dict(FC_DEFAULT)}
 
     def esp_status() -> dict:
@@ -49,6 +50,18 @@ def create_app(esp: Any, fc: Any = None, dist: Optional[Path] = None) -> FastAPI
 
     def fc_poll() -> dict:
         out = dict(FC_DEFAULT)
+        fc = state["fc_obj"]
+        if fc is None and fc_factory is not None:
+            now = time.monotonic()
+            if now - state["fc_try"] < fc_retry_s:
+                out.update(error=(state.get("fc") or {}).get("error"))
+                return out
+            state["fc_try"] = now
+            try:
+                fc = state["fc_obj"] = fc_factory()
+            except Exception as e:  # noqa: BLE001
+                out.update(error=str(e))
+                return out
         if fc is None:
             return out
         try:
@@ -62,6 +75,10 @@ def create_app(esp: Any, fc: Any = None, dist: Optional[Path] = None) -> FastAPI
                            arming_disable=list(s.get("arming_disable") or []))
         except Exception as e:  # noqa: BLE001
             out.update(connected=False, error=str(e))
+            if fc_factory is not None:  # drop the dead port; reopen after fc_retry_s
+                state["fc_obj"], state["fc_try"] = None, time.monotonic()
+                with contextlib.suppress(Exception):
+                    fc.close()
         return out
 
     async def full_status() -> dict:
@@ -166,11 +183,11 @@ def main() -> None:
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=8000)
     a = p.parse_args()
-    fc = None
+    factory = None
     if a.fc_port:
         from .msp import BetaflightMSP
-        fc = BetaflightMSP(a.fc_port)
-    uvicorn.run(create_app(D8Link(a.esp_port), fc), host=a.host, port=a.port)
+        factory = lambda: BetaflightMSP(a.fc_port)  # noqa: E731
+    uvicorn.run(create_app(D8Link(a.esp_port), None, fc_factory=factory), host=a.host, port=a.port)
 
 
 if __name__ == "__main__":

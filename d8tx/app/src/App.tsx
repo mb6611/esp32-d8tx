@@ -40,6 +40,15 @@ function Row({ k, v, cls = '' }: { k: string; v: React.ReactNode; cls?: string }
 type Tab = 'fly' | 'sticks' | 'stats'
 const tabFromHash = (): Tab => (location.hash === '#sticks' ? 'sticks' : location.hash === '#stats' ? 'stats' : 'fly')
 
+const REASONS: Record<string, string> = {
+  ANGLE: 'drone not level',
+  THROTTLE: 'throttle not low',
+  RXFAILSAFE: 'no radio link yet',
+  RXLOSS: 'no radio link yet',
+  ARMSWITCH: 'arm switch was high: release and re-arm',
+  FAILSAFE: 'failsafe active',
+}
+
 export default function App() {
   const c = useController()
   const [opts, setOpts] = useState<StartOptions>({ power: 127, fofs_hz: -63000, timeout_ms: 300, allow_arm: true })
@@ -61,7 +70,18 @@ export default function App() {
   const failsafe = !!fc?.failsafe
   const fcArmed = !!fc?.armed
   const reachable = (c.ws === 'open' || MOCK) && !!esp?.connected
-  const ready = linked && !failsafe
+  const fcOn = !!fc?.connected
+  const [noFcReady, setNoFcReady] = useState(false)
+  useEffect(() => {
+    if (!linked) return
+    const t = setTimeout(() => setNoFcReady(true), 3000)
+    return () => {
+      clearTimeout(t)
+      setNoFcReady(false)
+    }
+  }, [linked])
+  const ready = linked && (fcOn ? !failsafe : noFcReady)
+  const reasons = (fc?.arming_disable ?? []).map((r) => REASONS[r.toUpperCase().replace(/_/g, '')] ?? r).join(', ')
   const num = (k: keyof StartOptions) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setOpts({ ...opts, [k]: Number(e.target.value) })
 
@@ -69,8 +89,12 @@ export default function App() {
   if (!reachable) banner = { text: 'Not connected', cls: 'border-line text-muted' }
   else if (c.armed) banner = { text: 'ARMED', cls: 'border-bad bg-bad text-paper font-bold' }
   else if (!linked) banner = failsafe ? { text: 'Failsafe, start the link again', cls: 'border-warn text-warn' } : { text: 'Link off', cls: 'border-line text-muted' }
-  else if (failsafe) banner = { text: 'Failsafe, waiting for Betaflight to clear it', cls: 'border-warn text-warn' }
+  else if (!fcOn && !noFcReady) banner = { text: 'Starting link…', cls: 'border-warn text-warn' }
+  else if (fcOn && failsafe) banner = { text: 'Failsafe, waiting for Betaflight to clear it', cls: 'border-warn text-warn' }
+  else if (!fcOn) banner = { text: 'Ready (no Betaflight readback), hold R to arm', cls: 'border-ok text-ok' }
   else banner = { text: 'Ready, hold R to arm', cls: 'border-ok text-ok' }
+
+  if (fcOn && c.armed && !fcArmed && reasons) banner = { text: `Armed requested, not armed: ${reasons}`, cls: 'border-warn text-warn' }
 
   const thrLabel = c.armed ? 'throttle' : 'throttle (preview, not sent)'
 
