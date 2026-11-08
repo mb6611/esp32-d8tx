@@ -3,26 +3,99 @@ import Stick from './Stick'
 import { MOCK, useController } from './useController'
 import type { StartOptions } from './types'
 
-const CH_NAMES = ['Throttle', 'Roll', 'Pitch', 'Yaw', 'Aux1', 'Aux2', 'Arm', 'Aux4']
+const CH = ['THR', 'AIL', 'ELE', 'RUD', 'AUX1', 'AUX2', 'ARM', 'AUX4']
+const CH_COL = ['ch1', 'ch2', 'ch3', 'ch4', 'ch5', 'ch6', 'ch7', 'ch8']
+const CH_VAR = CH_COL.map((c) => `var(--color-${c})`)
 
-function Bars({ cmd, rc }: { cmd: number[]; rc?: number[] }) {
-  const pct = (v: number) => Math.max(0, Math.min(100, (v - 1000) / 10))
+/** EdgeTX-style channel monitor: bars centred at 1500, readback tick, µs values. */
+function Monitor({ cmd, rc, armed, compact }: { cmd: number[]; rc?: number[]; armed: boolean; compact?: boolean }) {
+  const pos = (v: number) => Math.max(0, Math.min(100, (v - 1000) / 10))
   return (
-    <div className="flex flex-col gap-1.5 font-sans text-xs">
-      {CH_NAMES.map((n, i) => (
-        <div key={n} className="flex items-center gap-2">
-          <span className="w-14 text-muted">{n}</span>
-          <div className="relative h-3 flex-1 border border-line bg-paper-2">
-            <div className="absolute inset-y-0 left-0 bg-ch1/70" style={{ width: `${pct(cmd[i])}%` }} />
-            {rc && <div className="absolute -inset-y-px w-0.5 bg-fg" style={{ left: `${pct(rc[i] ?? 1000)}%` }} />}
+    <div className="font-sans text-xs">
+      <div className="grid grid-cols-[3rem_1fr_3rem_3rem] items-end gap-x-2 pb-1 text-[10px] font-semibold tracking-wide text-muted uppercase">
+        <span>Ch</span>
+        <span className="relative h-3"><span className="absolute left-0">1000</span><span className="absolute left-1/2 -translate-x-1/2">1500</span><span className="absolute right-0">2000</span></span>
+        <span className="text-right">cmd</span>
+        <span className="text-right">fc</span>
+      </div>
+      {CH.map((n, i) => {
+        const p = pos(cmd[i])
+        const isArm = i === 6
+        const on = isArm && armed
+        return (
+          <div key={n} className={`grid grid-cols-[3rem_1fr_3rem_3rem] items-center gap-x-2 border-t border-line ${compact ? 'py-px' : 'py-[5px]'} ${isArm ? 'bg-paper-2' : ''}`}>
+            <span className={`font-mono text-[11px] ${isArm ? 'font-bold text-fg' : 'text-muted'}`}>
+              <i className="mr-1 inline-block h-2 w-2 align-baseline" style={{ background: CH_VAR[i] }} />{n}
+            </span>
+            <div className={`relative bg-paper ${compact ? 'h-3' : 'h-3.5'}`}>
+              {[0, 25, 50, 75, 100].map((t) => (
+                <span key={t} className={`absolute inset-y-0 w-px ${t === 50 ? 'bg-muted' : 'bg-line'}`} style={{ left: `${t}%` }} />
+              ))}
+              <div className="absolute top-[3px] bottom-[3px]" style={{ left: `${Math.min(p, 50)}%`, width: `${Math.abs(p - 50)}%`, background: on ? 'var(--color-bad)' : CH_VAR[i], opacity: on ? 1 : 0.85 }} />
+              {rc && <div className="absolute -inset-y-px w-0.5 -translate-x-1/2 bg-fg" style={{ left: `${pos(rc[i] ?? 1000)}%` }} />}
+            </div>
+            <span className="text-right font-mono tabular-nums">{Math.round(cmd[i])}</span>
+            <span className="text-right font-mono tabular-nums text-muted">{rc ? Math.round(rc[i] ?? 0) : '–'}</span>
           </div>
-          <span className="w-10 text-right font-mono tabular-nums">{cmd[i]}</span>
-          <span className="w-10 text-right font-mono tabular-nums text-muted">{rc ? Math.round(rc[i] ?? 0) : '–'}</span>
-        </div>
+        )
+      })}
+      <div className={`${compact ? 'hidden' : 'flex'} justify-end gap-4 border-t border-line pt-1.5 text-[11px] text-muted`}>
+        <span>bar: commanded</span><span><i className="mr-1 inline-block h-2.5 w-0.5 bg-fg align-middle" />Betaflight readback</span>
+      </div>
+    </div>
+  )
+}
+
+function SignalBars({ level }: { level: number }) {
+  return (
+    <svg width="22" height="16" viewBox="0 0 22 16" className="block">
+      {[0, 1, 2, 3, 4].map((i) => (
+        <rect key={i} x={i * 4.5} y={14 - (i + 1) * 2.8} width="3" height={(i + 1) * 2.8 + 2} fill={i < level ? 'var(--color-fg)' : 'var(--color-line)'} />
       ))}
-      <div className="flex justify-end gap-4 pt-1 text-muted">
-        <span>blue bar: commanded</span>
-        <span>black tick: Betaflight readback</span>
+    </svg>
+  )
+}
+
+function Cell({ k, children, cls = '' }: { k: string; children: React.ReactNode; cls?: string }) {
+  return (
+    <div className={`flex min-w-0 flex-col justify-center border-r border-line px-3 py-1 ${cls}`}>
+      <div className="font-sans text-[10px] font-semibold tracking-wider text-muted uppercase">{k}</div>
+      <div className="flex items-center gap-2 font-mono text-sm leading-tight tabular-nums">{children}</div>
+    </div>
+  )
+}
+
+function Key({ k, wide }: { k: string; wide?: boolean }) {
+  return (
+    <kbd className={`inline-flex h-5 items-center justify-center border border-muted border-b-2 bg-paper px-1 font-mono text-[10px] text-fg ${wide ? 'min-w-9' : 'min-w-5'}`}>{k}</kbd>
+  )
+}
+
+/** Physical toggle: lever flips up when armed; hold-fill shows the 1 s press. */
+function ArmSwitch({ armed, progress, enabled, onDown, onUp, onDisarm }: {
+  armed: boolean; progress: number; enabled: boolean; onDown: () => void; onUp: () => void; onDisarm: () => void
+}) {
+  const lever = armed ? 22 : 62 - progress * 40
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div className="font-sans text-[10px] font-semibold tracking-wider text-muted uppercase">Arm switch · CH7</div>
+      <svg
+        width="70" height="100" viewBox="0 0 92 132"
+        className={`touch-none select-none ${armed || enabled ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
+        onPointerDown={() => (armed ? onDisarm() : enabled && onDown())}
+        onPointerUp={onUp}
+        onPointerLeave={onUp}
+      >
+        <rect x="14" y="4" width="64" height="124" fill="var(--color-paper-2)" stroke="var(--color-fg)" />
+        <text x="46" y="20" textAnchor="middle" fontSize="9" fontFamily="var(--font-sans)" fill="var(--color-bad)" fontWeight="700">ARM</text>
+        <text x="46" y="123" textAnchor="middle" fontSize="9" fontFamily="var(--font-sans)" fill="var(--color-muted)">SAFE</text>
+        <rect x="35" y="28" width="22" height="76" fill="var(--color-paper)" stroke="var(--color-muted)" />
+        {[0, 1, 2, 3, 4, 5, 6].map((i) => <line key={i} x1="29" x2="35" y1={34 + i * 11} y2={34 + i * 11} stroke="var(--color-muted)" />)}
+        <line x1="46" x2="46" y1="66" y2={lever + 22} stroke="var(--color-fg)" strokeWidth="8" strokeLinecap="butt" />
+        <rect x="38" y={lever + 6} width="16" height="16" fill={armed ? 'var(--color-bad)' : progress > 0 ? 'var(--color-warn)' : 'var(--color-fg)'} />
+      </svg>
+      <div className="text-center font-sans text-[11px] leading-tight text-muted">
+        {armed ? <>click or <Key k="X" /> to disarm</> : enabled ? <>hold click or <Key k="R" /> 1 s</> : 'locked until link is ready'}
       </div>
     </div>
   )
@@ -53,6 +126,7 @@ const REASONS: Record<string, string> = {
 export default function App() {
   const c = useController()
   const [opts, setOpts] = useState<StartOptions>({ power: 127, fofs_hz: -63000, timeout_ms: 300, allow_arm: true })
+  const [settings, setSettings] = useState(false)
   const [tab, setTabState] = useState<Tab>(tabFromHash)
   const setTab = (t: Tab) => {
     window.history.replaceState(null, '', t === 'sticks' ? location.pathname + location.search : '#' + t)
@@ -81,11 +155,13 @@ export default function App() {
 
   let banner: { text: string; cls: string }
   if (!reachable) banner = { text: 'Not connected', cls: 'border-line text-muted' }
-  else if (c.armed) banner = { text: 'ARMED', cls: 'border-bad bg-bad text-paper font-bold' }
+  else if (c.armed && fcOn && fcArmed) banner = { text: 'ARMED (confirmed by Betaflight)', cls: 'border-bad bg-bad text-paper font-bold' }
+  else if (c.armed && !fcOn) banner = { text: 'ARM SENT. Drone state unknown (no readback).', cls: 'border-warn text-warn' }
+  else if (c.armed) banner = { text: 'Arm sent, waiting for Betaflight to confirm', cls: 'border-warn text-warn' }
   else if (!linked) banner = failsafe ? { text: 'Failsafe, start the link again', cls: 'border-warn text-warn' } : { text: 'Link off', cls: 'border-line text-muted' }
   else if (!fcOn && !noFcReady) banner = { text: 'Starting link…', cls: 'border-warn text-warn' }
   else if (fcOn && failsafe) banner = { text: 'Failsafe, waiting for Betaflight to clear it', cls: 'border-warn text-warn' }
-  else if (!fcOn) banner = { text: 'Ready (no Betaflight readback), hold R to arm', cls: 'border-ok text-ok' }
+  else if (!fcOn) banner = { text: 'Link up. Drone state unknown (no readback). Hold R to send arm.', cls: 'border-warn text-warn' }
   else banner = { text: 'Ready, hold R to arm', cls: 'border-ok text-ok' }
 
   if (!c.armed && c.disarmNote) {
@@ -100,77 +176,130 @@ export default function App() {
   }
   if (fcOn && c.armed && !fcArmed && reasons) banner = { text: `Armed requested, not armed: ${reasons}`, cls: 'border-warn text-warn' }
 
-  const thrLabel = c.armed ? 'throttle' : 'throttle (preview, not sent)'
-
-  const primary = !linked ? (
-    <button className="btn min-w-56 py-2.5 text-base" onClick={() => c.startLink(opts)} disabled={!reachable}>Start link</button>
-  ) : c.armed ? (
-    <button className="btn min-w-56 border-bad py-2.5 text-base font-bold text-bad" onClick={c.disarm}>Disarm (X)</button>
-  ) : (
-    <button
-      disabled={!ready || !c.canArm}
-      onPointerDown={c.armPress}
-      onPointerUp={c.armRelease}
-      onPointerLeave={c.armRelease}
-      className="btn relative min-w-56 overflow-hidden py-2.5 text-base"
-    >
-      <span className="absolute inset-y-0 left-0 bg-bad/20" style={{ width: `${c.armProgress * 100}%` }} />
-      <span className="relative">{ready ? 'Hold to arm (R)' : 'Waiting for failsafe to clear'}</span>
-    </button>
-  )
-
+  const redArmed = c.armed && fcOn && fcArmed
+  const armSent = c.armed && !redArmed
   const tabs: [Tab, string][] = [['sticks', 'Sticks'], ['stats', 'Stats for nerds']]
+  const armEnabled = linked && ready && c.canArm
+  const rssi = fc?.connected ? (fc.rssi ?? 0) : undefined
+  const sig = !linked ? 0 : rssi !== undefined ? Math.round(rssi / 20) : (esp?.sender_hz ?? 0) > 100 ? 4 : 2
+  const bannerTone = banner.cls.includes('bg-bad') ? 'text-bad' : banner.cls.includes('text-ok') ? 'text-ok' : banner.cls.includes('text-warn') ? 'text-warn' : 'text-muted'
+  const dot = (cls: string) => <i className={`inline-block h-2 w-2 rounded-full ${cls}`} />
 
   return (
-    <div className="mx-auto max-w-[900px] px-5 pt-10 pb-16">
-      <header className="mb-4">
-        <h1 className="font-serif text-[2.1rem] leading-tight font-bold">D8 TX controller</h1>
-        <nav className="mt-3 flex gap-5 border-t border-line pt-2 font-sans text-sm">
+    <div className="mx-auto flex h-dvh max-w-[1360px] flex-col overflow-y-auto px-6 pt-2 pb-2">
+      <header className="mb-1.5 flex shrink-0 items-baseline justify-between border-b border-fg pb-1">
+        <h1 className="m-0 font-serif text-xl leading-tight font-bold">D8 TX controller</h1>
+        <nav className="flex gap-5 font-sans text-sm">
           {tabs.map(([t, n]) => (
             <button key={t} onClick={() => setTab(t)} className={tab === t ? 'border-b-2 border-fg font-bold' : 'text-link'}>{n}</button>
           ))}
         </nav>
       </header>
 
+      {/* ground-station status strip */}
+      <div className="mb-1.5 grid shrink-0 grid-cols-[1.2fr_.9fr_1fr_1fr_1fr_1.5fr] border border-fg">
+        <Cell k="Link">
+          <SignalBars level={sig} />
+          <span>{linked ? `${(esp?.sender_hz ?? 0).toFixed(0)} pkt/s` : 'off'}</span>
+        </Cell>
+        <Cell k="RF power">{opts.power}<span className="font-sans text-xs text-muted">/127</span></Cell>
+        <Cell k="ESP32">{dot(esp?.connected ? 'bg-ok' : 'bg-bad')}<span className="font-sans text-sm">{esp?.connected ? (esp.keyed ? 'transmitting' : 'idle') : 'offline'}</span></Cell>
+        <Cell k="Drone USB">{dot(fcOn ? 'bg-ok' : 'bg-muted')}<span className="font-sans text-sm">{fcOn ? `MSP${rssi !== undefined ? ` · rssi ${rssi}` : ''}` : 'no readback'}</span></Cell>
+        <Cell k="Failsafe">{dot(failsafe ? 'bg-warn' : 'bg-ok')}<span className={`font-sans text-sm ${failsafe ? 'font-bold text-warn' : ''}`}>{failsafe ? 'ACTIVE' : 'clear'}</span></Cell>
+        <div className={`flex items-center justify-between gap-3 px-3 py-1 ${redArmed ? 'bg-bad text-paper' : armSent ? 'bg-warn/20 text-warn' : ''}`}>
+          <div>
+            <div className={`font-sans text-[10px] font-semibold tracking-wider uppercase ${redArmed ? 'text-paper/80' : 'text-muted'}`}>Motors</div>
+            <div className="font-sans text-base leading-tight font-bold tracking-wide">{redArmed ? 'ARMED' : armSent ? 'ARM SENT' : 'DISARMED'}</div>
+            {armSent && <div className="font-sans text-[10px] leading-tight">{fcOn ? 'waiting for Betaflight' : 'drone state unknown: no USB readback'}</div>}
+          </div>
+          <svg width="46" height="24" viewBox="0 0 46 24">
+            <rect x=".5" y=".5" width="45" height="23" fill={redArmed ? 'var(--color-paper)' : 'var(--color-paper-2)'} stroke={redArmed ? 'var(--color-paper)' : 'var(--color-fg)'} />
+            <rect x={c.armed ? 24 : 3} y="3" width="19" height="18" fill={redArmed ? 'var(--color-bad)' : armSent ? 'var(--color-warn)' : 'var(--color-muted)'} />
+          </svg>
+        </div>
+      </div>
+
       {c.ws !== 'open' && !MOCK && (
-        <p className="mb-4 border border-line px-3 py-2 font-sans text-sm text-muted">Backend not reachable, retrying every second.</p>
+        <p className="mb-2 border border-line px-3 py-1.5 font-sans text-sm text-muted">Backend not reachable, retrying every second.</p>
       )}
-      {c.error && <p className="mb-4 border border-bad px-3 py-2 font-sans text-sm text-bad">{c.error}</p>}
+      {c.error && <p className="mb-2 border border-bad px-3 py-1.5 font-sans text-sm text-bad">{c.error}</p>}
 
       {tab !== 'stats' && (
-        <main className="flex flex-col items-center gap-6">
-          <div className={`w-full border px-3 py-2 text-center font-sans text-base ${banner.cls}`}>{banner.text}</div>
-
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {primary}
-            {linked && <button className="btn text-muted" onClick={c.stopLink}>Stop link</button>}
+        <main className="flex min-h-0 flex-1 flex-col">
+          <div className={`relative mb-1.5 flex shrink-0 items-center justify-between border border-line px-3 py-0.5 font-sans text-sm ${bannerTone} ${c.armed ? 'border-bad' : ''}`}>
+            <span className="font-semibold">{banner.text}</span>
+            <span className="flex items-center gap-2">
+              <button className="btn !py-0.5" onClick={() => setSettings((v) => !v)}>Settings</button>
+              {!linked
+                ? <button className="btn !py-0.5" onClick={() => c.startLink(opts)} disabled={!reachable}>Start link</button>
+                : <button className="btn !py-0.5 text-muted" onClick={c.stopLink}>Stop link</button>}
+            </span>
           </div>
 
-          <div className="text-center font-sans">
-            <div className="text-xs font-semibold text-muted">Throttle, %</div>
-            <div className="font-mono text-6xl tabular-nums">{Math.round(c.sticks.throttle * 100)}</div>
-          </div>
-
-          <div className="flex flex-wrap justify-center gap-6">
-            <Stick label="Left, mode 2" xLabel="yaw" yLabel={thrLabel} x={c.sticks.yaw} y={c.sticks.throttle * 2 - 1} yPct={c.sticks.throttle * 100} yUs={c.channels[0]}
-              onDrag={(x, y) => c.setMouseL({ x, y })} onRelease={() => c.setMouseL(null)} />
-            <Stick label="Right" xLabel="roll" yLabel="pitch" x={c.sticks.roll} y={c.sticks.pitch}
-              onDrag={(x, y) => c.setMouseR({ x, y })} onRelease={() => c.setMouseR(null)} />
-          </div>
-
-          <p className="m-0 text-center font-sans text-xs leading-snug text-muted">
-            {'W/S throttle (stays where left) · A/D yaw · arrows pitch/roll · hold R arm · X disarm · or drag the sticks'}
-          </p>
-
-          <details className="w-full font-sans text-sm">
-            <summary className="cursor-pointer text-link">Settings</summary>
-            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <label>Power (0–127)<input type="number" min={0} max={127} value={opts.power} onChange={num('power')} disabled={linked} /></label>
-              <label>FOFS, Hz<input type="number" min={-200000} max={200000} step={1000} value={opts.fofs_hz} onChange={num('fofs_hz')} disabled={linked} /></label>
-              <label>Timeout, ms<input type="number" min={50} max={2000} step={50} value={opts.timeout_ms} onChange={num('timeout_ms')} disabled={linked} /></label>
-              <label>Max throttle, %<input type="number" min={0} max={100} value={c.maxThr} onChange={(e) => c.setMaxThr(Number(e.target.value))} /></label>
+          {settings && (
+            <div className="absolute top-9 right-0 z-10 w-80 border border-fg bg-paper p-3 font-sans shadow-lg">
+              <div className="grid grid-cols-2 gap-3 text-xs text-muted">
+                <label>Power (0–127)<input type="number" min={0} max={127} value={opts.power} onChange={num('power')} disabled={linked} /></label>
+                <label>FOFS, Hz<input type="number" min={-200000} max={200000} step={1000} value={opts.fofs_hz} onChange={num('fofs_hz')} disabled={linked} /></label>
+                <label>Timeout, ms<input type="number" min={50} max={2000} step={50} value={opts.timeout_ms} onChange={num('timeout_ms')} disabled={linked} /></label>
+                <label>Max throttle, %<input type="number" min={0} max={100} value={c.maxThr} onChange={(e) => c.setMaxThr(Number(e.target.value))} /></label>
+              </div>
             </div>
-          </details>
+          )}
+
+          <div className="grid min-h-0 flex-1 grid-cols-[1fr_auto_1fr] items-stretch gap-4 min-[1100px]:gap-8">
+            <div className="flex min-h-0 items-stretch justify-end gap-3">
+              <div className="flex flex-col items-center font-sans">
+                <div className="mb-1 text-[11px] font-semibold tracking-wide text-muted uppercase">Thr</div>
+                <div className="relative mt-[22px] mb-6 w-9 flex-1 border border-fg bg-paper">
+                  {[0, 25, 50, 75, 100].map((t) => (
+                    <span key={t} className="absolute right-full mr-1 font-mono text-[9px] leading-none text-muted" style={{ bottom: `calc(${t}% - 4px)` }}>{t}</span>
+                  ))}
+                  {Array.from({ length: 21 }, (_, i) => (
+                    <span key={i} className={`absolute left-0 h-px bg-line ${i % 5 === 0 ? 'w-3 bg-muted' : 'w-1.5'}`} style={{ bottom: `${i * 5}%` }} />
+                  ))}
+                  <div className="absolute inset-x-0 bottom-0 bg-ch1/80" style={{ height: `${c.sticks.throttle * 100}%` }} />
+                  <div className="absolute inset-x-[-4px] h-0.5 bg-fg" style={{ bottom: `${c.sticks.throttle * 100}%` }} />
+                </div>
+                <div className="mt-1 font-mono text-lg leading-none tabular-nums">{Math.round(c.sticks.throttle * 100)}<span className="text-xs text-muted">%</span></div>
+                <div className="font-mono text-[10px] text-muted">{Math.round(c.channels[0])}µs</div>
+              </div>
+              <div className="min-h-0 min-w-0 flex-1 max-w-[400px]">
+                <Stick label={c.armed ? 'Left · mode 2' : 'Left · mode 2 · preview'} xLabel="yaw" yLabel="thr" x={c.sticks.yaw} y={c.sticks.throttle * 2 - 1} yPct={c.sticks.throttle * 100}
+                  xUs={c.channels[3]} yUs={c.channels[0]} accent="var(--color-ch1)"
+                  onDrag={(x, y) => c.setMouseL({ x, y })} onRelease={() => c.setMouseL(null)} />
+              </div>
+            </div>
+
+            <div className="flex w-32 flex-col items-center justify-center gap-2">
+              <ArmSwitch armed={c.armed} progress={c.armProgress} enabled={armEnabled}
+                onDown={c.armPress} onUp={c.armRelease} onDisarm={c.disarm} />
+              <div className="w-full border-t border-line pt-2 text-center font-mono text-[11px] text-muted">
+                hold {Math.round(c.armProgress * 100)}%
+              </div>
+            </div>
+
+            <div className="min-h-0 min-w-0 flex-1 max-w-[400px]">
+              <Stick label="Right" xLabel="roll" yLabel="pitch" x={c.sticks.roll} y={c.sticks.pitch}
+                xUs={c.channels[1]} yUs={c.channels[2]} accent="var(--color-ch2)"
+                onDrag={(x, y) => c.setMouseR({ x, y })} onRelease={() => c.setMouseR(null)} />
+            </div>
+          </div>
+
+          <div className="mt-1.5 grid shrink-0 gap-6 border-t border-line pt-1.5 md:grid-cols-[1.6fr_1fr]">
+            <section>
+              <Monitor cmd={c.channels} rc={fc?.connected ? fc.rc : undefined} armed={c.armed} compact />
+            </section>
+            <section>
+              <h2 className="h !mb-1">Keys</h2>
+              <dl className="m-0 flex flex-col gap-1 font-sans text-[11px] text-muted">
+                <div className="flex items-center gap-1"><Key k="W" /><Key k="S" /> throttle <Key k="A" /><Key k="D" /> yaw</div>
+                <div className="flex items-center gap-1"><Key k="↑" /><Key k="↓" /><Key k="←" /><Key k="→" /> pitch/roll</div>
+                <div className="flex items-center gap-1"><Key k="R" /> hold 1 s arm <Key k="X" /> disarm</div>
+                <div className="flex items-center gap-1"><Key k="drag" wide /> either gimbal</div>
+              </dl>
+            </section>
+          </div>
         </main>
       )}
 
@@ -200,7 +329,7 @@ export default function App() {
           <div className="flex flex-col gap-6">
             <section>
               <h2 className="h">Channels, µs (commanded / readback)</h2>
-              <Bars cmd={c.channels} rc={fc?.connected ? fc.rc : undefined} />
+              <Monitor cmd={c.channels} rc={fc?.connected ? fc.rc : undefined} armed={c.armed} />
             </section>
             <section>
               <h2 className="h">Betaflight</h2>
