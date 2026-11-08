@@ -10,10 +10,14 @@ const wrap = (d: number) => ((((d + 180) % 360) + 360) % 360) - 180
 export default function Quad3D({ att, dim, tau = 100 }: { att: Att; dim: boolean; tau?: number }) {
   const host = useRef<HTMLDivElement>(null)
   const target = useRef<Att>(att)
+  // Heading is shown relative to a reference: the first heading received counts as 'forward' (nose away
+  // from the viewer). Click the view to make the drone's current heading forward again.
+  const yawZero = useRef<number | null>(null)
   const tauRef = useRef(tau)
   useEffect(() => { tauRef.current = tau }, [tau])
   useEffect(() => {
-    const y = att.yaw ?? target.current.yaw // yaw unknown: keep last
+    if (att.yaw != null && yawZero.current == null) yawZero.current = att.yaw
+    const y = att.yaw != null ? att.yaw - (yawZero.current ?? 0) : target.current.yaw // yaw unknown: keep last
     target.current = { ...att, yaw: y }
   }, [att.roll, att.pitch, att.yaw]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -96,5 +100,17 @@ export default function Quad3D({ att, dim, tau = 100 }: { att: Att; dim: boolean
     }
   }, [])
 
-  return <div ref={host} className={`aspect-square w-full ${dim ? 'opacity-40' : ''}`} />
+  const zero = () => {
+    if (att.yaw == null) return
+    yawZero.current = att.yaw
+    target.current = { ...target.current, yaw: 0 }
+  }
+  return (
+    <div
+      ref={host}
+      onClick={zero}
+      title="Click to make the drone's current heading 'forward'"
+      className={`aspect-square w-full cursor-pointer ${dim ? 'opacity-40' : ''}`}
+    />
+  )
 }
