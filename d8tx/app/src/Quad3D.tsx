@@ -62,8 +62,13 @@ export default function Quad3D({ att, dim, tau = 100, spin = null, src = '' }: {
       const col = z < 0 ? red : grey // front props red
       const g = new THREE.Group()
       g.position.set(x * 0.9, 0.15, z * 0.9)
-      const blades = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.07), new THREE.MeshBasicMaterial({ color: col, side: THREE.DoubleSide, transparent: true }))
-      blades.rotation.x = -Math.PI / 2
+      const bm = new THREE.MeshBasicMaterial({ color: col, side: THREE.DoubleSide, transparent: true })
+      const b1 = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.07), bm)
+      const b2 = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.07), bm)
+      b1.rotation.x = b2.rotation.x = -Math.PI / 2
+      b2.rotation.z = Math.PI / 2 // second blade pair crosses the first: 4 blades
+      const blades = new THREE.Group() as unknown as THREE.Mesh
+      blades.add(b1, b2)
       const disc = new THREE.Mesh(new THREE.CircleGeometry(0.4, 28), new THREE.MeshBasicMaterial({ color: col, side: THREE.DoubleSide, transparent: true, opacity: 0.05, depthWrite: false }))
       disc.rotation.x = -Math.PI / 2
       g.add(disc, blades)
@@ -102,7 +107,7 @@ export default function Quad3D({ att, dim, tau = 100, spin = null, src = '' }: {
       props.forEach((p, i) => {
         const f = Math.max(0, Math.min(1, spinRef.current?.[i] ?? 0))
         p.g.rotation.y -= p.dir * f * REV_S * 2 * Math.PI * dt // CW from above = negative about +y
-        ;(p.blades.material as THREE.MeshBasicMaterial).opacity = 1 - 0.75 * f
+        ;((p.blades.children[0] as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = 1 - 0.75 * f
         ;(p.disc.material as THREE.MeshBasicMaterial).opacity = 0.05 + 0.15 * f
       })
       cur.yaw += wrap((g.yaw ?? 0) - cur.yaw) * k
