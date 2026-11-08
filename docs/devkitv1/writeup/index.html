@@ -585,9 +585,82 @@ esp32sdr d8live --follow --gain 40 --open               # live page; #waterfall 
 <p><strong>A scripted hop.</strong> <a href="../../../d8tx/python/examples/up_forward_land.py"><code>d8tx/python/examples/up_forward_land.py</code></a> arms, climbs, tilts forward, descends and disarms from a fixed timeline, in Angle mode. It is open loop: there is no altitude sensor and the ESP32 gets no telemetry, so every number is a guess. The first attempts at hover throttle 1450 and 1550 µs did not lift off and slid forward along the ground. So the hover throttle is unknown but above 1550, and with throttle that high the forward tilt has to be small. The next step is Betaflight blackbox logging, to measure rather than guess.</p>
 <p><strong>Telemetry comes back.</strong> Betaflight’s D8 receiver replies. In <a href="../../../bench/cc2500-rxdiag/firmware/work/betaflight/src/main/rx/cc2500_frsky_d.c"><code>cc2500_frsky_d.c</code></a>, after a packet with <code>packet[3] % 4 == 2</code> (line 237) it builds a telemetry frame (<code>buildTelemetryFrame</code>, line 239) and in <code>STATE_TELEMETRY</code> waits until 1380 µs after that packet (line 290) before switching to transmit. It has already stepped to the next hop channel (<code>nextChannel(1)</code> runs before <code>STATE_TELEMETRY</code>), so the reply comes on the <strong>next</strong> channel, not the trigger channel. The frame is 18 bytes (length byte 0x11, lines 135–147): bind ID, A1 (battery voltage), A2 (RSSI ADC), RSSI in dBm, a hub byte count and an echo of the packet’s ID, then FrSky hub bytes. In <a href="../../../bench/cc2500-rxdiag/firmware/work/betaflight/src/main/telemetry/frsky_hub.c"><code>telemetry/frsky_hub.c</code></a> the hub cycle is 125 ms (<code>FRSKY_HUB_CYCLETIME_US</code>, line 86) and acceleration is sent once per cycle, so 8 Hz; gyro IDs are defined but nothing sends them in this version (4.2). Too slow and too coarse for control, but enough for battery and RSSI.</p>
 <p>I then tried it. After a trigger packet the ESP32 unkeys, retunes to the next channel and starts an I/Q capture 0.21–0.37 ms later, records 10.3 ms and ships the samples to the Mac, which decodes them with the RX project’s D8 decoder (<code>bench/d8-tx/host/tlm_listen.py</code>). On battery, arm channel low, a 20 s run caught a CRC-valid 18-byte reply with the drone’s ID in <strong>26 of 46 trigger slots</strong>, arriving 1.34–1.51 ms after the trigger packet, with A1/A2 and the drone’s RSSI byte (71–76) and the telemetry ID echoed correctly (<code>bench/d8-tx/results/telemetry/</code>). So the half-duplex turnaround on the hacked transmit path works. Open: no hub bytes arrived (count 0 in every frame, so no accelerometer yet), the catch rate is 57% with one long run of misses, and A1 is not yet converted to volts. For dense flight data the practical route is still blackbox on the flight controller, read afterwards.</p>
+<h3 id="telemetry-in-the-stack-a-richer-hub-and-blackbox">9. Telemetry in the stack, a richer hub, and blackbox</h3>
+<p>Section 8 ended with a bench script that caught 57% of replies and no hub data. This section makes the replies part of the controller, makes Betaflight send more useful hub fields, and tries blackbox logging over USB. All of it was done with the drone on USB power and <strong>no battery</strong> (CLI <code>status</code>: <code>Voltage: 1 * 0.01V (0S battery - NOT PRESENT)</code>), props off.</p>
+<p><strong>Getting to near 100% first.</strong> Three fixes came between Section 8 and the stack (<code>bench/d8-tx/results/telemetry/SUMMARY.md</code>). The old firmware stopped transmitting for about 0.22 s while it sent each 20 KB capture over the UART, so Betaflight spent most of a run in RX failsafe; capturing int8 and streaming it out between packets took a 60 s run from 56/139 (40%) to 121/139 (87%). Hub bytes were always 0 because the drone had <code>FEATURE_TELEMETRY</code> off; turning it on (the only config change) brought hub frames. And our carrier sat about 35 kHz above the drone’s receive frequency at FOFS -50 kHz, so the drone lost some trigger packets: FOFS <strong>-75 kHz</strong> got 97.8–100% of triggers answered, against 82% at -50 kHz back to back. The id rule also changed to Betaflight’s: the next telemetry id only after a reply echoed the last one, otherwise resend the same id.</p>
+<p><strong>Telemetry in d8tx.</strong> <code>D8Link.start()</code> now turns telemetry on by default (<a href="../../../d8tx/PROTOCOL.md"><code>PROTOCOL.md</code></a>, “Telemetry in the library”): a trigger every 48 slots, a 9 ms capture streamed in int8, and FOFS -75000 Hz unless the caller sets one. A worker thread decodes each capture with a vendored copy of the RX decoder (about 5 ms each) and acks the id. The backend puts a <code>radio</code> object in <code>/api/status</code> and every WebSocket message: powered (reply within 3 s), link (within 1 s), catch rate over 10 s, reply age, RSSI, A1 battery voltage (<code>absent</code> below 2 V), hub fields and an inferred <code>armed</code>. The page’s “Drone (radio)” cell shows powered, link, battery and armed.</p>
+<p>A 60 s library run answered 138 of 138 triggers. A 10-minute run through the backend, with MSP readback and sticks at 20 Hz, answered <strong>1387 of 1395 (99.4%)</strong>, never below 97.2% in any minute (<code>bench/d8-tx/results/telemetry-stack/</code>). The sender held 111 Hz, 66,706 sends, none skipped, worst late 799 µs.</p>
+<figure>
+<a href="img/tx-evidence/tlm-catch-age.png"><img loading="lazy" src="img/tx-evidence/tlm-catch-age.png" alt="Left: replies per trigger for each minute of a 10-minute run, 97.2 to 100%. Right: histogram of reply age in the status messages, flat from 0 to about 430 ms." /></a>
+<figcaption>Figure 14 (<a href="img/tx-evidence/tlm-catch-age.svg">SVG</a>). The 10-minute backend run. Reply age p50 215 ms, p95 410 ms, maximum 849 ms: it is flat because a trigger comes every 48 slots (432 ms), so a missed reply doubles it. Source: <code>telemetry-stack/e2e/fc_10min_b.jsonl.gz</code>; <code>plot_telemetry.py</code>.</figcaption>
+</figure>
+<p>Three things went wrong on the way. WebSocket streams froze for minutes in two early runs; that was the Mac idle-sleeping, and the 10-minute run under <code>caffeinate</code> had no gap over 54 ms. Opening the ESP32’s port reboots it, so a link start posted right after the backend starts can get <code>no reply to 'FOFS -75000'</code>; waiting about 3 s works. And in the 10-minute run the hub fields <strong>stopped updating after 12.9 s</strong> while replies kept arriving; only the gyro of the patched fields (below) had appeared by then. The shorter 40 s and 60 s runs updated hub fields to the end. I have not looked into why.</p>
+<p><strong>A patched Betaflight hub.</strong> Stock 4.2.11 sends ACC as <code>((int16_t)(acc in g)) * 1000</code>, so a drone sitting level reads 0 or 1000 milli-g, never 996, and it has no arm state at all. A patch to <code>frsky_hub.c</code> alone (<a href="../../../bench/betaflight-patch/README.md"><code>bench/betaflight-patch/</code></a>) keeps every stock ID and adds:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Field</th>
+<th>Unit</th>
+<th>Rate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0x24–0x26</td>
+<td>ACC X/Y/Z</td>
+<td>true milli-g (was whole g × 1000)</td>
+<td>every 125 ms cycle</td>
+</tr>
+<tr>
+<td>0x46</td>
+<td>STATUS</td>
+<td>bit0 armed, bit1 ANGLE, bit2 HORIZON, bit3 failsafe, bit4 arming disabled, bit5 acro</td>
+<td>every cycle</td>
+</tr>
+<tr>
+<td>0x47</td>
+<td>ARMING_DISABLE</td>
+<td>low 16 bits of <code>armingDisableFlags</code></td>
+<td>every cycle</td>
+</tr>
+<tr>
+<td>0x40–0x42</td>
+<td>GYRO</td>
+<td>0.1 deg/s, filtered</td>
+<td>odd cycles (4 Hz)</td>
+</tr>
+<tr>
+<td>0x43–0x45</td>
+<td>ATT roll/pitch/yaw</td>
+<td>0.1 degree</td>
+<td>every 4th cycle (2 Hz)</td>
+</tr>
+</tbody>
+</table></div>
+<p>The worst cycle is 53 bytes, under the receiver’s 64-byte buffer (encoding in <a href="../../../d8tx/PROTOCOL.md"><code>d8tx/PROTOCOL.md</code></a>, “Patched Betaflight hub fields”). The first image flashed fine and then reported <code>NO_GYRO</code>: the bare MATEKF411RX target only builds the MPU6000 driver and this Tinyhawk has an ICM20689, which the stock cloud build includes. A second patch adds that driver to the target. Image <code>a7c24987</code> (431,488 bytes) found the ICM20689, gyro at 8 kHz. Flashing needs no button: CLI <code>bl</code> reboots into the ROM DFU bootloader and <code>dfu-util</code> writes the image. The same command writes the stock 4.2.11 image back (<code>recovery/</code>, sha256 <code>bb32b85a…12fc5</code>). Flashing wipes the config, so the transmitter ID 66,178, hop table, offset -32, <code>feature TELEMETRY</code> and LEDs off were replayed and checked against <code>diff all</code> (<code>bench/d8-tx/results/betaflight-patch/</code>).</p>
+<p>Over the radio a 90 s run answered 207 of 208 triggers. The drone sitting level read <strong>ACC -28.1, -46.7, +1004.5 milli-g</strong> (Z 1003–1006), gyro within ±0.6 deg/s, attitude roll -2.7°, pitch +1.6°, yaw 359.3°, and STATUS mostly 2 (ANGLE). All stock fields still arrived. Field counts came out 4:2:1 (ACC 52, gyro 26, attitude 13), the ratio the patch intends, but the absolute rates are capped by one reply every 48 slots (about 19 hub bytes a second), not by the drone. Since the new fields share that budget, each stock field updates about 30% less often per trigger. The patch’s 8/4/2 Hz would need a trigger every ~10 slots; that was not measured.</p>
+<figure>
+<a href="img/tx-evidence/tlm-hub-acc-gyro.png"><img loading="lazy" src="img/tx-evidence/tlm-hub-acc-gyro.png" alt="Two panels over a 60 s run: ACC X and Y near -28 and -46 milli-g and Z near 1005 milli-g; gyro X, Y, Z between -0.1 and 0.2 deg/s." /></a>
+<figcaption>Figure 15 (<a href="img/tx-evidence/tlm-hub-acc-gyro.svg">SVG</a>). Patched ACC and gyro received over the radio by the backend, drone still on the bench, one point per hub update (137 in 60 s). Mean ACC -28.3, -45.9, +1005.7 milli-g. Source: <code>telemetry-stack/e2e/fc_idle.jsonl.gz</code>; <code>plot_telemetry.py</code>.</figcaption>
+</figure>
+<p><strong>Armed over the radio.</strong> STATUS bit 0 is Betaflight’s own armed flag, so the controller can show ARMED without a USB cable. In the arm test (allow arm, throttle low, channel 7 high for 10 s), MSP over USB saw the arm 0.15 s after the switch and the radio 0.63 s after it; disarm took 0.18 s and 1.01 s.</p>
+<figure>
+<a href="img/tx-evidence/tlm-armed-bit.png"><img loading="lazy" src="img/tx-evidence/tlm-armed-bit.png" alt="Three step traces: arm switch high from 14.0 to 24.0 s, MSP armed from 14.17 to 24.20 s, hub STATUS armed from 14.65 to 25.03 s." /></a>
+<figcaption>Figure 16 (<a href="img/tx-evidence/tlm-armed-bit.svg">SVG</a>). The arm switch sent, Betaflight’s armed flag read over USB, and STATUS bit 0 received over the radio. Source: <code>results/betaflight-patch/armtest_log.csv</code>, <code>armtest_events.json</code>; <code>plot_telemetry.py</code>.</figcaption>
+</figure>
+<p>Through the backend the radio lagged MSP by 0.73 s on arm and 0.37 s on disarm. With no USB at all (<code>nofc_arm</code>), it showed armed 1.26 s after the command and disarmed 1.9 s after, with <code>armed_source</code> “patched”. Replies come only every 432 ms, which probably accounts for most of the lag; it is good for an indicator, not for a safety interlock. With stock firmware the library falls back to inferring arm state from the RPM field, which in several cases can only answer <code>None</code> (<code>PROTOCOL.md</code> lists them).</p>
+<p><strong>Blackbox over USB.</strong> Section 8 ended with blackbox as the way to measure a hop. This flight controller has no flash chip and no SD card, so blackbox can only go to a serial port, and I used the USB VCP, shared with MSP (<code>bench/blackbox/README.md</code>). I enabled it there (<code>serial 20 129 … 2000000</code>, the only line of <code>diff all</code> that changed) and wrote a capture, decode and plot tool in <a href="../../../bench/blackbox/"><code>bench/blackbox/</code></a>.</p>
+<p>One armed session worked, about 15 s of scripted roll, pitch and yaw sweeps. It decoded with Betaflight’s <code>blackbox_decode</code> to <strong>13,655 frames, 0 failed, at 954 Hz</strong> over 14.31 s (<code>bench/blackbox/results/bench/</code>). The start of the header was lost (see below), so <code>reconstruct_header.py</code> rebuilt it from Betaflight 4.2’s field rules for this config; that variant is the only one that decodes cleanly (variants without <code>rssi</code> or <code>axisD[2]</code> decode to 30 Hz of garbage), and the captured tail of the header matched it. rcCommand follows the script, ±300 on each axis in turn, except the first ~0.9 s: <code>rxSignalReceived</code> was 0 from 0.081 to 0.922 s, so the first roll ramp is missing.</p>
+<figure>
+<a href="img/tx-evidence/blackbox-session1.png"><img loading="lazy" src="img/tx-evidence/blackbox-session1.png" alt="Three panels over 14 s: rcCommand roll, pitch and yaw sweeping ±300 in turn; setpoint following at about ±170 deg/s; four motor outputs swinging between about 180 and 2047." /></a>
+<figcaption>Figure 17 (<a href="img/tx-evidence/blackbox-session1.svg">SVG</a>). The one good blackbox log. The gyro (not shown) stays within ±1 because the drone sat still. The motors swing to full with props off because nothing moves, so the I-term winds up under airmode; the ESCs were unpowered. Throttle rcCommand stays at 1000–1001 for throttle sent up to 1150 µs, which is the throttle curve of this rate profile (thr_mid 0, thr_expo 100). Source: <code>bench/blackbox/results/bench/bb_session1_reconstructed.01.csv</code>; <code>plot_telemetry.py</code>.</figcaption>
+</figure>
+<p><strong>The USB hang, still open.</strong> On this F4, Betaflight 4.2 reopens the VCP with <code>usbVcpOpen()</code> whenever the port changes owner: on arm, when blackbox takes it from MSP, and on disarm, when MSP gets it back. That pulls D+ low for 200 ms and reinitialises USB (<code>drivers/serial_usb_vcp.c:219</code>, <code>drivers/usb_io.c:69</code>). macOS does not re-enumerate, so the port goes silent. A host-side libusb reset (<code>usbreset.py</code>) brings it back; with one reset per arm the data flowed, but the start of the header was already gone, which is why it had to be rebuilt. A later two-session run reset the port on every 1.5 s of silence, and that wedged the flight controller: no USB and no radio telemetry (21 triggers, 0 replies); it needs a physical unplug and replug. That the repeated resets caused it is likely but not proven. So blackbox over the shared VCP is not a routine setup here. The options are a UART logger such as an OpenLager, or a Linux host, which might re-enumerate after the D+ pulse; neither is tested. The blackbox-on-VCP setting is still saved on the drone, and must be reverted (<code>bench/blackbox/results/NOTES.md</code>, “MORNING STEP”) before MSP or <code>d8tx.server</code> work normally again.</p>
+<p><strong>What this does not show.</strong> No flight with telemetry, and nothing on battery: the battery fields all read 0. The 8/4/2 Hz hub rates were not measured, only their ratio. The hub stall in the 10-minute run is unexplained. The blackbox result is one 14 s log on the bench, with a rebuilt header, and the setup that produced it also hung the flight controller.</p>
 <h2 id="what-this-does-not-show">What this does not show</h2>
 <ul>
-<li><strong>Sections 1–6: not binding, control or flight</strong> (Sections 7 and 8 cover those). Hopping works against the diagnostic receiver, which was given the hop table directly. No bind exchange and no stock Betaflight receiver were involved: the proof is that a CC2500 with the D8 settings and an independent CRC accepted the packets, not that a model aircraft would.</li>
+<li><strong>Sections 1–6: not binding, control or flight</strong> (Sections 7–9 cover those). Hopping works against the diagnostic receiver, which was given the hop table directly. No bind exchange and no stock Betaflight receiver were involved: the proof is that a CC2500 with the D8 settings and an independent CRC accepted the packets, not that a model aircraft would.</li>
 <li><strong>Not a calibrated transmitter.</strong> The ±1-step deviation (≈39 kHz) is 23% wider than the stock 31.7 kHz, there is no Gaussian shaping, and the power setting has no verified output level. The packet was radiated within bench range; there is no distance or attenuation information. Frequency accuracy rests on the 100 kHz-granularity scan and a coarse FREQEST. That the packet works says the receiver is tolerant, not that the ESP32 is accurate.</li>
 <li><strong>7/10 was one batch, and partly the receiver.</strong> Section 5 repeats the measurement with the fixed receiver (about 94%); the cause of the remaining misses is open.</li>
 <li><strong>The ESP32’s readback is not RF evidence.</strong> <code>late_bits=207</code> of 208, <code>max_late_ns=1266</code> is timing of the CPU loop. It is small compared with a bit time (~32 µs) but I did not verify it on air.</li>
@@ -599,6 +672,9 @@ esp32sdr d8live --follow --gain 40 --open               # live page; #waterfall 
 <pre class="sh"><code>python3 -m venv /tmp/mpl &amp;&amp; /tmp/mpl/bin/pip install matplotlib   # &gt;=3.5; the only dependency
 /tmp/mpl/bin/python bench/d8-tx/analysis/plot_tx.py               # writes docs/devkitv1/writeup/img/tx-evidence/*.{svg,png}
 /tmp/mpl/bin/python docs/devkitv1/writeup/plot_reliability.py     # Figures 5-7 and the Section 5 numbers
+/tmp/mpl/bin/python docs/devkitv1/writeup/plot_hop.py             # Figures 10-11
+/tmp/mpl/bin/python docs/devkitv1/writeup/plot_latency.py         # Figure 12
+/tmp/mpl/bin/python docs/devkitv1/writeup/plot_telemetry.py       # Figures 14-17 (--summary prints the Section 9 numbers)
 python3 bench/d8-tx/analysis/plot_tx.py --summary                 # numbers only, standard library</code></pre>
 <p>Offline firmware and host tests: <code>python3 -m unittest discover -s bench/d8-tx/tests</code>, <code>bench/d8-tx/firmware/test/run.sh</code>. No RF hardware is needed for any of this. The script reads only files in this repo.</p>
 <!-- END TX CHAPTER -->
