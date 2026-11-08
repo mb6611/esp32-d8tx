@@ -34,7 +34,7 @@ Bench-only extension for listening to Betaflight's FrSky D8 telemetry reply. The
 
 | Command | Reply | Notes |
 |---|---|---|
-| `TLM <every> [cap_us] [gain] [dec] [same] [stream] [ack] [mark] [retry]` | `OK every=.. cap_us=.. gain=.. dec=.. same=.. stream=.. ack=.. mark=.. retry=.. n=<samples> gain_max=..` | idle only (else `ERR busy`); RAM only. every 0 = off, else 4..940 slots. cap_us 500..12000 (default 10000), gain -1 = hardware AGC or 0..127 manual code (default 40, clamped to the chip's max), dec 16/32/64 (default 32), same 0 = listen on the next hop channel (default), 1 = on the trigger channel. cap_us*16/dec ≤ 6000. stream 0 (default) = blocking int16 dump; 1 = int8 payload shipped in the background while LINK keeps sending. ack 0 (default) = firmware advances tid +1 per trigger; 1 = host acks with `TID`. mark 1 = ch8 is 1500 us on trigger packets, 1600 on re-triggers, 1000 otherwise (drone-side receipt check through MSP_RC). retry 0..3 (stream=1 only): when the on-chip energy check sees no reply, drop the capture (`EV tlm_drop k=.. ch=.. tid=.. try=.. nb=.. fit=.. sl=.. rt=.. gap=.. pgap=..`) and repeat the request with the same tid at the next free slot |
+| `TLM <every> [cap_us] [gain] [dec] [same] [stream] [ack] [mark] [retry] [skip_us] [bits]` | `OK every=.. cap_us=.. gain=.. dec=.. same=.. stream=.. ack=.. mark=.. retry=.. n=<samples> gain_max=..` | idle only (else `ERR busy`); RAM only. every 0 = off, else 4..940 slots. cap_us 500..12000 (default 10000), gain -1 = hardware AGC or 0..127 manual code (default 40, clamped to the chip's max), dec 16/32/64 (default 32), same 0 = listen on the next hop channel (default), 1 = on the trigger channel. cap_us*16/dec ≤ 6000. stream 0 (default) = blocking int16 dump; 1 = int8 payload shipped in the background while LINK keeps sending. ack 0 (default) = firmware advances tid +1 per trigger; 1 = host acks with `TID`. mark 1 = ch8 is 1500 us on trigger packets, 1600 on re-triggers, 1000 otherwise (drone-side receipt check through MSP_RC). skip_us 0..6000 / bits 4|8 (stream=1 only): the first skip_us of the capture is not shipped; bits=4 ships mean-removed samples scaled to ±7, I in the low nibble and Q in the high nibble (header `bits=4`, `n` = shipped samples). retry 0..3 (stream=1 only): when the on-chip energy check sees no reply, drop the capture (`EV tlm_drop k=.. ch=.. tid=.. try=.. nb=.. fit=.. sl=.. rt=.. gap=.. pgap=..`) and repeat the request with the same tid at the next free slot |
 | `TLMX <tail_bits> <settle_us> [all] [probe]` | `OK tail=.. settle=.. all=.. probe=..` | experiment knobs, RAM only: tail 0..32 alternating bits keyed after the CRC of trigger packets (all=1: every packet), settle 0..300 us wait between the trigger unkey and the listen retune, probe 1 = half way between triggers send one data packet with ch8 1400 us and leave the next slot silent (`EV probe k=.. ch=.. gap=.. pgap=..`) |
 | `TID <0..31>` | idle: `OK tid=<n>`; during LINK: no reply | idle: first tid of the next LINK (default 0). During LINK: replaces the tid for the next trigger in either mode (with ack=0 the firmware keeps adding +1 per trigger from the new value, so the host normally sends `TID` only with ack=1). With ack=1: the host sends tid+1 if it decoded a reply echoing tid, else the same tid (Betaflight's re-request rule). The next trigger waits for it (at most 1 s, then repeats the same tid) |
 | `TCAP <khz> [cap_us] [gain] [dec] [pwr]` | `EV tlm ...` + payload, then `OK` | one capture at khz (2404000..2478000) + FOFS, no link. pwr −1 (default) = no keying; 0..127 = key one data packet (counter 0, current sticks) on that frequency first, then capture: exercises the same unkey→capture path. LO returns to 2412 MHz afterwards |
@@ -48,7 +48,7 @@ With `TLM every>0`, slot k of a `LINK` is a trigger when k ≥ every and k % eve
 - Only `S`, `TID`, `STOP`/`U` and `STAT` are handled while linked (`STAT` is dropped while a stream=1 capture is going out); `S` lines that arrive during a capture/dump are buffered and applied after it.
 
 ## Telemetry in the library
-`D8Link.start(..., telemetry=True)` (default) sends `TID <next id>` and `TLM 48 9000 40 32 0 1 1 0 1` (`protocol.TLM_RECIPE`: every 48 slots,
+`D8Link.start(..., telemetry=True)` (default) sends `TID <next id>` and `TLM 12 9000 40 64 0 1 1 0 1 1000 4` (`protocol.TLM_RECIPE`: every 12 slots, dec 64, int4 payload from 1 ms on; older: every 48 slots,
 9 ms capture, dec 32, gain 40, next hop channel, stream=1, ack=1, retry=1) before `LINK`, and sets FOFS to `DEFAULT_FOFS_HZ = -75000` when no
 `fofs_hz` is given. The firmware keeps the recipe (RAM) across LINKs, so no firmware change was needed; the library keeps the id sequence across
 links so the drone's expected id stays locked. A firmware answering `ERR` to `TLM` leaves telemetry off and the link still starts; `telemetry=False`
@@ -75,6 +75,7 @@ sends `TLM 0` if a recipe was sent before.
   `None`; an armed drone at idle throttle with motor_stop and capacity 0 also reads 0 (`None`); RPM older than 5 s -> `None`.
 - Throughput: one reply carries at most 10 hub bytes and a trigger comes every ~0.43 s (about 23 B/s), and the drone builds a new hub cycle only after the
   previous one was fully sent, so slow-rate fields (gyro/attitude of the patched firmware) refresh every few seconds, not at their nominal rate.
+  (Old firmware / 48-slot recipe. The FAST block below moves attitude and gyro out of the hub path.)
 
 ## Patched Betaflight hub fields
 
@@ -94,3 +95,19 @@ Byte budget (4 B per frame, 1 B tail per cycle): stock about 132 B/s; patched ab
 gyro 48, attitude 24, tails 8 = 240 B/s, plus 1 s group ~28 and clock ~2). Worst single cycle is 53 B (n%8==0 with the 5 s clock frame),
 under the 64 B `serialBuffer` of `cc2500_frsky_d.c`; the optional fields never share a cycle with the 1 s group.
 The receiver sends 10 hub bytes per D8 packet, so the link is not the limit. `d8hub.patched_state()` decodes these.
+
+## FAST block (patch 0003, `bench/betaflight-patch/patches/0003-frsky-d-fast-block.patch`)
+
+Reply frame stays `11 txid0 txid1 A1 A2 RSSI cnt tid payload[10]`. `cnt` = 0x8A (bit 7 set, `FAST_FLAG`) means the 10 payload bytes are a FAST
+block, not hub bytes; otherwise `cnt` is the hub byte count (0..10) as before. The payload is one little-endian 80-bit integer, fields from bit 0:
+roll s12 (bits 0-11, deci-deg), pitch s12 (12-23), yaw u12 (24-35, 0..3599), gyro x/y/z s14 (36-49 / 50-63 / 64-77, 0.25 deg/s, filtered gyro,
+clamped +-8191), seq u2 (78-79, +1 per fast block). Decoder: `d8tx/telemetry.py` `parse_fast`; offline check `bench/betaflight-patch/check/fast_block_check.py`.
+
+Scheduling (drone): every reply is fast except each `FAST_HUB_EVERY`-th (3) one, which is a hub reply (a hub slot with nothing pending is fast too).
+Fast replies never load, send or consume hub bytes; the `telemetryIdExpected` ack of the previous hub bytes is evaluated on every reply. The host ack
+rule is unchanged (next tid after a decoded reply that echoed the sent tid). Hub fields (ACC, STATUS, battery, ...) therefore get one third of replies;
+hub ids 0x40-0x45 are still sent. Patch 0003 also contains the hub-timer-stall guard (unsigned time difference in `processFrSkyHubTelemetry`).
+
+Host: `D8Link.telemetry()["fast"]` = `{attitude_deg [roll,pitch,yaw], gyro_dps [x,y,z], seq, age_ms, rate_hz}` (None until the first fast block;
+`rate_hz` over a rolling window). The backend publishes the same dict as `radio.fast` in `/api/status`. Bench (default recipe, 8.5 replies/s):
+fast 5.7 Hz (interval p50 0.12 s, p95 0.23 s), hub replies 2.85 Hz, seq gaps 0; see `bench/d8-tx/results/fast-telemetry/e2e/`.

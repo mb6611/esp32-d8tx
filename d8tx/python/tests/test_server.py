@@ -131,6 +131,7 @@ def test_radio_defaults_when_esp_lacks_telemetry(tmp_path):
     with TestClient(create_app(FakeEsp(), None, tmp_path / "none")) as c:
         r = c.get("/api/status").json()["radio"]
         assert r["enabled"] is False and r["armed"] is None and r["hub"]["raw"] == {}
+        assert r["fast"] is None
         with c.websocket_connect("/api/ws") as ws:
             assert ws.receive_json()["radio"]["powered"] is False
 

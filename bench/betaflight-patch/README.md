@@ -9,7 +9,8 @@ byte budget: `d8tx/PROTOCOL.md` "Patched Betaflight hub fields". Patch 0002 (`00
 `../cc2500-rxdiag/firmware/work/betaflight`). Uses the pinned docker/GCC 9.2.1 toolchain and downloads of
 `../cc2500-rxdiag/firmware` (SOURCES.lock). Output `out/<BUILD_ID>/` (hex, bin, SHA256SUMS; only the sums are tracked).
 The build log's "warning:" lines are the docker environment's (`python: not found`, git-not-a-repo), same as stock.
-Current build id a7c24987: bin 431488 bytes, sha256 c24cfa44bd89...7dcc (full in `out/a7c24987/SHA256SUMS`). Older build f9420b39 (430792 B) is superseded.
+Patch 0003 (`patches/0003-frsky-d-fast-block.patch`): FAST block + hub-timer-stall guard, see below.
+Current build id c3f351e4 (patches 0001-0003): bin 432016 bytes, sha256 59c9b279b3d488792d0d04001203ec80bd85d2db15f9fc06afb044e7e916f039 (`out/c3f351e4/SHA256SUMS`). Flashed and bench-verified 2026-11-08 (`bench/d8-tx/results/fast-telemetry/e2e/flash_log.txt`). Previous a7c24987 (431488 B, patches 0001+0002) and f9420b39 are superseded.
 The result is a bare target build (no cloud options), hence smaller than the stock cloud image.
 
 ## Recovery: stock image
@@ -22,4 +23,15 @@ Rollback (FC in DFU mode. Bench path without touching the board: Betaflight CLI 
 Bench flashes (see `bench/d8-tx/results/betaflight-patch/flash_log_a7c_1.txt`) used the no-touch path: `bl` over the CLI, then the same `dfu-util ... -D <bin>` command.
 
 Flashing wipes config: redo it per `bench/d8-tx/results/bf_link/RESTORE.md` (diff all replay, tx id 66,178, hop table,
-spi offset -32, feature TELEMETRY, LEDs off). Flash the patched image the same way with `out/<id>/*.bin`.
+spi offset -32, feature TELEMETRY, LEDs on: LED C13, RX_SPI_LED B09, LED_STRIP; simplest is replaying the saved pre-flash `diff all`). Flash the patched image the same way with `out/<id>/*.bin`.
+
+## Patch 0003: FAST telemetry block (design: `.ru/plans/fast-telemetry.md`)
+`src/main/rx/cc2500_frsky_d.c`, `appendFrSkyHubData()` (+ `buildFastBlock()`, `frSkyDPackFast()`): reply `cnt` byte (frame[6]) is 0x8A and
+the 10 payload bytes are the FAST block (roll/pitch/yaw deci-deg, gyro xyz 0.25 deg/s filtered, 2-bit seq; bit layout in the design) on every
+reply except each `FAST_HUB_EVERY`-th (3) hub slot; a hub slot with nothing to send is fast too. Ack rule unchanged in spirit: the `telemetryIdExpected`
+match (ack of previous hub bytes, expected+1) now runs on every reply incl. fast ones, because the host acks the previous hub reply in whatever slot follows;
+fast replies load/send/consume no hub bytes. New-data refill happens only in a hub slot on a match. `telemetryBytesGenerated` is cleared when acked
+(not in the send loop), and `telemetryBytesAcknowledged` is zeroed on refill, so a resend cannot replay stale bytes.
+`src/main/telemetry/frsky_hub.c`, `processFrSkyHubTelemetry()`: cycle gate uses unsigned `(uint32_t)(now - last)` instead of signed `cmpTimeUs` (hub stall fix).
+Hub gyro/attitude ids 0x40-0x45 are unchanged (kept). Offline check: `python3 check/fast_block_check.py` compiles the C packer extracted from the patch and
+compares it with a Python pack/unpack (2005 cases). Note: the design text said "0.25 deg/s, same as 0x40" but 0x40 is 0.1 deg/s; the FAST block uses 0.25 deg/s.

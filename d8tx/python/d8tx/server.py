@@ -24,6 +24,7 @@ RADIO_DEFAULT = {
     "hub": {"acc_mg": None, "heading_deg": None, "rpm": None, "vfas_v": None, "current_a": None,
             "fuel": None, "temp1": None, "temp2": None, "patched": {}, "raw": {}, "age_ms": None},
     "armed": None, "armed_source": None,
+    "fast": None,
 }
 DEFAULT_DIST = Path(__file__).resolve().parents[2] / "app" / "dist"
 

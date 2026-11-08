@@ -16,6 +16,16 @@ class D8Error(ProtocolError):
     pass
 
 
+def unpack4(payload: bytes) -> bytes:
+    """TLM bits=4 payload (I in the low nibble, Q in the high nibble of each byte, signed) -> int8 I,Q interleaved."""
+    import numpy as np
+    b = np.frombuffer(payload, np.uint8)
+    out = np.empty(2 * len(b), np.int8)
+    out[0::2] = ((b & 0xF).astype(np.int8) ^ 8) - 8
+    out[1::2] = ((b >> 4).astype(np.int8) ^ 8) - 8
+    return out.tobytes()
+
+
 class D8Link:
     def __init__(self, port, baud=921600, serial_obj=None, reply_timeout=1.0,
                  clock=time.perf_counter, sleep=time.sleep):
@@ -109,7 +119,10 @@ class D8Link:
             return
         rep = None
         if payload_ok(meta, payload):
-            iq = load_iq(payload, meta.get("n", 0), meta.get("bits", 16))
+            bits = meta.get("bits", 16)
+            if bits == 4:
+                payload, bits = unpack4(payload), 8
+            iq = load_iq(payload, meta.get("n", 0), bits)
             rep = decode_capture(iq, float(meta.get("fs", 500000)), hint=self._shift_hint)
         if rep is not None:
             self._shift_hint = rep["shift_hz"]

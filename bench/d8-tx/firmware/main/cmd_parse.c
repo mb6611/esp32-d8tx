@@ -36,10 +36,10 @@ const char *err_code(const char *why) {
 
 cmd_t cmd_parse(char *line) {
     cmd_t c = {.kind = CMD_NONE, .pwr = PWR_MAX};
-    char *save, *tok[10];
+    char *save, *tok[12];
     int n = 0;
     for (char *t = strtok_r(line, " \t", &save); t; t = strtok_r(NULL, " \t", &save)) {
-        if (n == 10) return fail("args");
+        if (n == 12) return fail("args");
         tok[n++] = t;
     }
     if (!n) return c;
@@ -64,11 +64,11 @@ cmd_t cmd_parse(char *line) {
         c.kind = CMD_LINK;
         return c;
     }
-    if (!strcmp(tok[0], "TLM")) { /* TLM every [cap_us] [gain] [dec] [same] [stream] [ack] [mark] [retry]: telemetry listen for later LINKs */
-        if (n < 2 || n > 10) return fail("args");
+    if (!strcmp(tok[0], "TLM")) { /* TLM every [cap_us] [gain] [dec] [same] [stream] [ack] [mark] [retry] [skip_us] [bits]: telemetry listen for later LINKs */
+        if (n < 2 || n > 12) return fail("args");
         if (!parse_int(tok[1], 0, TLM_EVERY_MAX, &v) || (v && v < TLM_EVERY_MIN)) return fail("every");
         c.tlm_every = (unsigned)v;
-        c.cap_us = TLM_CAP_US_DEF; c.gain = TLM_GAIN_DEF; c.dec = TLM_DEC_DEF; c.same = 0;
+        c.cap_us = TLM_CAP_US_DEF; c.gain = TLM_GAIN_DEF; c.dec = TLM_DEC_DEF; c.same = 0; c.skip_us = 0; c.bits = 8;
         if (n >= 3) { if (!parse_int(tok[2], TLM_CAP_US_MIN, TLM_CAP_US_MAX, &v)) return fail("cap_us"); c.cap_us = (unsigned)v; }
         if (n >= 4) { if (!parse_int(tok[3], -1, TLM_GAIN_MAX, &v)) return fail("gain"); c.gain = (int)v; }
         if (n >= 5) { if (!parse_int(tok[4], 16, 64, &v) || (v != 16 && v != 32 && v != 64)) return fail("dec"); c.dec = (unsigned)v; }
@@ -77,7 +77,11 @@ cmd_t cmd_parse(char *line) {
         if (n >= 8) { if (!parse_int(tok[7], 0, 1, &v)) return fail("ack"); c.ack = (int)v; }
         if (n >= 9) { if (!parse_int(tok[8], 0, 1, &v)) return fail("mark"); c.mark = (int)v; }
         if (n >= 10) { if (!parse_int(tok[9], 0, TLM_RETRY_MAX, &v)) return fail("retry"); c.retry = (int)v; }
+        if (n >= 11) { if (!parse_int(tok[10], 0, TLM_SKIP_MAX, &v)) return fail("skip"); c.skip_us = (unsigned)v; }
+        if (n >= 12) { if (!parse_int(tok[11], 4, 8, &v) || (v != 4 && v != 8)) return fail("bits"); c.bits = (int)v; }
         if (c.retry && !c.stream) return fail("retry");
+        if ((c.skip_us || c.bits != 8) && !c.stream) return fail("skip");
+        if (c.skip_us + 500u > c.cap_us) return fail("skip");
         if (c.cap_us * 16u / c.dec > 6000u) return fail("cap_us");
         c.kind = CMD_TLM;
         return c;

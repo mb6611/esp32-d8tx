@@ -1,0 +1,137 @@
+diff --git a/src/main/rx/cc2500_frsky_d.c b/src/main/rx/cc2500_frsky_d.c
+index 1883533..8522347 100644
+--- a/src/main/rx/cc2500_frsky_d.c
++++ b/src/main/rx/cc2500_frsky_d.c
+@@ -53,7 +53,10 @@
+ #include "rx/cc2500_frsky_common.h"
+ #include "rx/cc2500_frsky_shared.h"
+ 
++#include "flight/imu.h"
++
+ #include "sensors/battery.h"
++#include "sensors/gyro.h"
+ 
+ #include "telemetry/frsky_hub.h"
+ 
+@@ -73,31 +76,99 @@ static bool telemetryEnabled = false;
+ static uint8_t telemetryBytesGenerated;
+ static uint8_t serialBuffer[MAX_SERIAL_BYTES]; // buffer for telemetry serial data
+ 
++// Patched: FAST block (attitude + gyro, 10 bytes, cnt byte 0x8A), see .ru/plans/fast-telemetry.md.
++// Every reply is fast except every FAST_HUB_EVERY-th (hub slot), and except hub slots with nothing to send.
++#define FAST_HUB_EVERY 3
++#define FAST_CNT 0x8A
++
++// FASTPACK-BEGIN (self-contained plain C; extracted and tested by check/fast_block_check.py)
++static int32_t fastClamp(int32_t v, int32_t lo, int32_t hi)
++{
++    return v < lo ? lo : (v > hi ? hi : v);
++}
++
++// Little-endian 80-bit v: roll s12 @0 (deci-deg), pitch s12 @12, yaw u12 @24 (0..3599), gyro x/y/z s14 @36/50/64 (0.25 deg/s),
++// seq 2 bit @78.
++static void frSkyDPackFast(uint8_t *out, int32_t rollDd, int32_t pitchDd, int32_t yawDd,
++                           int32_t gxQ, int32_t gyQ, int32_t gzQ, uint8_t seq)
++{
++    const uint64_t f[7] = {
++        (uint64_t)fastClamp(rollDd, -2048, 2047) & 0xFFF,
++        (uint64_t)fastClamp(pitchDd, -2048, 2047) & 0xFFF,
++        (uint64_t)fastClamp(yawDd, 0, 3599) & 0xFFF,
++        (uint64_t)fastClamp(gxQ, -8192, 8191) & 0x3FFF,
++        (uint64_t)fastClamp(gyQ, -8192, 8191) & 0x3FFF,
++        (uint64_t)fastClamp(gzQ, -8192, 8191) & 0x3FFF,
++        (uint64_t)(seq & 3),
++    };
++    static const uint8_t width[7] = { 12, 12, 12, 14, 14, 14, 2 };
++    uint8_t shift = 0;
++    for (uint8_t i = 0; i < 10; i++) {
++        out[i] = 0;
++    }
++    for (uint8_t k = 0; k < 7; k++) {
++        for (uint8_t b = 0; b < width[k]; b++) {
++            if ((f[k] >> b) & 1) {
++                out[shift >> 3] |= 1 << (shift & 7);
++            }
++            shift++;
++        }
++    }
++}
++// FASTPACK-END
++
++static void buildFastBlock(uint8_t *buf)
++{
++    static uint8_t fastSeq = 0;
++    frSkyDPackFast(buf, attitude.values.roll, attitude.values.pitch, attitude.values.yaw,
++                   lrintf(gyro.gyroADCf[0] * 4.0f), lrintf(gyro.gyroADCf[1] * 4.0f), lrintf(gyro.gyroADCf[2] * 4.0f),
++                   fastSeq++);
++}
++
++// Returns the cnt byte value (hub byte count 0..10, or FAST_CNT when buf holds a fast block).
+ static uint8_t appendFrSkyHubData(uint8_t *buf)
+ {
+     static uint8_t telemetryBytesSent = 0;
+     static uint8_t telemetryBytesAcknowledged = 0;
+     static uint8_t telemetryIdExpected = 0;
++    static uint8_t replyNum = 0;
+ 
+-    if (telemetryId == telemetryIdExpected) {
++    // Fast slots: the ack rule below still runs (the host acks the previous hub reply in whatever reply slot follows),
++    // but no hub bytes are loaded, sent or consumed.
++    replyNum++;
++    const bool hubSlot = (replyNum % FAST_HUB_EVERY) == 0;
++
++    const bool matched = (telemetryId == telemetryIdExpected);
++    if (matched) {
+         telemetryBytesAcknowledged = telemetryBytesSent;
+ 
+         telemetryIdExpected = (telemetryId + 1) & 0x1F;
+-        if (!telemetryBytesGenerated) {
++    } else { // rx re-requests last packet
++        telemetryBytesSent = telemetryBytesAcknowledged;
++    }
++
++    if (hubSlot) {
++        if (telemetryBytesGenerated && telemetryBytesSent == telemetryBytesGenerated && matched) {
++            telemetryBytesGenerated = 0; // everything delivered and acked
++        }
++        if (matched && !telemetryBytesGenerated) {
+             telemetryBytesSent = 0;
++            telemetryBytesAcknowledged = 0;
+ 
+             processFrSkyHubTelemetry(micros());
+         }
+-    } else { // rx re-requests last packet
+-        telemetryBytesSent = telemetryBytesAcknowledged;
++    }
++
++    if (!hubSlot || (telemetryBytesSent == telemetryBytesGenerated)) {
++        // fast reply (nothing pending in a hub slot also becomes fast)
++        buildFastBlock(buf);
++        return FAST_CNT;
+     }
+ 
+     uint8_t index = 0;
+     for (uint8_t i = 0; i < 10; i++) {
+         if (telemetryBytesSent == telemetryBytesGenerated) {
+-            telemetryBytesGenerated = 0;
+-
+-            break;
++            break; // generated is cleared only once acked (hub slot above), so a resend never replays stale bytes
+         }
+         buf[i] = serialBuffer[telemetryBytesSent];
+         telemetryBytesSent = (telemetryBytesSent + 1) & (MAX_SERIAL_BYTES - 1);
+diff --git a/src/main/telemetry/frsky_hub.c b/src/main/telemetry/frsky_hub.c
+index 6e4abfb..14118d6 100644
+--- a/src/main/telemetry/frsky_hub.c
++++ b/src/main/telemetry/frsky_hub.c
+@@ -554,7 +554,9 @@ void processFrSkyHubTelemetry(timeUs_t currentTimeUs)
+     static uint32_t frSkyHubLastCycleTime = 0;
+     static uint8_t cycleNum = 0;
+ 
+-    if (cmpTimeUs(currentTimeUs, frSkyHubLastCycleTime) < FRSKY_HUB_CYCLETIME_US) {
++    // Patched: unsigned elapsed time. Stock's signed cmpTimeUs() goes negative after 35.8 min without a cycle and
++    // then blocks every cycle until 71.6 min (hub stall). Unsigned wraps correctly (and passes when now < last).
++    if ((uint32_t)(currentTimeUs - frSkyHubLastCycleTime) < FRSKY_HUB_CYCLETIME_US) {
+         return;
+     }
+     frSkyHubLastCycleTime = currentTimeUs;

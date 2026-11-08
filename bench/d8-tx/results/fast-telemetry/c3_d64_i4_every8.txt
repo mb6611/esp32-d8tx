@@ -1,0 +1,55 @@
+analog {'vbat_dv': 0, 'mah': 0, 'rssi': 423, 'amps_cA': 0, 'vbat_cv': 1}
+{
+ "name": "c3_d64_i4_every8",
+ "recipe": "TLM 8 9000 40 64 0 1 1 0 1 1000 4",
+ "secs": 60.0,
+ "captures": 513,
+ "captures_per_s": 8.55,
+ "decoded": 511,
+ "decoded_per_s": 8.516666666666667,
+ "decode_fail": 2,
+ "tlm_drop": 2,
+ "latency_s": {
+  "p50": 0.09873962492847355,
+  "p95": 0.09987791700763271,
+  "max": 0.10382037497537588
+ },
+ "median_decode_s": 0.0007132500177249312,
+ "median_bytes": 2000,
+ "msp_samples": 748,
+ "msp_err": 0,
+ "rssi_min_mean_max": [
+  381,
+  604.9598930481284,
+  620
+ ],
+ "failsafe_samples": 0,
+ "rc_bad": 0,
+ "arming_flags": [
+  "RX_FAILSAFE"
+ ],
+ "msp_samples_after_3s": 710,
+ "ch8_lag_s": {
+  "p50": 0.02,
+  "p95": 0.04,
+  "max": 1.98,
+  "n": 748
+ },
+ "link_end": [
+  {
+   "name": "link_end",
+   "why": "stop",
+   "slots": 6166,
+   "late_max_us": 169,
+   "retune_max_us": 450,
+   "gap_max_us": 220,
+   "gap50": 2425,
+   "gap100": 691,
+   "gap200": 2,
+   "g2_min_us": -152,
+   "g2_max_us": 221,
+   "trig": 515,
+   "retry": 2
+  }
+ ]
+}

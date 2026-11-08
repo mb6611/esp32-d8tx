@@ -294,7 +294,7 @@ static void lo_retune(uint32_t f10) {
 static bool v1_link; /* current run_hop was started by LINK (protocol v1 events/replies) */
 
 /* ---- telemetry listen state (TLM / TCAP; off unless TLM every > 0 was sent) ---- */
-static struct { unsigned every, cap_us, dec; int gain, same, stream, ack, mark, retry; } tlm = {0, TLM_CAP_US_DEF, TLM_DEC_DEF, TLM_GAIN_DEF, 0, 0, 0, 0, 0};
+static struct { unsigned every, cap_us, dec, skip_us; int gain, same, stream, ack, mark, retry, bits; } tlm = {0, TLM_CAP_US_DEF, TLM_DEC_DEF, 0, TLM_GAIN_DEF, 0, 0, 0, 0, 0, 8};
 static unsigned tlm_tid, tlm_tid_init, tlm_n, gain_max = 127;
 static bool tid_ready; /* ack mode: a TID arrived since the last capture */
 static unsigned tlmx_tail, tlmx_settle; /* TLMX experiments: tail bits on trigger packets, unkey->listen retune wait */
@@ -306,7 +306,7 @@ static int tlmx_probe;                  /* TLMX: one marked data packet + silent
 static struct { char hdr[400]; unsigned hlen, blen, pos; const uint8_t *data; bool busy; } shp;
 /* A finished capture waiting for its int8 conversion (~1.3 ms of CPU), done in the idle gap after the resume slot
  * so it never delays a packet. */
-static struct { bool on; unsigned after_k, k, ch, tid, n_out, dec; uint32_t u0; unsigned phase, i, m, sh;
+static struct { bool on; unsigned after_k, k, ch, tid, n_out, dec, skip, bits; uint32_t u0; unsigned phase, i, m, sh; int mean_i, mean_q; int32_t sum_i, sum_q;
                 unsigned tries, nb, fit, sl, rt; int gap, pgap; } shp_pend;
 #define GAP_NONE 99999 /* no previous slot within 3 slots */
 
@@ -410,32 +410,66 @@ static void tlm_dump(unsigned k, unsigned ch, unsigned tid, unsigned n_out, unsi
  * Done in chunks of 512 values (phase 0: peak scan, 1: convert) so it fits the ~1.9 ms idle gaps between packets.
  * Returns true when the capture has been queued for shipping. */
 static bool tlm_ship_step(const tcap_res_t *r) {
-    int16_t *s = tcap_buffer();
-    int8_t *d = (int8_t *)s;
-    const unsigned n = 2u * shp_pend.n_out;
-    unsigned e = shp_pend.i + 512u < n ? shp_pend.i + 512u : n;
+    /* Ships samples skip..n_out-1 of the capture. bits=8: int8 with a common right shift; bits=4: mean removed, scaled to
+     * +-7, I in the low nibble and Q in the high nibble of each byte. Conversion is in place (output never passes the input). */
+    int16_t *s = tcap_buffer() + 2u * shp_pend.skip; /* first shipped value */
+    int8_t *d = (int8_t *)tcap_buffer();
+    const unsigned ns = shp_pend.n_out - shp_pend.skip; /* shipped samples */
+    const unsigned n = shp_pend.bits == 4 ? ns : 2u * ns; /* shipped bytes */
+    const unsigned nv = 2u * ns;
+    unsigned i0 = shp_pend.i, e = i0 + 512u < nv ? i0 + 512u : nv;
     if (shp_pend.phase == 0) {
-        for (unsigned i = shp_pend.i; i < e; i++) { int v = s[i] < 0 ? -s[i] : s[i]; if ((unsigned)v > shp_pend.m) shp_pend.m = (unsigned)v; }
+        for (unsigned i = i0; i < e; i++) {
+            int v = s[i] < 0 ? -s[i] : s[i];
+            if ((i & 1u) == 0) shp_pend.sum_i += s[i]; else shp_pend.sum_q += s[i];
+            if ((unsigned)v > shp_pend.m) shp_pend.m = (unsigned)v;
+        }
         shp_pend.i = e;
-        if (e == n) {
+        if (e == nv) {
             shp_pend.sh = 0;
-            while ((shp_pend.m >> shp_pend.sh) > 127u) shp_pend.sh++;
-            shp_pend.phase = 1;
+            if (shp_pend.bits == 4) {
+                shp_pend.mean_i = (int)(shp_pend.sum_i / (int32_t)ns); shp_pend.mean_q = (int)(shp_pend.sum_q / (int32_t)ns);
+                shp_pend.m = 0; /* peak of the mean-removed data: second pass */
+                shp_pend.phase = 2;
+            } else {
+                while ((shp_pend.m >> shp_pend.sh) > 127u) shp_pend.sh++;
+                shp_pend.phase = 1;
+            }
             shp_pend.i = 0;
         }
         return false;
     }
-    for (unsigned i = shp_pend.i; i < e; i++) d[i] = (int8_t)(s[i] >> shp_pend.sh); /* byte i overwrites s[i/2], already read */
+    if (shp_pend.phase == 2) { /* bits=4: peak after mean removal */
+        for (unsigned i = i0; i < e; i++) {
+            int v = s[i] - ((i & 1u) ? shp_pend.mean_q : shp_pend.mean_i);
+            if (v < 0) v = -v;
+            if ((unsigned)v > shp_pend.m) shp_pend.m = (unsigned)v;
+        }
+        shp_pend.i = e;
+        if (e == nv) { shp_pend.sum_i = (int32_t)((7u << 16) / (shp_pend.m ? shp_pend.m : 1u)); shp_pend.phase = 1; shp_pend.i = 0; }
+        return false;
+    }
+    if (shp_pend.bits == 4) { /* i counts values; handle sample pairs */
+        const int32_t mul = shp_pend.sum_i;
+        for (unsigned i = i0; i < e; i += 2) {
+            int qi = ((s[i] - shp_pend.mean_i) * mul + 32768) >> 16, qq = ((s[i + 1] - shp_pend.mean_q) * mul + 32768) >> 16;
+            if (qi > 7) qi = 7; else if (qi < -7) qi = -7;
+            if (qq > 7) qq = 7; else if (qq < -7) qq = -7;
+            d[i / 2] = (int8_t)((qi & 0xf) | ((qq & 0xf) << 4));
+        }
+    } else {
+        for (unsigned i = i0; i < e; i++) d[i] = (int8_t)(s[i] >> shp_pend.sh); /* byte i overwrites a value already read */
+    }
     shp_pend.i = e;
-    if (e < n) return false;
+    if (e < nv) return false;
     uint32_t crc = esp_rom_crc32_le(0, (const uint8_t *)d, n);
     uint32_t turn = r->start_cyc - shp_pend.u0;
     int h = snprintf(shp.hdr, sizeof shp.hdr, "EV tlm k=%u ch=%u tid=%u fs=%u n=%u dec=%u turn_ns=%" PRIu32 " run_us=%" PRIu32
                      " g0=%" PRIu32 " g1=%" PRIu32 " lost=%" PRIu32 " bad=%" PRIu32 " late=%" PRIu32 " work=%" PRIu32
-                     " units=%" PRIu32 " to=%d bits=8 sh=%u try=%u nb=%u fit=%u sl=%u rt=%u gap=%d pgap=%d bytes=%u crc=%08" PRIx32 "\n",
-                     shp_pend.k, shp_pend.ch, shp_pend.tid, TCAP_RATE_HZ / shp_pend.dec, shp_pend.n_out, shp_pend.dec,
+                     " units=%" PRIu32 " to=%d bits=%u sh=%u try=%u nb=%u fit=%u sl=%u rt=%u gap=%d pgap=%d bytes=%u crc=%08" PRIx32 "\n",
+                     shp_pend.k, shp_pend.ch, shp_pend.tid, TCAP_RATE_HZ / shp_pend.dec, ns, shp_pend.dec,
                      turn * 1000u / CYC_PER_US, (r->end_cyc - r->start_cyc) / CYC_PER_US, r->gain_first, r->gain_last, r->lost,
-                     r->bad, r->late_max, r->work_max, r->units, r->timeout, shp_pend.sh, shp_pend.tries, shp_pend.nb,
+                     r->bad, r->late_max, r->work_max, r->units, r->timeout, shp_pend.bits, shp_pend.sh, shp_pend.tries, shp_pend.nb,
                      shp_pend.fit, shp_pend.sl, shp_pend.rt, shp_pend.gap, shp_pend.pgap, n, crc);
     shp.hlen = h < (int)sizeof shp.hdr ? (unsigned)h : sizeof shp.hdr - 1;
     shp.data = (const uint8_t *)d;
@@ -587,7 +621,8 @@ static void run_hop(const cmd_t *c) {
             tries = 0; retry_due = false;
             shp_pend.on = true; shp_pend.after_k = j + 1; shp_pend.k = k; shp_pend.ch = lch; shp_pend.tid = tlm_tid;
             shp_pend.n_out = n_out; shp_pend.dec = tlm.dec; shp_pend.u0 = u0;
-            shp_pend.phase = 0; shp_pend.i = 0; shp_pend.m = 0;
+            shp_pend.skip = tlm.skip_us * 16u / tlm.dec; shp_pend.bits = (unsigned)tlm.bits;
+            shp_pend.phase = 0; shp_pend.i = 0; shp_pend.m = 0; shp_pend.sum_i = shp_pend.sum_q = 0;
             if (!tlm.ack) tlm_tid = (tlm_tid + 1u) & 0x1fu;
             tid_ready = false;
             ack_t0 = esp_timer_get_time();
@@ -721,10 +756,10 @@ void app_main(void) {
         case CMD_PKT: run_packet(&c); break;
         case CMD_TLM:
             tlm.every = c.tlm_every; tlm.cap_us = c.cap_us; tlm.gain = c.gain; tlm.dec = c.dec; tlm.same = c.same;
-            tlm.stream = c.stream; tlm.ack = c.ack; tlm.mark = c.mark; tlm.retry = c.retry;
-            printf("OK every=%u cap_us=%u gain=%d dec=%u same=%d stream=%d ack=%d mark=%d retry=%d n=%u gain_max=%u\n", tlm.every,
+            tlm.stream = c.stream; tlm.ack = c.ack; tlm.mark = c.mark; tlm.retry = c.retry; tlm.skip_us = c.skip_us; tlm.bits = c.bits;
+            printf("OK every=%u cap_us=%u gain=%d dec=%u same=%d stream=%d ack=%d mark=%d retry=%d n=%u gain_max=%u skip=%u bits=%d\n", tlm.every,
                    tlm.cap_us, tlm.gain, tlm.dec, tlm.same, tlm.stream, tlm.ack, tlm.mark, tlm.retry, tlm.cap_us * 16u / tlm.dec,
-                   gain_max);
+                   gain_max, tlm.skip_us, tlm.bits);
             break;
         case CMD_TID: tlm_tid_init = c.tid; printf("OK tid=%u\n", c.tid); break;
         case CMD_TLMX:

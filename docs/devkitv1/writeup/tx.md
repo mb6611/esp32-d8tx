@@ -284,6 +284,18 @@ One armed session worked, about 15 s of scripted roll, pitch and yaw sweeps. It 
 
 **The USB hang, still open.** On this F4, Betaflight 4.2 reopens the VCP with `usbVcpOpen()` whenever the port changes owner: on arm, when blackbox takes it from MSP, and on disarm, when MSP gets it back. That pulls D+ low for 200 ms and reinitialises USB (`drivers/serial_usb_vcp.c:219`, `drivers/usb_io.c:69`). macOS does not re-enumerate, so the port goes silent. A host-side libusb reset (`usbreset.py`) brings it back; with one reset per arm the data flowed, but the start of the header was already gone, which is why it had to be rebuilt. A later two-session run reset the port on every 1.5 s of silence, and that wedged the flight controller: no USB and no radio telemetry (21 triggers, 0 replies); it needs a physical unplug and replug. That the repeated resets caused it is likely but not proven. So blackbox over the shared VCP is not a routine setup here. The options are a UART logger such as an OpenLager, or a Linux host, which might re-enumerate after the D+ pulse; neither is tested. The blackbox-on-VCP setting is still saved on the drone, and must be reverted (`bench/blackbox/results/NOTES.md`, "MORNING STEP") before MSP or `d8tx.server` work normally again.
 
+**Fast attitude and gyro (patch 0003).** Hub bytes were too slow: at one reply per 432 ms, gyro refreshed every ~3.5 s and attitude every ~7 s. Patch 0003 makes the drone's reply carry a 10-byte block of roll/pitch/yaw and gyro x/y/z (`cnt` = 0x8A, format in `PROTOCOL.md`) in two of every three replies, and the stack now polls every 12 slots (about 8.5 replies/s). Flashed build `c3f351e4`, 60 s bench link, drone on USB, no battery:
+
+| | before (a7c24987, every 48 slots) | after (c3f351e4, every 12 slots) |
+|---|---|---|
+| replies/s | 2.3 | 8.5 |
+| gyro/attitude refresh | 0.29 / 0.14 Hz (3.5 s / 7 s) | 5.7 Hz (p50 0.12 s, p95 0.23 s) |
+| request-to-decoded latency | 0.31 s | 0.10 s |
+| ACC / STATUS refresh | ~1.7 s | ~1.5 s |
+| MSP RSSI, failsafe, ch8 lag p50 | 0 failsafe, 0.02 s | 0 failsafe, 0.02 s (p95 0.04 s) |
+
+The radio values agree with MSP_ATTITUDE (-1.8, 1.2 deg vs -18, 12 deci-deg) and gyro within noise. The same patch carries the hub-timer-stall guard, but the 36-minute idle condition was not re-tested. Evidence: `bench/d8-tx/results/fast-telemetry/e2e/`.
+
 **What this does not show.** No flight with telemetry, and nothing on battery: the battery fields all read 0. The 8/4/2 Hz hub rates were not measured, only their ratio. The hub stall in the 10-minute run is explained by a model and by timing, but the reply byte counts were not logged and the fix (a guard in the patched firmware) is not built. The blackbox result is one 14 s log on the bench, with a rebuilt header, and the setup that produced it also hung the flight controller.
 
 ## What this does not show

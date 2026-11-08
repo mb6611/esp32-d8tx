@@ -360,3 +360,75 @@ def test_vfas_low_precision_matches_betaflight_integer_ratio():
     h.update(0x3A, 7, 0.0)
     h.update(0x3B, 5, 0.0)
     assert h.vfas_v() == 15.0
+
+
+# ---- FAST block (cnt bit 0x80), .ru/plans/fast-telemetry.md
+def pack_fast(roll, pitch, yaw, gx, gy, gz, seq=0):
+    m12, m14 = (1 << 12) - 1, (1 << 14) - 1
+    v = (roll & m12) | ((pitch & m12) << 12) | (yaw << 24) | ((gx & m14) << 36) | ((gy & m14) << 50) \
+        | ((gz & m14) << 64) | (seq << 78)
+    return v.to_bytes(10, "little")
+
+
+def fast_raw(block, tid=0, cnt=0x8A):
+    return bytes([0x11, 0, 0, 60, 7, 70, cnt, tid]) + block
+
+
+def test_fast_decode_signs_clamps_yaw():
+    r = parse_reply(fast_raw(pack_fast(-1800, -900, 3599, -8191, 8191, -1, seq=3)))
+    f = r["fast"]
+    assert f["attitude_deg"] == [-180.0, -90.0, 359.9]
+    assert f["gyro_dps"] == [-8191 * 0.25, 8191 * 0.25, -0.25] and f["seq"] == 3 and r["hub"] == b""
+    f = parse_reply(fast_raw(pack_fast(1800, 900, 0, 8191, -8192, 0, seq=1)))["fast"]
+    assert f["attitude_deg"] == [180.0, 90.0, 0.0] and f["gyro_dps"][1] == -2048.0 and f["seq"] == 1
+    assert parse_reply(fast_raw(pack_fast(-1, 1, 1, 1, 1, 1)))["fast"]["attitude_deg"][:2] == [-0.1, 0.1]
+
+
+def test_hub_cnt_unchanged():
+    r = parse_reply(bytes([0x11, 0, 0, 1, 2, 3, 3, 5]) + b"\x5e\x24\x01\x00\x00\x00\x00\x00\x00\x00")
+    assert "fast" not in r and r["hub"] == b"\x5e\x24\x01"
+
+
+def test_tracker_fast_mixed_with_hub():
+    clk = Clock(); t = Tracker(clk)
+    assert t.snapshot()["fast"] is None
+    hubrep = parse_reply(bytes([0x11, 0, 0, 1, 2, 3, 4, 0]) + bytes([0x5E, 0x39, 0x7B, 0x00]) + bytes(6))
+    for i in range(6):
+        clk.t += 0.25
+        t.note_reply(parse_reply(fast_raw(pack_fast(10 * i, 0, 100, 4, 8, 12, seq=i & 3), tid=i)))
+        if i == 2:
+            t.note_reply(dict(hubrep, tid=9))
+    s = t.snapshot()
+    f = s["fast"]
+    assert f["attitude_deg"][0] == 5.0 and f["gyro_dps"] == [1.0, 2.0, 3.0] and f["seq"] == 1 and f["age_ms"] == 0
+    assert 3.5 < f["rate_hz"] < 4.5
+    assert s["hub"]["vfas_v"] == pytest.approx(12.3) and s["replies"] == 7
+    clk.t += 2
+    assert t.snapshot()["fast"]["age_ms"] == 2000
+
+
+def test_fast_does_not_disturb_hub_resend_filter():
+    clk = Clock(); t = Tracker(clk)
+    h = dict(parse_reply(bytes([0x11, 0, 0, 1, 2, 3, 4, 7]) + bytes([0x5E, 0x39, 0x7B, 0x00]) + bytes(6)))
+    t.note_reply(h)
+    t.note_reply(parse_reply(fast_raw(pack_fast(0, 0, 0, 0, 0, 0), tid=8)))
+    t.note_reply(h)  # same tid+bytes as the last hub chunk: still a resend
+    assert t.parser is not None and t.hub.age_s(0x39, clk()) is not None
+
+
+def test_fast_replies_ack_tid_and_expose_fast(monkeypatch):
+    import d8tx.link as lk
+    seq = iter([0, 1, 2])
+    def fake(iq, fs, hint=None, **kw):
+        i = next(seq)
+        return dict(parse_reply(fast_raw(pack_fast(15, -15, 900, 40, 0, 0, seq=i), tid=i)), shift_hz=0.0, cfo_hz=0.0)
+    monkeypatch.setattr(lk, "decode_capture", fake)
+    p = TlmPort(); l = D8Link("x", serial_obj=p); l.start()
+    m, payload = load(0)
+    for i in range(3):
+        p.inject(dict(m, tid=i), payload)
+    assert wait(lambda: len([x for x in p.lines if x.startswith("TID ")]) >= 4)
+    assert [x for x in p.lines if x.startswith("TID ")][1:4] == ["TID 1", "TID 2", "TID 3"]
+    f = l.telemetry()["fast"]
+    assert f["attitude_deg"] == [1.5, -1.5, 90.0] and f["gyro_dps"] == [10.0, 0.0, 0.0] and f["seq"] == 2
+    l.close()

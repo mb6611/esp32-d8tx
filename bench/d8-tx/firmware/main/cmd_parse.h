@@ -31,6 +31,7 @@
 #define TLM_DEC_DEF     32     /* 16 MS/s boxcar: 16 / 32 / 64 */
 #define TLMX_TAIL_MAX   32     /* extra 1010 bits keyed after the CRC */
 #define TLMX_SETTLE_MAX 300    /* us between unkey and the listen retune */
+#define TLM_SKIP_MAX    6000   /* us of capture start not shipped */
 #define TLM_RETRY_MAX   3      /* re-triggers (stream mode) after an on-chip "no reply" verdict */
 
 typedef enum { CMD_NONE, CMD_PING, CMD_STAT, CMD_UNKEY, CMD_TONE, CMD_ALT, CMD_PKT, CMD_RETUNE, CMD_HOP, CMD_STICKS, CMD_S, CMD_FOFS, CMD_ARMOK, CMD_INFO, CMD_LINK, CMD_TLM, CMD_TCAP, CMD_TID, CMD_TLMX, CMD_ERR } cmd_kind_t;
@@ -55,6 +56,8 @@ typedef struct {
     int stream;            /* TLM: 1 = int8 capture shipped in the background while LINK keeps sending */
     int ack;               /* TLM: 1 = the host acks each capture with TID before the next trigger */
     int mark;              /* TLM: 1 = ch8 marks trigger packets (1500 us first try, 1600 us retry, else 1000 us) */
+    unsigned skip_us;      /* TLM: leave the first skip_us of the capture out of the shipped payload (stream=1) */
+    int bits;              /* TLM: shipped sample width in stream mode, 8 (default) or 4 (packed, I low nibble, Q high) */
     int retry;             /* TLM: re-trigger up to this many times when the on-chip energy check sees no reply */
     unsigned tail_bits;    /* TLMX: extra alternating bits after the CRC (trigger packets, or all with tail_all) */
     unsigned settle_us;    /* TLMX: wait after the trigger's unkey before retuning to the listen channel */

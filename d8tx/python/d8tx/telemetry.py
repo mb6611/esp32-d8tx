@@ -42,11 +42,37 @@ def payload_ok(meta: dict, payload: bytes) -> bool:
     return len(payload) == meta.get("bytes", -1) and (zlib.crc32(payload) & 0xFFFFFFFF) == int(meta.get("crc", "0"), 16)
 
 
+FAST_FLAG = 0x80  # reply cnt byte bit 7: payload is a FAST block, not hub bytes (.ru/plans/fast-telemetry.md)
+FAST_WINDOW_S = 5.0
+
+
+def _sx(v: int, bits: int) -> int:
+    v &= (1 << bits) - 1
+    return v - (1 << bits) if v >> (bits - 1) else v
+
+
+def parse_fast(block: bytes) -> dict:
+    """10-byte FAST block = little-endian 80-bit integer: roll s12, pitch s12 (deci-deg), yaw u12 (deci-deg 0..3599),
+    gyro x/y/z s14 (0.25 deg/s), seq u2 at bits 78-79."""
+    v = int.from_bytes(bytes(block[:10]), "little")
+    yaw = (v >> 24) & 0xFFF
+    return {
+        "attitude_deg": [_sx(v, 12) / 10.0, _sx(v >> 12, 12) / 10.0, yaw / 10.0],
+        "gyro_dps": [_sx(v >> 36, 14) * 0.25, _sx(v >> 50, 14) * 0.25, _sx(v >> 64, 14) * 0.25],
+        "seq": (v >> 78) & 3,
+    }
+
+
 def parse_reply(raw: bytes) -> dict:
     """18-byte D8 telemetry frame (cc2500_frsky_d.c buildTelemetryFrame L117-148):
     [0]=0x11 [1,2]=bind txid [3]=A1 [4]=A2 [5]=(uint8)rssiDbm [6]=hub byte count [7]=echoed tid [8..]=hub bytes."""
-    n = min(raw[6], 10)
-    return {"a1": raw[3], "a2": raw[4], "rssi": raw[5], "hub_count": raw[6], "tid": raw[7], "hub": bytes(raw[8:8 + n])}
+    out = {"a1": raw[3], "a2": raw[4], "rssi": raw[5], "hub_count": raw[6], "tid": raw[7]}
+    if raw[6] & FAST_FLAG:
+        out["hub"] = b""
+        out["fast"] = parse_fast(raw[8:18])
+    else:
+        out["hub"] = bytes(raw[8:8 + min(raw[6], 10)])
+    return out
 
 
 def decode_capture(iq: np.ndarray, fs: float, hint=None, txid=TXID, shifts=SHIFTS):
@@ -120,6 +146,9 @@ class Tracker:
             self.parser = HubParser()
             self.prev_chunk = None
             self.prev_tid = None
+            self.fast_last: dict | None = None
+            self.t_fast = None
+            self.fast_times: deque = deque()
             self.armed_low_since = None
             self.rpm_base = None
             self.rpm_base_n = 0
@@ -140,6 +169,10 @@ class Tracker:
             self.window.append((now, True))
             self.t_reply = now
             self.last = rep
+            if "fast" in rep:  # fast block: never touches hub data or the resend filter
+                self.fast_last, self.t_fast = rep["fast"], now
+                self.fast_times.append(now)
+                return
             chunk = rep["hub"]
             # A resend (same echoed tid and same bytes, after a miss) is skipped; equal content on a new tid is fresh.
             if chunk and not (rep["tid"] == self.prev_tid and chunk == self.prev_chunk):
@@ -195,7 +228,16 @@ class Tracker:
                     a = armed_from_rpm(hub["rpm"], base)
                     if a is not None:
                         armed, src = a, "rpm"
+            while self.fast_times and now - self.fast_times[0] > FAST_WINDOW_S:
+                self.fast_times.popleft()
+            fast = None
+            if self.fast_last is not None:
+                n, t0 = len(self.fast_times), (self.fast_times[0] if self.fast_times else now)
+                rate = (n - 1) / (now - t0) if n > 1 and now > t0 else 0.0  # intervals per second over the window
+                fast = dict(self.fast_last, age_ms=int((now - self.t_fast) * 1000),
+                            rate_hz=round(rate, 2))
             return {
+                "fast": fast,
                 "enabled": self.enabled,
                 "powered": age is not None and age <= POWERED_S,
                 "link": age is not None and age <= LINK_S,

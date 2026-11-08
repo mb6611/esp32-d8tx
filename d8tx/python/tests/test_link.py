@@ -110,3 +110,10 @@ def test_stray_tid_ok_does_not_satisfy_request(port):
     port._cmd = cmd
     assert l.stat()["keyed"] == 0
     l.close()
+
+
+def test_unpack4_signed_nibbles():
+    from d8tx.link import unpack4
+    import numpy as np
+    out = np.frombuffer(unpack4(bytes([0x7F, 0x81, 0xF1, 0x08])), np.int8).tolist()
+    assert out == [-1, 7, 1, -8, 1, -1, -8, 0]

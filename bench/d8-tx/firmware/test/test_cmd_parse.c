@@ -27,7 +27,7 @@ int main(void) {
     ERR("ALT 0 8 50 12800", "transitions");
     ERR("ALT 0 600 100 1000", "freq"); ERR("ALT 0 8 100", "args");
     ERR("KEY", "cmd"); ERR("tone 0 1000", "cmd");
-    ERR("A B C D E F G H I J K", "args");
+    ERR("A B C D E F G H I J K L M", "args");
     c = P("FOFS -63000"); assert(c.kind == CMD_FOFS && c.hz == -63000);
     assert(P("FOFS 200000").hz == 200000 && P("FOFS 0").kind == CMD_FOFS);
     ERR("FOFS 200001", "hz"); ERR("FOFS -200001", "hz"); ERR("FOFS x", "hz"); ERR("FOFS", "args");
@@ -67,9 +67,12 @@ int main(void) {
     c = P("TLM 4 6000 0 16"); assert(c.kind == CMD_TLM && c.dec == 16 && c.gain == 0);
     ERR("TLM", "args"); ERR("TLM 3", "every"); ERR("TLM 941", "every"); ERR("TLM 47 499", "cap_us"); ERR("TLM 47 12001", "cap_us");
     ERR("TLM 47 10000 128", "gain"); ERR("TLM 47 10000 -2", "gain"); ERR("TLM 47 10000 40 48", "dec");
-    ERR("TLM 47 10000 40 32 2", "same"); ERR("TLM 47 6001 40 16", "cap_us"); ERR("TLM 1 2 3 4 5 6 7 8 9 10", "args");
+    ERR("TLM 47 10000 40 32 2", "same"); ERR("TLM 47 6001 40 16", "cap_us"); ERR("TLM 1 2 3 4 5 6 7 8 9 10 11 12 13", "args");
     c = P("TLM 48 9000 40 32 0 1 1"); assert(c.kind == CMD_TLM && c.stream == 1 && c.ack == 1 && c.cap_us == 9000);
-    c = P("TLM 48"); assert(c.stream == 0 && c.ack == 0);
+    c = P("TLM 48"); assert(c.stream == 0 && c.ack == 0 && c.skip_us == 0 && c.bits == 8);
+    c = P("TLM 8 8600 40 64 0 1 1 0 1 1000 4"); assert(c.kind == CMD_TLM && c.skip_us == 1000 && c.bits == 4 && c.dec == 64);
+    ERR("TLM 8 8600 40 64 0 1 1 0 1 1000 5", "bits"); ERR("TLM 8 8600 40 64 0 1 1 0 1 8200", "skip");
+    ERR("TLM 8 8600 40 64 0 0 0 0 0 1000", "skip"); ERR("TLM 8 8600 40 64 0 0 0 0 0 0 4", "skip");
     c = P("TLM 48 9000 40 32 0 1 1 1 2"); assert(c.kind == CMD_TLM && c.mark == 1 && c.retry == 2);
     c = P("TLM 48 9000 40 32 0 1 1"); assert(c.mark == 0 && c.retry == 0);
     ERR("TLM 48 9000 40 32 0 1 1 2", "mark"); ERR("TLM 48 9000 40 32 0 1 1 0 4", "retry"); ERR("TLM 48 9000 40 32 0 0 1 0 1", "retry");
