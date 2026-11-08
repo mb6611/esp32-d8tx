@@ -61,6 +61,17 @@ int main(void) {
     assert(P("STOP").kind == CMD_UNKEY);
     ERR("STOP 1", "args"); ERR("PING 1", "args"); ERR("STAT x", "args"); ERR("ARMOK 1", "args");
     ERR("NOPE", "cmd");
+    /* TLM / TCAP (telemetry listen, off by default) */
+    c = P("TLM 0"); assert(c.kind == CMD_TLM && c.tlm_every == 0 && c.cap_us == 10000 && c.gain == 40 && c.dec == 32 && c.same == 0);
+    c = P("TLM 47 12000 -1 64 1"); assert(c.kind == CMD_TLM && c.tlm_every == 47 && c.cap_us == 12000 && c.gain == -1 && c.dec == 64 && c.same == 1);
+    c = P("TLM 4 6000 0 16"); assert(c.kind == CMD_TLM && c.dec == 16 && c.gain == 0);
+    ERR("TLM", "args"); ERR("TLM 3", "every"); ERR("TLM 941", "every"); ERR("TLM 47 499", "cap_us"); ERR("TLM 47 12001", "cap_us");
+    ERR("TLM 47 10000 128", "gain"); ERR("TLM 47 10000 -2", "gain"); ERR("TLM 47 10000 40 48", "dec");
+    ERR("TLM 47 10000 40 32 2", "same"); ERR("TLM 47 6001 40 16", "cap_us"); ERR("TLM 1 2 3 4 5 6", "args");
+    assert(!P("TLM 3").legacy && !strcmp(err_code("every"), "range"));
+    c = P("TCAP 2440000"); assert(c.kind == CMD_TCAP && c.khz == 2440000 && c.pwr == -1 && c.cap_us == 10000 && c.dec == 32);
+    c = P("TCAP 2412000 2000 50 64 127"); assert(c.kind == CMD_TCAP && c.cap_us == 2000 && c.gain == 50 && c.dec == 64 && c.pwr == 127);
+    ERR("TCAP 2403999", "khz"); ERR("TCAP 2412000 2000 50 64 128", "pwr"); ERR("TCAP", "args");
     puts("cmd_parse tests ok");
     return 0;
 }

@@ -49,3 +49,8 @@ void d8_build_body(uint8_t id0, uint8_t id1, uint8_t counter, const uint16_t raw
         out[hi[i]] |= (uint8_t)(((raw[i] >> 8) & 0xf) << sh[i]);
     }
 }
+
+void d8_mark_telemetry(uint8_t body[D8_BODY_BYTES], uint8_t tid) {
+    body[3] = D8_TLM_REQ;
+    body[4] = (uint8_t)(tid & 0x1f);
+}

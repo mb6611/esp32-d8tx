@@ -29,4 +29,8 @@ uint16_t d8_us_to_raw(int us);
  * (low bytes at 6,7,8,9,12,13,14,15; high nibbles at 10,11,16,17). */
 void d8_build_body(uint8_t id0, uint8_t id1, uint8_t counter, const uint16_t raw[D8_STICKS],
                    uint8_t out[D8_BODY_BYTES]);
+/* Telemetry request (Betaflight cc2500_frsky_d.c: reply when byte[3] % 4 == 2; byte[4] is the telemetry id
+ * it echoes in frame[7] and checks against its expected hub ack id, (last + 1) & 0x1f). */
+#define D8_TLM_REQ 0x02u
+void d8_mark_telemetry(uint8_t body[D8_BODY_BYTES], uint8_t tid);
 #endif

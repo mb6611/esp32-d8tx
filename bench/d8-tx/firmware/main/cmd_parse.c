@@ -64,6 +64,32 @@ cmd_t cmd_parse(char *line) {
         c.kind = CMD_LINK;
         return c;
     }
+    if (!strcmp(tok[0], "TLM")) { /* TLM every [cap_us] [gain] [dec] [same]: telemetry listen for later LINKs */
+        if (n < 2 || n > 6) return fail("args");
+        if (!parse_int(tok[1], 0, TLM_EVERY_MAX, &v) || (v && v < TLM_EVERY_MIN)) return fail("every");
+        c.tlm_every = (unsigned)v;
+        c.cap_us = TLM_CAP_US_DEF; c.gain = TLM_GAIN_DEF; c.dec = TLM_DEC_DEF; c.same = 0;
+        if (n >= 3) { if (!parse_int(tok[2], TLM_CAP_US_MIN, TLM_CAP_US_MAX, &v)) return fail("cap_us"); c.cap_us = (unsigned)v; }
+        if (n >= 4) { if (!parse_int(tok[3], -1, TLM_GAIN_MAX, &v)) return fail("gain"); c.gain = (int)v; }
+        if (n >= 5) { if (!parse_int(tok[4], 16, 64, &v) || (v != 16 && v != 32 && v != 64)) return fail("dec"); c.dec = (unsigned)v; }
+        if (n >= 6) { if (!parse_int(tok[5], 0, 1, &v)) return fail("same"); c.same = (int)v; }
+        if (c.cap_us * 16u / c.dec > 6000u) return fail("cap_us");
+        c.kind = CMD_TLM;
+        return c;
+    }
+    if (!strcmp(tok[0], "TCAP")) { /* TCAP khz [cap_us] [gain] [dec] [pwr]: one capture; pwr>=0 keys one data packet first */
+        if (n < 2 || n > 6) return fail("args");
+        if (!parse_int(tok[1], RETUNE_KHZ_MIN, RETUNE_KHZ_MAX, &v)) return fail("khz");
+        c.khz = (int)v;
+        c.cap_us = TLM_CAP_US_DEF; c.gain = TLM_GAIN_DEF; c.dec = TLM_DEC_DEF; c.pwr = -1;
+        if (n >= 3) { if (!parse_int(tok[2], TLM_CAP_US_MIN, TLM_CAP_US_MAX, &v)) return fail("cap_us"); c.cap_us = (unsigned)v; }
+        if (n >= 4) { if (!parse_int(tok[3], -1, TLM_GAIN_MAX, &v)) return fail("gain"); c.gain = (int)v; }
+        if (n >= 5) { if (!parse_int(tok[4], 16, 64, &v) || (v != 16 && v != 32 && v != 64)) return fail("dec"); c.dec = (unsigned)v; }
+        if (n >= 6) { if (!parse_int(tok[5], -1, PWR_MAX, &v)) return fail("pwr"); c.pwr = (int)v; }
+        if (c.cap_us * 16u / c.dec > 6000u) return fail("cap_us");
+        c.kind = CMD_TCAP;
+        return c;
+    }
     if (!strcmp(tok[0], "PING") || !strcmp(tok[0], "STAT") || !strcmp(tok[0], "U") || !strcmp(tok[0], "STOP")) {
         if (n != 1) return fail("args");
         c.kind = tok[0][0] == 'P' ? CMD_PING : !strcmp(tok[0], "STAT") ? CMD_STAT : CMD_UNKEY;

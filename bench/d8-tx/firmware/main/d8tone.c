@@ -28,6 +28,10 @@
  *                              critical section), then WDT feed + UART poll; any UART byte aborts. LO is
  *                              restored to 2412 MHz afterwards. Reply:
  *                              K,hop,slots=N,late_max_us=X,retune_max_us=Y then OK. ERR -> unkeyed.
+ *   TLM every [cap_us] [gain] [dec] [same]   telemetry listen for later LINKs (default off; d8tx/PROTOCOL.md):
+ *                              every Nth slot sends byte3=2, byte4=tid, then unkeys, retunes to the listen channel
+ *                              and runs a 16 MS/s ring capture (tlm_cap.c), shipped as EV tlm + binary.
+ *   TCAP khz [cap_us] [gain] [dec] [pwr]     one such capture, optionally right after keying one data packet.
  * Results are printed only after unkey:
  *   K,<mode>,fa,fb,half_us,req_us,pwr,on_us,key_total_us,key_cycles,unkey_cycles,b8_on,b8_end,b8_off,a8_on,a8_off,ntrans
  *   T,<i>,<due_us>,<actual_us>,<b8_readback>        one per transition (time since tone on, 240 MHz cycles/240)
@@ -57,10 +61,13 @@
 #include "cmd_parse.h"
 #include "packet.h"
 #include "line_in.h"
+#include "tlm_cap.h"
+#include "esp_rom_crc.h"
 
 #define TONE0 0x600060b8u /* tone NCO: [27:0] f, bit18 enable, [17:10] -gain */
 #define TONE_FINE 0x600050a8u /* low f bits when TONE0 bit29 set */
 #define CYC_PER_US 240u
+#define RX_GAIN 0x3ff5c02cu /* bits [30:24] forced gain code, bit 23 force (else hardware AGC), [14:8] max */
 
 extern void rom_pbus_workmode(void);
 extern void rom_pbus_xpd_rx_on(int);
@@ -140,6 +147,20 @@ static void unkey(void) {
     rom_stop_tx_tone(1);
     rx_mode();
     keyed = false;
+}
+
+/* Key one D8 air frame (208 bits, hard 2-FSK at f=+-1); leaves the radio keyed. Caller holds the mux. */
+static inline uint32_t cyc(void);
+static void key_air(const uint8_t air[D8_AIR_BYTES], int pwr) {
+    keyed = true;
+    key((air[0] & 0x80) ? 1 : -1, pwr);
+    uint32_t t0 = cyc();
+    for (unsigned i = 1; i < D8_AIR_BITS; i++) {
+        uint32_t due = i * D8_BIT_CYCLES;
+        while ((int32_t)(cyc() - t0 - due) < 0) { }
+        tone_set((air[i >> 3] & (0x80u >> (i & 7))) ? 1 : -1);
+    }
+    while ((int32_t)(cyc() - t0 - D8_AIR_BITS * D8_BIT_CYCLES) < 0) { }
 }
 
 typedef struct { uint32_t due, actual, rb; } trans_t;
@@ -304,6 +325,63 @@ static int hop_drain(line_in_t *li, const char **err, int64_t *last_s_us) {
     return 0;
 }
 
+/* ---- telemetry listen (TLM / TCAP; off unless TLM every > 0 was sent) ---- */
+static struct { unsigned every, cap_us, dec; int gain, same; } tlm = {0, TLM_CAP_US_DEF, TLM_DEC_DEF, TLM_GAIN_DEF, 0};
+static unsigned tlm_tid, tlm_n, gain_max = 127;
+
+/* Called with the mux held, right after the last air bit: unkey, retune to f10, set RX gain, capture.
+ * Returns CCOUNT at unkey start (turnaround = r->start_cyc - return value). */
+static uint32_t tlm_listen(uint32_t f10, int gain, unsigned n_out, unsigned dec, tcap_res_t *r) {
+    uint32_t u0 = cyc();
+    unkey();
+    lo_retune(f10);
+    uint32_t g = REG_READ(RX_GAIN);
+    if (gain < 0) REG_WRITE(RX_GAIN, g & ~BIT(23));
+    else REG_WRITE(RX_GAIN, (g & 0x7fffffu) | ((uint32_t)(gain > (int)gain_max ? (int)gain_max : gain) << 24) | BIT(23));
+    tcap_run(n_out, dec, r);
+    REG_WRITE(RX_GAIN, g);
+    return u0;
+}
+
+/* EV tlm line, then exactly bytes= raw bytes (int16 LE I,Q interleaved; Q not negated), then "\n". */
+static void tlm_dump(unsigned k, unsigned ch, unsigned tid, unsigned n_out, unsigned dec, uint32_t u0, const tcap_res_t *r) {
+    const uint8_t *b = (const uint8_t *)tcap_buffer();
+    unsigned bytes = 4u * n_out;
+    uint32_t crc = esp_rom_crc32_le(0, b, bytes);
+    uint32_t turn = r->start_cyc - u0;
+    feed();
+    printf("EV tlm k=%u ch=%u tid=%u fs=%u n=%u dec=%u turn_ns=%" PRIu32 " run_us=%" PRIu32 " g0=%" PRIu32 " g1=%" PRIu32
+           " lost=%" PRIu32 " bad=%" PRIu32 " late=%" PRIu32 " work=%" PRIu32 " units=%" PRIu32 " to=%d bytes=%u crc=%08" PRIx32 "\n",
+           k, ch, tid, TCAP_RATE_HZ / dec, n_out, dec, turn * 1000u / CYC_PER_US, (r->end_cyc - r->start_cyc) / CYC_PER_US,
+           r->gain_first, r->gain_last, r->lost, r->bad, r->late_max, r->work_max, r->units, r->timeout, bytes, crc);
+    fflush(stdout);
+    uart_write_bytes(UART_NUM_0, b, bytes);
+    uart_write_bytes(UART_NUM_0, "\n", 1);
+    uart_wait_tx_done(UART_NUM_0, pdMS_TO_TICKS(1000));
+    feed();
+}
+
+static void run_tcap(const cmd_t *c) {
+    if (keyed) { print_err_v1("keyed"); return; }
+    uint32_t f10 = (uint32_t)((int)c->khz * 100 + fofs_hz / 10);
+    unsigned n_out = c->cap_us * 16u / c->dec;
+    uint8_t body[D8_BODY_BYTES], air[D8_AIR_BYTES];
+    d8_build_body(D8_TXID0, D8_TXID1, 0, sticks_raw, body);
+    if (!d8_air_bytes(body, D8_BODY_BYTES, air)) { print_err_v1("packet"); return; }
+    tcap_prepare(n_out);
+    tcap_res_t r;
+    feed();
+    lo_retune(f10);
+    portENTER_CRITICAL(&mux);
+    if (c->pwr >= 0) key_air(air, c->pwr);
+    uint32_t u0 = tlm_listen(f10, c->gain, n_out, c->dec, &r); /* unkey() is idempotent when not keyed */
+    portEXIT_CRITICAL(&mux);
+    tlm_dump(0, c->khz, c->pwr >= 0 ? 1u : 0u, n_out, c->dec, u0, &r);
+    lo_retune(241200000u);
+    lo_off = false;
+    printf("OK\n");
+}
+
 static void run_hop(const cmd_t *c) {
     uint8_t tab[D8_HOP_CHANNELS], body[D8_BODY_BYTES], air[D8_AIR_BYTES];
     d8_hop_table(2, 55, tab);
@@ -315,6 +393,10 @@ static void run_hop(const cmd_t *c) {
     static line_in_t hli;
     hli.len = 0;
     v1_link = c->kind == CMD_LINK;
+    const bool tlm_link = v1_link && tlm.every; /* TLM applies to LINK only */
+    const unsigned n_out = tlm.cap_us * 16u / tlm.dec;
+    tcap_res_t tr;
+    tlm_tid = 0;
     if (v1_link) { printf("OK\n"); fflush(stdout); }
     feed();
     int64_t last_s_us = esp_timer_get_time(), last_st_us = last_s_us;
@@ -322,6 +404,8 @@ static void run_hop(const cmd_t *c) {
     uint32_t slot_start = base; /* scheduled start of the current slot */
     for (unsigned k = 0; (cont || k < c->n_slots) && !abort; k++) {
         d8_build_body(D8_TXID0, D8_TXID1, (uint8_t)k, sticks_raw, body);
+        const bool trig = tlm_link && k >= tlm.every && k % tlm.every == 0;
+        if (trig) { d8_mark_telemetry(body, (uint8_t)tlm_tid); tcap_prepare(n_out); }
         if (!d8_air_bytes(body, D8_BODY_BYTES, air)) { printf("ERR packet\n"); abort = true; abort_pkt = true; why = "packet"; break; }
         uint32_t f10 = d8_channel_f10(tab[k % D8_HOP_CHANNELS]);
         while ((int32_t)(cyc() - slot_start) < 0) { /* wait for the slot (interrupts on) */
@@ -338,18 +422,26 @@ static void run_hop(const cmd_t *c) {
         lo_retune(f10 + (uint32_t)(fofs_hz / 10));
         uint32_t r1 = cyc() - r0;
         if (r1 > rt_max) rt_max = r1;
-        keyed = true;
-        key((air[0] & 0x80) ? 1 : -1, c->pwr);
-        uint32_t t0 = cyc();
-        for (unsigned i = 1; i < D8_AIR_BITS; i++) {
-            uint32_t due = i * D8_BIT_CYCLES;
-            while ((int32_t)(cyc() - t0 - due) < 0) { }
-            tone_set((air[i >> 3] & (0x80u >> (i & 7))) ? 1 : -1);
-        }
-        while ((int32_t)(cyc() - t0 - D8_AIR_BITS * D8_BIT_CYCLES) < 0) { }
-        unkey();
+        key_air(air, c->pwr);
+        uint32_t u0 = 0;
+        if (trig) u0 = tlm_listen(d8_channel_f10(tab[(k + (tlm.same ? 0 : 1)) % D8_HOP_CHANNELS]) + (uint32_t)(fofs_hz / 10),
+                                  tlm.gain, n_out, tlm.dec, &tr);
+        else unkey();
         portEXIT_CRITICAL(&mux);
         sent++;
+        if (trig) { /* ship the capture, then resume at the first future slot >= k+2 (k+1 was the listen slot) */
+            unsigned lch = tab[(k + (tlm.same ? 0 : 1)) % D8_HOP_CHANNELS];
+            tlm_dump(k, lch, tlm_tid, n_out, tlm.dec, u0, &tr);
+            tlm_tid = (tlm_tid + 1u) & 0x1fu;
+            tlm_n++;
+            if (hop_drain(&hli, &err, &last_s_us)) { abort = true; why = err ? "err" : "stop"; break; }
+            uint32_t next = slot_start + 2u * HOP_SLOT_CYC;
+            unsigned j = k + 2;
+            while ((int32_t)(cyc() - next) >= 0) { next += HOP_SLOT_CYC; j++; }
+            slot_start = next;
+            k = j - 1; /* loop ++ */
+            continue;
+        }
         slot_start += HOP_SLOT_CYC;
         if (cont) {
             int64_t now = esp_timer_get_time();
@@ -393,6 +485,7 @@ void app_main(void) {
     fflush(stdout);
     phy_up();
     rom_stop_tx_tone(1); /* tone enable off: RF-silent regardless of prior state */
+    gain_max = (REG_READ(RX_GAIN) >> 8) & 127;
     vTaskDelay(pdMS_TO_TICKS(100));
     uart_driver_install(UART_NUM_0, 2048, 0, 0, NULL, 0);
     uart_vfs_dev_use_driver(UART_NUM_0); /* stdout only; input is polled via uart_read_bytes */
@@ -449,6 +542,12 @@ void app_main(void) {
                 if (i == 6 && sticks_raw[i] > d8_us_to_raw(S_CH7_US_MAX)) sticks_raw[i] = d8_us_to_raw(1000);
             break;
         case CMD_PKT: run_packet(&c); break;
+        case CMD_TLM:
+            tlm.every = c.tlm_every; tlm.cap_us = c.cap_us; tlm.gain = c.gain; tlm.dec = c.dec; tlm.same = c.same;
+            printf("OK every=%u cap_us=%u gain=%d dec=%u same=%d n=%u gain_max=%u\n", tlm.every, tlm.cap_us, tlm.gain,
+                   tlm.dec, tlm.same, tlm.cap_us * 16u / tlm.dec, gain_max);
+            break;
+        case CMD_TCAP: run_tcap(&c); break;
         }
         fflush(stdout);
     }

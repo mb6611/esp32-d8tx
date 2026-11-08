@@ -64,5 +64,14 @@ int main(void) {
         assert(parse("STICKS 1500 1500 1000 2000 1500 1500 1500 799").kind == CMD_ERR);
     }
     puts("packet tests ok");
+    { /* telemetry request marker: byte3 = 2, byte4 = tid & 0x1f, rest unchanged */
+        uint16_t raw[D8_STICKS] = {2250, 2250, 2250, 2250, 2250, 2250, 2250, 2250};
+        uint8_t a[D8_BODY_BYTES], b[D8_BODY_BYTES];
+        d8_build_body(D8_TXID0, D8_TXID1, 77, raw, a);
+        memcpy(b, a, sizeof b);
+        d8_mark_telemetry(b, 33);
+        assert(b[3] == 2 && b[4] == 1 && b[3] % 4 == 2);
+        for (unsigned i = 0; i < D8_BODY_BYTES; i++) if (i != 3 && i != 4) assert(a[i] == b[i]);
+    }
     return 0;
 }

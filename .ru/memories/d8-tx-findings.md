@@ -15,3 +15,8 @@ Measured on 2026-11-06 (evidence under `bench/d8-tx/results/{tone,packet}/`):
 - Fixed-channel packet loss (2026-11-06, `bench/d8-tx/results/packet/{reliability,freqest}/`): the ESP32 reached ~95% CRC-valid reception on the CC2500 rxdiag (123/130 attributable), and the stock E8 on the same receiver reached ~93% (175 of ~189 expected; it revisits one channel every 422.7 ms). The owner accepted this as receiver/bench loss, cause unknown, and moved on. Per-packet FREQEST clamps at ±33.3 kHz and scatters ~15 kHz even for the E8, so it cannot resolve small carrier offsets.
 
 **How to apply:** start new TX work from these numbers instead of re-deriving them, and recheck the carrier wander if decoding gets marginal on other channels.
+
+Telemetry listen prep (2026-11-07, no battery; `bench/d8-tx/host/tlm_listen.py`, firmware `TLM`/`TCAP`, results `bench/d8-tx/results/telemetry/`):
+- In Betaflight 4.2 `cc2500_frsky_d.c`, `nextChannel(1)` runs before `STATE_TELEMETRY`, so the reply goes out on the **next** hop channel, not the trigger channel (the write-up §8 says "same channel"). Check this before assuming either.
+- After keying a packet, the ESP32 RX hears the 2440 MHz crystal harmonic again within the first ms (unkey→capture start 0.21–0.31 ms, mostly the retune). So the RX does recover after TX. This is different from the stage-2 "deaf during K 0" result.
+- The single-core 16 MS/s ring capture (`tlm_cap.c`) only keeps up when built at -O2. The project default is -Og, which lost 65% of pairs.
