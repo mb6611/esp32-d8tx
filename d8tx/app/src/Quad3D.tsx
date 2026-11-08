@@ -11,7 +11,7 @@ export default function Quad3D({ att, dim, tau = 100 }: { att: Att; dim: boolean
   const host = useRef<HTMLDivElement>(null)
   const target = useRef<Att>(att)
   const tauRef = useRef(tau)
-  tauRef.current = tau
+  useEffect(() => { tauRef.current = tau }, [tau])
   useEffect(() => {
     const y = att.yaw ?? target.current.yaw // yaw unknown: keep last
     target.current = { ...att, yaw: y }
