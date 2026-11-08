@@ -112,20 +112,28 @@ class Board:
         import serial
         self.s = serial.Serial(port, baud, timeout=0.05)
         self.buf = b""
+        self.raw = open(os.environ["TLM_RAW"], "wb") if os.environ.get("TLM_RAW") else None  # debug: tee every byte
+
+    def _read(self, n: int) -> bytes:
+        d = self.s.read(n)
+        if self.raw and d:
+            self.raw.write(d)
+            self.raw.flush()
+        return d
 
     def readline(self, timeout: float) -> str | None:
         end = time.time() + timeout
         while b"\n" not in self.buf:
             if time.time() > end:
                 return None
-            self.buf += self.s.read(4096)
+            self.buf += self._read(4096)
         line, self.buf = self.buf.split(b"\n", 1)
         return line.decode("ascii", "replace").strip()
 
     def readn(self, n: int, timeout: float) -> bytes:
         end = time.time() + timeout
         while len(self.buf) < n and time.time() < end:
-            self.buf += self.s.read(max(4096, n - len(self.buf)))
+            self.buf += self._read(max(4096, n - len(self.buf)))
         out, self.buf = self.buf[:n], self.buf[n:]
         return out
 
@@ -196,7 +204,7 @@ def mode_tcap(a) -> None:
             line = b.readline(end - time.time())
             if line is None:
                 raise RuntimeError("no EV tlm")
-            if line.startswith("EV tlm"):
+            if line.startswith("EV tlm "):
                 meta, data = b.read_capture(line)
                 rec = save(rd, i, meta, data, {"mode": "tcap", "khz": a.khz, "pre_pwr": a.pre, "gain_req": a.gain})
                 print(summary_line(rec))
@@ -212,8 +220,10 @@ def mode_link(a) -> None:
     print(b.cmd("PING"))
     if a.fofs is not None:
         print(b.cmd(f"FOFS {a.fofs}"))
-    print(b.cmd(f"TLM {a.every} {a.cap_us} {a.gain} {a.dec} {1 if a.same else 0} {int(a.stream)} {int(a.ack)}"))
+    print(b.cmd(f"TLM {a.every} {a.cap_us} {a.gain} {a.dec} {1 if a.same else 0} {int(a.stream)} {int(a.ack)}"
+                f" {int(a.mark)} {a.retry}"))
     print(b.cmd(f"TID {a.tid0}"))
+    print(b.cmd(f"TLMX {a.tlmx}"))
     rd = run_dir_for("link")
     stop = threading.Event()
     lock = threading.Lock()
@@ -228,6 +238,11 @@ def mode_link(a) -> None:
 
         def msp_watch():
             port = serial.Serial(a.msp, 115200, timeout=0.05)
+            if a.msp_rc_hz:  # RC-only fast poll (ch8 trigger marker, see --mark); stop.is_set() ends it via seconds
+                with open(os.path.join(rd, "msp_rc.csv"), "w") as f:
+                    bf_msp.fast(port, f, a.seconds + 1.0, a.msp_rc_hz)
+                port.close()
+                return
             with open(os.path.join(rd, "msp.log"), "w") as f:
                 while not stop.is_set():
                     try:
@@ -256,6 +271,7 @@ def mode_link(a) -> None:
     with lock:
         b.s.write(f"LINK {a.power} {a.timeout}\n".encode())
     line = b.readline(2.0)
+    t_link0 = time.time()
     print("<", line)
     if not line or not line.startswith("OK"):
         raise RuntimeError("LINK refused")
@@ -263,20 +279,29 @@ def mode_link(a) -> None:
     th.start()
     t_end = time.time() + a.seconds
     n_cap = n_tel = 0
+    drops: list[dict] = []
+    probes: list[dict] = []
+    tries_hit: dict[int, int] = {}
+    tries_cap: dict[int, int] = {}
+    link_end = ""
     log = open(os.path.join(rd, "events.log"), "w")
+    log.write(f"{t_link0:.4f} host LINK OK\n")
     try:
         while time.time() < t_end:
             line = b.readline(1.0)
             if line is None:
                 continue
             log.write(f"{time.time():.3f} {line[:300]}\n")
-            if line.startswith("EV tlm"):
+            if line.startswith("EV tlm "):
                 meta, data = b.read_capture(line)
                 rec = save(rd, n_cap, meta, data, {"mode": "link", "power": a.power, "fofs": a.fofs,
                                                     "every": a.every, "same": a.same})
                 n_cap += 1
                 tel = [h for h in rec["frames"] if h["telemetry"]]
                 n_tel += bool(tel)
+                tr = int(meta.get("try", 0))
+                tries_cap[tr] = tries_cap.get(tr, 0) + 1
+                tries_hit[tr] = tries_hit.get(tr, 0) + bool(tel)
                 print(summary_line(rec))
                 if tel and tel[0]["hub_count"]:
                     hb = bytes.fromhex(tel[0]["hub"])
@@ -288,8 +313,14 @@ def mode_link(a) -> None:
                     with lock:
                         b.s.write(f"TID {nt}\n".encode())
                     log.write(f"{time.time():.3f} host TID {nt}\n")
+            elif line.startswith("EV probe"):
+                probes.append({k: int(v) for k, v in RE_KV.findall(line)})
+            elif line.startswith("EV tlm_drop"):
+                drops.append({k: int(v) for k, v in RE_KV.findall(line)})
+                print("<", line)
             elif line.startswith("EV link_end"):
                 print("<", line)
+                link_end = line
                 break
             elif line:
                 print("<", line)
@@ -302,7 +333,7 @@ def mode_link(a) -> None:
             line = b.readline(end - time.time())
             if line is None:
                 break
-            if line.startswith("EV tlm"):
+            if line.startswith("EV tlm "):
                 b.read_capture(line)  # drain
                 continue
             print("<", line)
@@ -313,7 +344,15 @@ def mode_link(a) -> None:
         log.close()
         if msp_th:
             msp_th.join(1)
-    json.dump({"captures": n_cap, "with_telemetry": n_tel, "hub_bytes": hub_bytes,
+    # per request = shipped captures (the last try of each request); per attempt = every trigger packet sent
+    n_att = n_cap + len(drops)
+    att_hit = n_tel  # each request has at most one decoded reply (its shipped capture)
+    print(f"requests={n_cap} caught={n_tel} ({100.0 * n_tel / max(n_cap, 1):.1f}%) attempts={n_att} "
+          f"attempt_catch={100.0 * att_hit / max(n_att, 1):.1f}% first_try={tries_hit.get(0, 0)}/{tries_cap.get(0, 0) + sum(1 for d in drops if d.get('try') == 0)} "
+          f"by_try_cap={tries_cap} by_try_hit={tries_hit} drops={len(drops)} probes={len(probes)}")
+    json.dump({"captures": n_cap, "with_telemetry": n_tel, "attempts": n_att, "drops": drops, "probes": probes,
+               "tries_cap": tries_cap, "tries_hit": tries_hit, "link_end": link_end, "t_link0": t_link0,
+               "hub_bytes": hub_bytes,
                "hub_frames": [list(f) for f in hub.frames], "acc_g": acc_g(hub.frames)},
               open(os.path.join(rd, "result.json"), "w"), indent=1)
     print(f"captures={n_cap} with_telemetry={n_tel} hub_bytes={hub_bytes} hub_frames={len(hub.frames)} saved {rd}")
@@ -355,6 +394,13 @@ def main(argv=None) -> None:
     p.add_argument("--ack", action="store_true", help="TLM ack=1: host sends TID (id+1 after a reply, same id after a miss)")
     p.add_argument("--tid0", type=int, default=0, help="first telemetry id")
     p.add_argument("--msp", default=None, help="FC MSP port: log RSSI/failsafe to msp.log every 0.1 s")
+    p.add_argument("--msp-rc-hz", type=float, default=0,
+                   help="instead of msp.log, poll MSP_RC at this rate into msp_rc.csv (drone-side receipt of --mark)")
+    p.add_argument("--mark", action="store_true",
+                   help="TLM mark=1: ch8 = 1500 us on trigger packets, 1600 on re-triggers, else 1000 (outside aux ranges)")
+    p.add_argument("--tlmx", default="0 0", help='TLMX "tail_bits settle_us [all]" end-of-trigger experiment knobs')
+    p.add_argument("--retry", type=int, default=0, choices=(0, 1, 2, 3),
+                   help="TLM retry=N (needs --stream): re-trigger at the next free slot when the on-chip check sees no reply")
     p = sub.add_parser("tcap")
     common(p)
     p.add_argument("khz", type=int)

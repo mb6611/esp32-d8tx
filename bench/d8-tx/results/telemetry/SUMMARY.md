@@ -66,3 +66,61 @@ retune_max 415 us, RX failsafe only in the first ~2 s (15/400 MSP rows).
   +-2000 milli-g; it shows 1 g only once the Z reading reaches a full 1 g. The decoder (`host/d8hub.py`) is correct;
   its acc_g docstring and test were updated to this encoding.
 - VOLT/current/fuel 0 is expected on USB power.
+
+# Why the drone did not reply: 2026-11-07 22:01 - 2026-11-08 00:26
+
+Drone on USB, stock Betaflight 4.2.11 with feature TELEMETRY (no config change), arm channel low, never armed.
+All runs: `tlm_listen.py link --stream --ack --msp /dev/cu.usbmodem0x80000001 --seconds 60 --every 48 --power 127 --cap-us 9000`
+plus the flags in the table. Firmware adds per-capture timing fields, a ch8 trigger marker, and an optional re-trigger (see below).
+
+**Cause: our carrier was ~35 kHz above the drone's receive frequency at FOFS -50 kHz, and the drone lost ~15-20% of our
+packets, trigger packets included. FOFS -75 kHz fixes it: 97.8-100% of triggers answered (vs 82% at -50 kHz back to back).**
+
+Evidence:
+1. **The drone never decoded the missed trigger packets.** `--mark` sets ch8 to 1500 us on trigger packets only (1000 otherwise, below
+   every aux range) and `--msp-rc-hz 100` polls MSP_RC (~55 Hz in practice, the USB VCP round trip is 16 ms). `host/tlm_why.py` checks
+   whether the marker reached rcData near each trigger. Over the 11 marker runs: answered triggers showed the marker 72-86% of the time
+   (that is the MSP sampling coverage), missed triggers 1 of 88. So a miss is the drone losing our packet, not a reply it failed to
+   send or one we failed to hear. Betaflight's reply conditions (cc2500_frsky_d.c) are only: CRC ok, txid match, byte3 % 4 == 2,
+   then a reply 1380 us later on the next hop channel. CCA is off (MCSM1 0x0C), and nothing depends on earlier packets or the hub state.
+2. **Timing is not it.** New `gap` field = packet start minus the previous packet start minus 8994 us. |gap| median is ~30-55 us for both hits and
+   misses, and misses are not later (60 s runs: max 130-360 us, `gap200` = 1 in the last 4 runs). The trigger slot is not delayed. A 16-bit tail after the CRC
+   (`--tlmx "16 0"`, 220528: 81%) changed nothing.
+3. **Frequency is it.** At FOFS -50 kHz the reply sits ~34 kHz below our LO, so our packets land ~34 kHz above the drone's
+   synthesizer. The CC2500 FOC limit with FOCCFG 0x16 is about ±BW/4 ≈ ±34 kHz, and our hard 2-FSK deviation is 39 kHz. FOFS sweep (139 triggers each):
+
+| Run | FOFS kHz | Caught | Notes |
+|---|---|---|---|
+| 20261107-220144 | -50 | 119 (85.6%) | marker on misses 0/20 |
+| 20261107-220528 | -50 | 113 (81.3%) | +16-bit tail on triggers |
+| 20261107-220730 | -50 | 112 (80.6%) | probes on |
+| 20261107-221227 | -65 | 138 (99.3%) | |
+| 20261107-221330 | -70 | 133 (95.7%) | |
+| 20261107-221012 | -75 | 137 (98.6%) | |
+| 20261107-221535 | -75 | 138 (99.3%) | |
+| 20261107-221432 | -80 | 138 (99.3%) | |
+| 20261107-220901 | -85 | 131 (94.2%) | reply CFO +2..+6 kHz |
+| 20261107-221115 | -95 | 130 (93.5%) | |
+| 20261108-002322 | -75 | 136 (97.8%) | plain run (no marker/MSP_RC); tlm_misses: 2 a, 1 b (interfered reply) |
+| 20261108-002524 | -50 | 114 (82.0%) | control right after; tlm_misses: 20 a, 2 b, 3 c |
+
+   The -65 to -80 kHz plateau is centred near -75 kHz. At -75 kHz the reply CFO is -4 to -16 kHz. The ch 4 -> 59 outlier from MISSES.md went away
+   with the offset (k=2928 still missed once in 002322). The `probe` mode (one marked plain data packet with a silent slot after it, half way
+   between triggers) gave marker/coverage ratios of 0.79-1.06 that did not follow FOFS cleanly, so it is weak evidence and is not used above.
+   The owner's ~97% data-packet figure fits FOFS ≈ -75 kHz. At -50 kHz the drone also lost ~15-20% of its control packets.
+4. Two retry runs were cut short by the Mac going to sleep on battery (capture stalled mid-stream; pmset log). Those runs were deleted. Bench runs need the
+   Mac awake (`caffeinate -dimsu` helped once the display was on).
+
+**Re-trigger (fallback, `--retry N`, stream mode only):** after each capture the firmware counts 0.5 ms blocks in 2.0-7.5 ms with mean
+I²+Q² > 2e5 (int16, scaled by (dec/32)²). Offline over 586 captures of 2026-11-07, every reply had 11/11 and every no-reply had ≤ 8.
+With fewer than 9, it drops the capture (one `EV tlm_drop` line) and sends the same tid again at the next free slot (k+2). Betaflight's re-request
+rule resends the same hub bytes, so no hub data is lost.
+
+| Run | FOFS | retry | Requests caught | Per trigger attempt |
+|---|---|---|---|---|
+| 20261108-002208 | -50 | 1 | 138/138 (100%) | 138/146 (94.5%), 8 re-triggers, all 8 answered |
+| 20261108-002423 | -75 | 1 | 139/139 (100%) | 139/139 (100%), no re-trigger needed |
+| 20261108-002322 | -75 | 0 | 136/139 (97.8%) | same |
+
+Recommendation: use FOFS -75000 (the app currently defaults to -63000 in d8tx/app/src/App.tsx, and tlm_listen examples use -50000). Keep `--retry 1` for telemetry.
+The drone's frequency drifts by a few kHz between sessions (the -50 kHz first-try rate varied 81-94%), so a centred offset matters more than retries.

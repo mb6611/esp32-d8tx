@@ -33,4 +33,14 @@ void d8_build_body(uint8_t id0, uint8_t id1, uint8_t counter, const uint16_t raw
  * it echoes in frame[7] and checks against its expected hub ack id, (last + 1) & 0x1f). */
 #define D8_TLM_REQ 0x02u
 void d8_mark_telemetry(uint8_t body[D8_BODY_BYTES], uint8_t tid);
+/* On-chip "did the drone reply?" check on a telemetry capture (interleaved int16 I,Q boxcar sums of dec pairs at
+ * 16 MS/s, capture starting ~0.2-0.4 ms after unkey). The reply runs ~1.3-8.1 ms into the capture with a constant
+ * envelope, so count the 0.5 ms blocks in 2.0-7.5 ms whose mean I^2+Q^2 exceeds D8_REPLY_POW (scaled by (dec/32)^2).
+ * Returns that count; *fit = blocks inside the capture (11 at 7.5+ ms). d8_reply_seen: at most 2 quiet blocks of >= 4.
+ * Offline over 586 captures of 2026-11-07 (dec 32, 11 blocks): every reply 11, every no-reply <= 8
+ * (interference bursts are <= 2.6 ms). */
+#define D8_REPLY_BLOCKS 11u
+#define D8_REPLY_POW 200000u
+unsigned d8_reply_blocks(const int16_t *iq, unsigned n_out, unsigned dec, unsigned *fit);
+static inline int d8_reply_seen(unsigned nb, unsigned fit) { return fit >= 4u && nb + 2u >= fit; }
 #endif

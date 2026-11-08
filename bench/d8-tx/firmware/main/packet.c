@@ -54,3 +54,23 @@ void d8_mark_telemetry(uint8_t body[D8_BODY_BYTES], uint8_t tid) {
     body[3] = D8_TLM_REQ;
     body[4] = (uint8_t)(tid & 0x1f);
 }
+
+unsigned d8_reply_blocks(const int16_t *iq, unsigned n_out, unsigned dec, unsigned *fit) {
+    *fit = 0;
+    if (!dec) return 0;
+    const unsigned b = 8000u / dec, a = 32000u / dec; /* 0.5 ms block, 2.0 ms start (fs = 16 MHz / dec) */
+    const uint64_t thr = (uint64_t)D8_REPLY_POW * dec * dec / 1024u * b;
+    unsigned nb = 0;
+    for (unsigned k = 0; k < D8_REPLY_BLOCKS; k++) {
+        unsigned i0 = a + k * b;
+        if (i0 + b > n_out) break;
+        ++*fit;
+        uint64_t s = 0;
+        for (unsigned i = i0; i < i0 + b; i++) {
+            int32_t x = iq[2 * i], y = iq[2 * i + 1];
+            s += (uint32_t)(x * x) + (uint32_t)(y * y);
+        }
+        if (s > thr) nb++;
+    }
+    return nb;
+}

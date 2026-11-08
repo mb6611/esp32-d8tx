@@ -125,7 +125,7 @@ const REASONS: Record<string, string> = {
 
 export default function App() {
   const c = useController()
-  const [opts, setOpts] = useState<StartOptions>({ power: 127, fofs_hz: -63000, timeout_ms: 300, allow_arm: true })
+  const [opts, setOpts] = useState<StartOptions>({ power: 127, fofs_hz: -75000, timeout_ms: 300, allow_arm: true })
   const [settings, setSettings] = useState(false)
   const [tab, setTabState] = useState<Tab>(tabFromHash)
   const setTab = (t: Tab) => {

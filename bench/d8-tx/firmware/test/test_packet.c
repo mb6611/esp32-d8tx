@@ -73,5 +73,24 @@ int main(void) {
         assert(b[3] == 2 && b[4] == 1 && b[3] % 4 == 2);
         for (unsigned i = 0; i < D8_BODY_BYTES; i++) if (i != 3 && i != 4) assert(a[i] == b[i]);
     }
+    { /* reply detector: full-window tone -> 11, silence -> 0, 2.5 ms burst -> < D8_REPLY_MIN, short capture clipped */
+        static int16_t iq[2 * 4500];
+        unsigned fit;
+        memset(iq, 0, sizeof iq);
+        assert(d8_reply_blocks(iq, 4500, 32, &fit) == 0);
+        for (unsigned i = 0; i < 4500; i++) { iq[2 * i] = (int16_t)((i & 1) ? 1500 : -1500); iq[2 * i + 1] = 300; }
+        assert(d8_reply_blocks(iq, 4500, 32, &fit) == D8_REPLY_BLOCKS && fit == D8_REPLY_BLOCKS);
+        assert(d8_reply_blocks(iq, 2000, 32, &fit) == 4); /* 4.0 ms capture: only the 2.0-4.0 ms blocks fit */
+        memset(iq, 0, sizeof iq);
+        for (unsigned i = 1000; i < 1000 + 1250; i++) iq[2 * i] = 2000; /* 2.5 ms burst at 2 ms */
+        assert(d8_reply_blocks(iq, 4500, 32, &fit) == 5);
+        for (unsigned i = 0; i < 4500; i++) iq[2 * i] = (int16_t)(i & 1 ? 30 : -30); /* noise-level floor */
+        assert(d8_reply_blocks(iq, 4500, 32, &fit) == 0);
+        static int16_t iq16[2 * 6000];
+        for (unsigned i = 0; i < 6000; i++) { iq16[2 * i] = 750; iq16[2 * i + 1] = 0; } /* dec 16: half the amplitude */
+        assert(d8_reply_blocks(iq16, 6000, 16, &fit) == 8 && fit == 8 && d8_reply_seen(8, fit)); /* 6 ms max at dec 16 */
+        assert(d8_reply_seen(11, 11) && d8_reply_seen(9, 11) && !d8_reply_seen(8, 11) && !d8_reply_seen(3, 3) && !d8_reply_seen(5, 8));
+    }
+    puts("reply detector tests ok");
     return 0;
 }

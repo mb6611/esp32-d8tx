@@ -67,9 +67,17 @@ int main(void) {
     c = P("TLM 4 6000 0 16"); assert(c.kind == CMD_TLM && c.dec == 16 && c.gain == 0);
     ERR("TLM", "args"); ERR("TLM 3", "every"); ERR("TLM 941", "every"); ERR("TLM 47 499", "cap_us"); ERR("TLM 47 12001", "cap_us");
     ERR("TLM 47 10000 128", "gain"); ERR("TLM 47 10000 -2", "gain"); ERR("TLM 47 10000 40 48", "dec");
-    ERR("TLM 47 10000 40 32 2", "same"); ERR("TLM 47 6001 40 16", "cap_us"); ERR("TLM 1 2 3 4 5 6 7 8", "args");
+    ERR("TLM 47 10000 40 32 2", "same"); ERR("TLM 47 6001 40 16", "cap_us"); ERR("TLM 1 2 3 4 5 6 7 8 9 10", "args");
     c = P("TLM 48 9000 40 32 0 1 1"); assert(c.kind == CMD_TLM && c.stream == 1 && c.ack == 1 && c.cap_us == 9000);
     c = P("TLM 48"); assert(c.stream == 0 && c.ack == 0);
+    c = P("TLM 48 9000 40 32 0 1 1 1 2"); assert(c.kind == CMD_TLM && c.mark == 1 && c.retry == 2);
+    c = P("TLM 48 9000 40 32 0 1 1"); assert(c.mark == 0 && c.retry == 0);
+    ERR("TLM 48 9000 40 32 0 1 1 2", "mark"); ERR("TLM 48 9000 40 32 0 1 1 0 4", "retry"); ERR("TLM 48 9000 40 32 0 0 1 0 1", "retry");
+    c = P("TLMX 8 50"); assert(c.kind == CMD_TLMX && c.tail_bits == 8 && c.settle_us == 50 && c.tail_all == 0);
+    c = P("TLMX 0 0 1"); assert(c.kind == CMD_TLMX && c.tail_all == 1 && c.probe == 0);
+    c = P("TLMX 0 0 0 1"); assert(c.kind == CMD_TLMX && c.tail_all == 0 && c.probe == 1);
+    ERR("TLMX 0 0 0 2", "probe");
+    ERR("TLMX 33 0", "tail"); ERR("TLMX 0 301", "settle"); ERR("TLMX 0 0 2", "all"); ERR("TLMX 1", "args");
     ERR("TLM 48 9000 40 32 0 2", "stream"); ERR("TLM 48 9000 40 32 0 1 2", "ack");
     c = P("TID 31"); assert(c.kind == CMD_TID && c.tid == 31);
     c = P("TID 0"); assert(c.kind == CMD_TID && c.tid == 0);

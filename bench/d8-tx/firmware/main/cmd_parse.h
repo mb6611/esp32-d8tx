@@ -29,8 +29,11 @@
 #define TLM_GAIN_DEF    40     /* manual RX gain code; -1 = hardware AGC */
 #define TLM_GAIN_MAX    127
 #define TLM_DEC_DEF     32     /* 16 MS/s boxcar: 16 / 32 / 64 */
+#define TLMX_TAIL_MAX   32     /* extra 1010 bits keyed after the CRC */
+#define TLMX_SETTLE_MAX 300    /* us between unkey and the listen retune */
+#define TLM_RETRY_MAX   3      /* re-triggers (stream mode) after an on-chip "no reply" verdict */
 
-typedef enum { CMD_NONE, CMD_PING, CMD_STAT, CMD_UNKEY, CMD_TONE, CMD_ALT, CMD_PKT, CMD_RETUNE, CMD_HOP, CMD_STICKS, CMD_S, CMD_FOFS, CMD_ARMOK, CMD_INFO, CMD_LINK, CMD_TLM, CMD_TCAP, CMD_TID, CMD_ERR } cmd_kind_t;
+typedef enum { CMD_NONE, CMD_PING, CMD_STAT, CMD_UNKEY, CMD_TONE, CMD_ALT, CMD_PKT, CMD_RETUNE, CMD_HOP, CMD_STICKS, CMD_S, CMD_FOFS, CMD_ARMOK, CMD_INFO, CMD_LINK, CMD_TLM, CMD_TCAP, CMD_TID, CMD_TLMX, CMD_ERR } cmd_kind_t;
 
 typedef struct {
     cmd_kind_t kind;
@@ -51,6 +54,12 @@ typedef struct {
     int same;              /* TLM: 1 = listen on the trigger channel, 0 = next hop channel */
     int stream;            /* TLM: 1 = int8 capture shipped in the background while LINK keeps sending */
     int ack;               /* TLM: 1 = the host acks each capture with TID before the next trigger */
+    int mark;              /* TLM: 1 = ch8 marks trigger packets (1500 us first try, 1600 us retry, else 1000 us) */
+    int retry;             /* TLM: re-trigger up to this many times when the on-chip energy check sees no reply */
+    unsigned tail_bits;    /* TLMX: extra alternating bits after the CRC (trigger packets, or all with tail_all) */
+    unsigned settle_us;    /* TLMX: wait after the trigger's unkey before retuning to the listen channel */
+    int tail_all;          /* TLMX: 1 = tail on every LINK packet */
+    int probe;             /* TLMX: 1 = mid-way between triggers send one marked data packet (ch8 1400) + a silent slot */
     unsigned tid;          /* TID: telemetry id (0..31) for the next trigger */
     const char *err;       /* set for CMD_ERR: short reason text */
     int legacy;            /* CMD_ERR from a legacy bench command: print the old bare "ERR <why>" */

@@ -64,8 +64,8 @@ cmd_t cmd_parse(char *line) {
         c.kind = CMD_LINK;
         return c;
     }
-    if (!strcmp(tok[0], "TLM")) { /* TLM every [cap_us] [gain] [dec] [same] [stream] [ack]: telemetry listen for later LINKs */
-        if (n < 2 || n > 8) return fail("args");
+    if (!strcmp(tok[0], "TLM")) { /* TLM every [cap_us] [gain] [dec] [same] [stream] [ack] [mark] [retry]: telemetry listen for later LINKs */
+        if (n < 2 || n > 10) return fail("args");
         if (!parse_int(tok[1], 0, TLM_EVERY_MAX, &v) || (v && v < TLM_EVERY_MIN)) return fail("every");
         c.tlm_every = (unsigned)v;
         c.cap_us = TLM_CAP_US_DEF; c.gain = TLM_GAIN_DEF; c.dec = TLM_DEC_DEF; c.same = 0;
@@ -75,8 +75,24 @@ cmd_t cmd_parse(char *line) {
         if (n >= 6) { if (!parse_int(tok[5], 0, 1, &v)) return fail("same"); c.same = (int)v; }
         if (n >= 7) { if (!parse_int(tok[6], 0, 1, &v)) return fail("stream"); c.stream = (int)v; }
         if (n >= 8) { if (!parse_int(tok[7], 0, 1, &v)) return fail("ack"); c.ack = (int)v; }
+        if (n >= 9) { if (!parse_int(tok[8], 0, 1, &v)) return fail("mark"); c.mark = (int)v; }
+        if (n >= 10) { if (!parse_int(tok[9], 0, TLM_RETRY_MAX, &v)) return fail("retry"); c.retry = (int)v; }
+        if (c.retry && !c.stream) return fail("retry");
         if (c.cap_us * 16u / c.dec > 6000u) return fail("cap_us");
         c.kind = CMD_TLM;
+        return c;
+    }
+    if (!strcmp(tok[0], "TLMX")) { /* TLMX tail_bits settle_us [all] [probe]: trigger experiments (RAM only) */
+        if (n < 3 || n > 5) return fail("args");
+        if (!parse_int(tok[1], 0, TLMX_TAIL_MAX, &v)) return fail("tail");
+        c.tail_bits = (unsigned)v;
+        if (!parse_int(tok[2], 0, TLMX_SETTLE_MAX, &v)) return fail("settle");
+        c.settle_us = (unsigned)v;
+        c.tail_all = 0;
+        c.probe = 0;
+        if (n >= 4) { if (!parse_int(tok[3], 0, 1, &v)) return fail("all"); c.tail_all = (int)v; }
+        if (n >= 5) { if (!parse_int(tok[4], 0, 1, &v)) return fail("probe"); c.probe = (int)v; }
+        c.kind = CMD_TLMX;
         return c;
     }
     if (!strcmp(tok[0], "TID")) { /* TID n: telemetry id for the next trigger (host ack/resend; silent during LINK) */
