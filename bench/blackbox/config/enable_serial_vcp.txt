@@ -1,0 +1,12 @@
+# Blackbox -> USB VCP (serial port identifier 20), shared with MSP.  Apply: bbcli.py apply config/enable_serial_vcp.txt --save
+# Derived from Betaflight 4.2.11 source (see README "Why these commands"):
+#   function mask 129 = FUNCTION_MSP (1) | FUNCTION_BLACKBOX (128); VCP must keep MSP (isSerialConfigValid).
+#   fields: serial <id> <mask> <msp_baud> <gps_baud> <telemetry_baud> <blackbox_baud>
+#   blackbox_baud 2000000 is not a line rate on USB; it only lifts the header throttle in blackboxDeviceOpen()
+#   (>= 1000000 => 64 header bytes per loop instead of ~1), so logging starts within ~0.1 s of arming.
+serial 20 129 115200 57600 0 2000000
+set blackbox_device = SERIAL
+set blackbox_mode = NORMAL
+# 32 = default: 1 P-frame per 1 ms, I-frame every 32 ms (=> ~1 kHz rows at 4 kHz PID loop)
+set blackbox_p_ratio = 32
+set blackbox_record_acc = ON

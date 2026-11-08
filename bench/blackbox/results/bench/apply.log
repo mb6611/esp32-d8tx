@@ -1,0 +1,10 @@
+# serial 20 129 115200 57600 0 2000000
+serial 20 129 115200 57600 0 2000000
+# set blackbox_device = SERIAL
+blackbox_device set to SERIAL
+# set blackbox_mode = NORMAL
+blackbox_mode set to NORMAL
+# set blackbox_p_ratio = 32
+blackbox_p_ratio set to 32
+# set blackbox_record_acc = ON
+blackbox_record_acc set to ON

@@ -1,0 +1,7 @@
+# Revert to the drone's pre-blackbox state (stock 4.2.11 defaults; the saved diffs have no 'serial 20' or blackbox lines).
+# Prefer comparing with the 'diff all' you saved before enabling; edit here if that diff differs.
+serial 20 1 115200 57600 0 115200
+set blackbox_device = SERIAL
+set blackbox_mode = NORMAL
+set blackbox_p_ratio = 32
+set blackbox_record_acc = ON

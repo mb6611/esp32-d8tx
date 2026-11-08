@@ -1,0 +1,14 @@
+Data file contained no events
+
+Log 1 of 1, start 14:07.006, end 14:21.316, duration 00:14.310
+
+Statistics
+Looptime           1014 avg          189.3 std dev (18.7%)
+I frames     428   49.4 bytes avg    21161 bytes total
+P frames   13227   24.6 bytes avg   325344 bytes total
+S frames       6    3.0 bytes avg       18 bytes total
+Frames     13655   25.4 bytes avg   346505 bytes total
+Data rate  954Hz  25451 bytes/s     254600 baud
+
+0 frames failed to decode, rendering 14 loop iterations unreadable. 41006 iterations are missing in total (10735ms, 75.02%)
+
