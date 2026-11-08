@@ -19,9 +19,24 @@ export interface FcStatus {
   arming_disable?: string[]
   rssi?: number
 }
+export interface RadioStatus {
+  enabled?: boolean
+  powered?: boolean
+  link?: boolean
+  age_ms?: number | null
+  catch_rate?: number | null
+  triggers?: number
+  replies?: number
+  rssi?: number | null
+  vbat_v?: number | null
+  battery?: 'absent' | 'present' | null
+  armed?: boolean | null
+  armed_source?: 'patched' | 'rpm' | null
+}
 export interface Telemetry {
   esp?: EspStatus
   fc?: FcStatus
+  radio?: RadioStatus
 }
 export interface StartOptions {
   power: number

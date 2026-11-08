@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import contextlib
+import copy
 import time
 from pathlib import Path
 from typing import Any, Optional
@@ -16,6 +17,14 @@ SILENCE_S = 0.25
 TELEMETRY_HZ = 50
 FC_DEFAULT = {"connected": False, "rc": [], "armed": None, "failsafe": None,
               "arming_disable": [], "rssi": None, "error": None}
+RADIO_DEFAULT = {
+    "enabled": False, "powered": False, "link": False, "age_ms": None, "catch_rate": None,
+    "triggers": 0, "replies": 0, "rssi": None, "rssi_dbm": None, "a1_raw": None, "a2_raw": None,
+    "vbat_v": None, "battery": None, "cfo_khz": None,
+    "hub": {"acc_mg": None, "heading_deg": None, "rpm": None, "vfas_v": None, "current_a": None,
+            "fuel": None, "temp1": None, "temp2": None, "patched": {}, "raw": {}, "age_ms": None},
+    "armed": None, "armed_source": None,
+}
 DEFAULT_DIST = Path(__file__).resolve().parents[2] / "app" / "dist"
 
 
@@ -24,6 +33,7 @@ class StartReq(BaseModel):
     fofs_hz: Optional[int] = None
     timeout_ms: int = 300
     allow_arm: bool = False
+    telemetry: bool = True
 
 
 def create_app(esp: Any, fc: Any = None, dist: Optional[Path] = None,
@@ -38,6 +48,14 @@ def create_app(esp: Any, fc: Any = None, dist: Optional[Path] = None,
             return st
         except Exception as e:  # noqa: BLE001
             return {"connected": False, "error": str(e)}
+
+    def radio_status() -> dict:
+        out = copy.deepcopy(RADIO_DEFAULT)
+        try:
+            out.update(esp.telemetry())
+        except Exception:  # noqa: BLE001
+            pass
+        return out
 
     def fetch_info() -> None:
         # INFO ends a running link in firmware: only call while not linked.
@@ -82,7 +100,8 @@ def create_app(esp: Any, fc: Any = None, dist: Optional[Path] = None,
         return out
 
     async def full_status() -> dict:
-        return {"esp": await asyncio.to_thread(esp_status), "fc": dict(state["fc"])}
+        return {"esp": await asyncio.to_thread(esp_status), "fc": dict(state["fc"]),
+                "radio": await asyncio.to_thread(radio_status)}
 
     def linked() -> bool:
         try:
@@ -129,7 +148,7 @@ def create_app(esp: Any, fc: Any = None, dist: Optional[Path] = None,
             state["last_msg"] = time.monotonic()
             await asyncio.to_thread(fetch_info)
             await asyncio.to_thread(esp.start, req.power, req.timeout_ms,
-                                    req.allow_arm, req.fofs_hz)
+                                    req.allow_arm, req.fofs_hz, telemetry=req.telemetry)
         except Exception as e:  # noqa: BLE001
             raise HTTPException(409, str(e))
         return {"ok": True}

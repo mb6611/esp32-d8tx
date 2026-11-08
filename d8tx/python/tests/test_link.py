@@ -96,3 +96,17 @@ def test_link_end_clears_keyed_and_no_stray_ok(port):
         assert l.stat()["keyed"] == 0
     l.close()
 
+
+
+def test_stray_tid_ok_does_not_satisfy_request(port):
+    l = D8Link("x", serial_obj=port)
+    l.start()
+    l.stop()
+    orig = port._cmd
+    def cmd(ln):
+        if ln == "STAT":
+            port._emit("OK tid=7")  # late answer to an async TID, arrives right before the real reply
+        orig(ln)
+    port._cmd = cmd
+    assert l.stat()["keyed"] == 0
+    l.close()

@@ -41,3 +41,14 @@ Channel 7 (ARM) is gated in the UI, in the library (`allow_arm`, default off) an
 ## Scripted hop
 
 `python/examples/up_forward_land.py --dry-run` prints the open-loop timeline; the backend must not be running when you fly it. Hover throttle is unknown (above 1550 µs on the bench quad), keep the forward tilt small, and log blackbox to tune.
+
+## Radio telemetry
+
+With `telemetry=true` (the default in `POST /api/link/start`) the link also listens for the drone's D8 reply frames
+(default FOFS -75000 Hz). `/api/status` and every WebSocket telemetry message carry a top-level `radio` object from
+`D8Link.telemetry()`: powered, link, catch rate, age, battery volts (`absent` below 2 V), hub fields and an inferred
+`armed`. If the ESP object has no `telemetry()` or it raises, `radio` holds the same keys with defaults.
+
+The "Drone (radio)" cell in the UI shows powered / link / battery / armed. Without USB/MSP readback the arm indicator
+says ARMED only when `radio.armed` is true, otherwise ARM SENT. With MSP connected, Betaflight readback decides as before.
+Try it without hardware: `?mock=1&autostart` (add `&batt=absent`, `&radio=off`, `&fc=off`).

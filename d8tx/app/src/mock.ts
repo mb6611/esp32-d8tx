@@ -1,4 +1,4 @@
-import type { Telemetry } from './types'
+import type { RadioStatus, Telemetry } from './types'
 
 /** Simulated backend state for ?mock=1 */
 export class MockBackend {
@@ -33,7 +33,19 @@ export class MockBackend {
       return v + (target - v) * k
     })
     const armed = this.link && this.allowArm && this.slots >= 170 && this.rc[6] > 1700 && this.rc[0] < 1900
+    const q = new URLSearchParams(location.search)
+    const radioOn = this.link && q.get('radio') !== 'off'
+    const radioArmed = armed && q.get('radio') !== 'noarm'
+    const radio: RadioStatus = radioOn
+      ? {
+          enabled: true, powered: true, link: true, age_ms: 40 + Math.round(Math.random() * 60),
+          catch_rate: 0.98, rssi: 120, vbat_v: q.get('batt') === 'absent' ? 0.2 : 3.9,
+          battery: q.get('batt') === 'absent' ? 'absent' : 'present',
+          armed: radioArmed ? true : this.slots >= 170 ? false : null, armed_source: 'rpm',
+        }
+      : { enabled: this.link, powered: false, link: false, age_ms: null, catch_rate: null, vbat_v: null, battery: null, armed: null, armed_source: null }
     return {
+      radio,
       esp: {
         connected: true,
         link: this.link,

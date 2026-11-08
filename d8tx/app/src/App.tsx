@@ -139,6 +139,7 @@ export default function App() {
   const fcArmed = !!fc?.armed
   const reachable = (c.ws === 'open' || MOCK) && !!esp?.connected
   const fcOn = !!fc?.connected
+  const radio = c.tel?.radio
   const [noFcReady, setNoFcReady] = useState(false)
   useEffect(() => {
     if (!linked) return
@@ -176,7 +177,7 @@ export default function App() {
   }
   if (fcOn && c.armed && !fcArmed && reasons) banner = { text: `Armed requested, not armed: ${reasons}`, cls: 'border-warn text-warn' }
 
-  const redArmed = c.armed && fcOn && fcArmed
+  const redArmed = c.armed && (fcOn ? fcArmed : radio?.armed === true)
   const armSent = c.armed && !redArmed
   const tabs: [Tab, string][] = [['sticks', 'Sticks'], ['stats', 'Stats for nerds']]
   const armEnabled = linked && ready && c.canArm
@@ -197,7 +198,7 @@ export default function App() {
       </header>
 
       {/* ground-station status strip */}
-      <div className="mb-1.5 grid shrink-0 grid-cols-[1.2fr_.9fr_1fr_1fr_1fr_1.5fr] border border-fg">
+      <div className="mb-1.5 grid shrink-0 grid-cols-[1.2fr_.8fr_1fr_1fr_.9fr_2.2fr_1.4fr] border border-fg">
         <Cell k="Link">
           <SignalBars level={sig} />
           <span>{linked ? `${(esp?.sender_hz ?? 0).toFixed(0)} pkt/s` : 'off'}</span>
@@ -206,11 +207,21 @@ export default function App() {
         <Cell k="ESP32">{dot(esp?.connected ? 'bg-ok' : 'bg-bad')}<span className="font-sans text-sm">{esp?.connected ? (esp.keyed ? 'transmitting' : 'idle') : 'offline'}</span></Cell>
         <Cell k="Drone USB">{dot(fcOn ? 'bg-ok' : 'bg-muted')}<span className="font-sans text-sm">{fcOn ? `MSP${rssi !== undefined ? ` · rssi ${rssi}` : ''}` : 'no readback'}</span></Cell>
         <Cell k="Failsafe">{dot(failsafe ? 'bg-warn' : 'bg-ok')}<span className={`font-sans text-sm ${failsafe ? 'font-bold text-warn' : ''}`}>{failsafe ? 'ACTIVE' : 'clear'}</span></Cell>
+        <Cell k="Drone (radio)">
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-0 font-sans text-xs">
+            {radio?.enabled ? (<>
+              <span>{dot(radio.powered ? 'bg-ok' : 'bg-muted')} {radio.powered ? 'powered' : 'no reply'}</span>
+              <span>link {radio.link ? 'up' : 'down'}{radio.catch_rate != null && <> <span className="font-mono">{Math.round(radio.catch_rate * 100)}%</span></>}{radio.age_ms != null && <span className="font-mono text-muted"> {radio.age_ms} ms</span>}</span>
+              <span>batt <span className="font-mono">{radio.battery === 'absent' ? 'absent' : radio.vbat_v != null ? `${radio.vbat_v.toFixed(1)} V` : '–'}</span></span>
+              <span>armed <span className={`font-mono ${radio.armed ? 'font-bold text-bad' : ''}`}>{radio.armed == null ? '?' : radio.armed ? 'yes' : 'no'}</span></span>
+            </>) : <span className="text-muted">telemetry off</span>}
+          </span>
+        </Cell>
         <div className={`flex items-center justify-between gap-3 px-3 py-1 ${redArmed ? 'bg-bad text-paper' : armSent ? 'bg-warn/20 text-warn' : ''}`}>
           <div>
             <div className={`font-sans text-[10px] font-semibold tracking-wider uppercase ${redArmed ? 'text-paper/80' : 'text-muted'}`}>Motors</div>
             <div className="font-sans text-base leading-tight font-bold tracking-wide">{redArmed ? 'ARMED' : armSent ? 'ARM SENT' : 'DISARMED'}</div>
-            {armSent && <div className="font-sans text-[10px] leading-tight">{fcOn ? 'waiting for Betaflight' : 'drone state unknown: no USB readback'}</div>}
+            {armSent && <div className="font-sans text-[10px] leading-tight">{fcOn ? 'waiting for Betaflight' : 'radio does not confirm armed'}</div>}
           </div>
           <svg width="46" height="24" viewBox="0 0 46 24">
             <rect x=".5" y=".5" width="45" height="23" fill={redArmed ? 'var(--color-paper)' : 'var(--color-paper-2)'} stroke={redArmed ? 'var(--color-paper)' : 'var(--color-fg)'} />
@@ -318,6 +329,8 @@ export default function App() {
               <Row k="keyed" v={esp?.keyed ? 'yes' : 'no'} />
               <Row k="sender rate" v={esp?.sender_hz ? `${esp.sender_hz.toFixed(1)} Hz` : '–'} />
               <Row k="browser to backend" v={`${c.sendHz} Hz`} />
+              <Row k="radio replies" v={radio?.enabled ? `${radio.replies ?? 0} / ${radio.triggers ?? 0}` : 'off'} />
+              <Row k="radio armed" v={radio?.armed == null ? 'unknown' : radio.armed ? `yes (${radio.armed_source})` : 'no'} />
               <Row k="telemetry" v={`${c.telHz} Hz`} cls={c.telHz < 10 ? 'text-warn' : ''} />
             </section>
             <section>

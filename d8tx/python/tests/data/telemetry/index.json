@@ -1,0 +1,164 @@
+[
+ {
+  "k": 48,
+  "ch": 112,
+  "tid": 0,
+  "fs": 500000.0,
+  "n": 4500,
+  "dec": 32,
+  "bits": 8,
+  "sh": 5,
+  "bytes": 9000,
+  "crc": "2a84fe9b",
+  "run_us": 9322,
+  "try": 0,
+  "file": "cap0000.iq8",
+  "expect": [
+   {
+    "a1": 0,
+    "a2": 0,
+    "hub_count": 10,
+    "telemetry_id": 0,
+    "hub": "00005e0200005e030000",
+    "shift_hz": -50000.0,
+    "cfo_hz": -14254.0,
+    "rssi": 77
+   }
+  ]
+ },
+ {
+  "k": 96,
+  "ch": 167,
+  "tid": 1,
+  "fs": 500000.0,
+  "n": 4500,
+  "dec": 32,
+  "bits": 8,
+  "sh": 4,
+  "bytes": 9000,
+  "crc": "602d7357",
+  "run_us": 9322,
+  "try": 0,
+  "file": "cap0001.iq8",
+  "expect": [
+   {
+    "a1": 0,
+    "a2": 0,
+    "hub_count": 10,
+    "telemetry_id": 1,
+    "hub": "00005e0200005e030000",
+    "shift_hz": -50000.0,
+    "cfo_hz": -14643.0,
+    "rssi": 74
+   }
+  ]
+ },
+ {
+  "k": 432,
+  "ch": 40,
+  "tid": 8,
+  "fs": 500000.0,
+  "n": 4500,
+  "dec": 32,
+  "bits": 8,
+  "sh": 6,
+  "bytes": 9000,
+  "crc": "f8142a45",
+  "run_us": 9322,
+  "try": 0,
+  "file": "cap0008.iq8",
+  "expect": [
+   {
+    "a1": 0,
+    "a2": 0,
+    "hub_count": 10,
+    "telemetry_id": 8,
+    "hub": "5e2400005e2500005e26",
+    "shift_hz": -25000.0,
+    "cfo_hz": -11277.0,
+    "rssi": 71
+   }
+  ]
+ },
+ {
+  "k": 480,
+  "ch": 95,
+  "tid": 9,
+  "fs": 500000.0,
+  "n": 4500,
+  "dec": 32,
+  "bits": 8,
+  "sh": 6,
+  "bytes": 9000,
+  "crc": "488bc327",
+  "run_us": 9322,
+  "try": 0,
+  "file": "cap0009.iq8",
+  "expect": [
+   {
+    "a1": 0,
+    "a2": 0,
+    "hub_count": 3,
+    "telemetry_id": 9,
+    "hub": "00005e",
+    "shift_hz": -50000.0,
+    "cfo_hz": -13259.0,
+    "rssi": 79
+   }
+  ]
+ },
+ {
+  "k": 528,
+  "ch": 150,
+  "tid": 10,
+  "fs": 500000.0,
+  "n": 4500,
+  "dec": 32,
+  "bits": 8,
+  "sh": 5,
+  "bytes": 9000,
+  "crc": "a1b6895c",
+  "run_us": 9322,
+  "try": 0,
+  "file": "cap0010.iq8",
+  "expect": [
+   {
+    "a1": 0,
+    "a2": 0,
+    "hub_count": 10,
+    "telemetry_id": 10,
+    "hub": "5e2400005e2500005e26",
+    "shift_hz": -50000.0,
+    "cfo_hz": -13395.0,
+    "rssi": 75
+   }
+  ]
+ },
+ {
+  "k": 624,
+  "ch": 4,
+  "tid": 12,
+  "fs": 500000.0,
+  "n": 4500,
+  "dec": 32,
+  "bits": 8,
+  "sh": 6,
+  "bytes": 9000,
+  "crc": "5f2549b7",
+  "run_us": 9322,
+  "try": 0,
+  "file": "cap0012.iq8",
+  "expect": [
+   {
+    "a1": 0,
+    "a2": 0,
+    "hub_count": 10,
+    "telemetry_id": 12,
+    "hub": "5e2400005e2500005e26",
+    "shift_hz": -50000.0,
+    "cfo_hz": -12873.0,
+    "rssi": 68
+   }
+  ]
+ }
+]

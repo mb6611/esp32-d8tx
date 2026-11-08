@@ -30,7 +30,7 @@ While linked, `S`, `STOP`/`U` and `STAT` are handled. Any other request ends the
 `TONE`, `ALT`, `RETUNE`, `PKT`, `HOP`, `STICKS` still exist but are not part of the API. They keep their old bare `ERR <why>` replies and `K,...` report lines. `HOP 0 <pwr> [timeout]` is the legacy twin of `LINK`. Changed vs. the earlier bench firmware: `PING` is `OK proto=1` (was `P,d8tone,1`), `STAT` is the v1 form (was `S,keyed=...`), boot line is `EV boot` (was `I,boot`), and the `I,ready` line is gone.
 
 ## Telemetry listen (experiment, off by default)
-Bench-only extension for listening to Betaflight's FrSky D8 telemetry reply. Not used by the d8tx library or app; with `TLM 0` (the boot default) `LINK` behaves exactly as above. Host: `bench/d8-tx/host/tlm_listen.py`.
+Bench-only extension for listening to Betaflight's FrSky D8 telemetry reply. The d8tx library uses it (see "Telemetry in the library"); with `TLM 0` (the boot default) `LINK` behaves exactly as above. Host: `bench/d8-tx/host/tlm_listen.py`.
 
 | Command | Reply | Notes |
 |---|---|---|
@@ -46,3 +46,32 @@ With `TLM every>0`, slot k of a `LINK` is a trigger when k ≥ every and k % eve
 - Each capture is reported as one line followed by binary payload:
   `EV tlm k=<slot> ch=<listen channel> tid=<id> fs=<Hz> n=<samples> dec=<dec> turn_ns=<unkey start→capture start> run_us=<capture> g0=<gain idx first> g1=<gain idx last> lost=<pairs> bad=<sessions> late=<pairs> work=<cycles> units=<sessions> to=<0|1> bytes=<4n> crc=<crc32 hex>` then exactly `bytes` raw bytes (int16 little-endian I, Q interleaved, Q **not** negated: negate Q for RF = LO + f) then `\n`. stream=1 adds `bits=8 sh=<shift> try=<re-trigger index> nb=<reply blocks> fit=<blocks in window> sl=<slot late us> rt=<retune us> gap=<us> pgap=<us>` before `bytes=<2n>`: the payload is int8 I, Q (the int16 values arithmetically shifted right by sh so the peak fits). For `TCAP`: k=0, ch=<khz>, tid=1 if a packet was keyed first, else 0. crc32 = zlib.crc32 of the payload. This line is longer than the 95-char request limit; it is a device→host event.
 - Only `S`, `TID`, `STOP`/`U` and `STAT` are handled while linked (`STAT` is dropped while a stream=1 capture is going out); `S` lines that arrive during a capture/dump are buffered and applied after it.
+
+## Telemetry in the library
+`D8Link.start(..., telemetry=True)` (default) sends `TID <next id>` and `TLM 48 9000 40 32 0 1 1 0 1` (`protocol.TLM_RECIPE`: every 48 slots,
+9 ms capture, dec 32, gain 40, next hop channel, stream=1, ack=1, retry=1) before `LINK`, and sets FOFS to `DEFAULT_FOFS_HZ = -75000` when no
+`fofs_hz` is given. The firmware keeps the recipe (RAM) across LINKs, so no firmware change was needed; the library keeps the id sequence across
+links so the drone's expected id stays locked. A firmware answering `ERR` to `TLM` leaves telemetry off and the link still starts; `telemetry=False`
+sends `TLM 0` if a recipe was sent before.
+- Reader thread: byte-oriented, so `EV tlm ... bytes=N` + N payload bytes + `\n` can be interleaved with `OK`/`EV` lines. Payloads go to a worker thread
+  (crc32 check, int8 I/Q, vendored decoder `d8tx/demod.py`, carrier shift sweep -150..150 kHz with the last good shift first, ~5 ms/capture), which
+  updates the state and writes `TID` (next id only after a reply echoed the sent id, else the same id; not after the link ended). `EV tlm_drop` and
+  undecodable captures count as triggers without reply.
+- `D8Link.telemetry()` returns the dict in `.ru/plans/telemetry-stack-contract.md`; extra key `hub.patched` is filled from the table below.
+  `catch_rate` = replies/triggers over 10 s; `powered` = reply within 3 s; `link` = within 1 s.
+- Reply frame (cc2500_frsky_d.c buildTelemetryFrame L117-148): `11 txid0 txid1 A1 A2 RSSI hubcount tid hub[0..9]`.
+  **A1** = `(getBatteryVoltage()/5)&0xff`, battery voltage in 0.01 V (battery.c L505, voltage.h L44) -> 0.05 V/count, wraps at 12.75 V (a 4S reads low);
+  `vbat_v` uses hub VFAS 0x39 (0.1 V) when seen within 3 s, else A1. `battery` "absent" below 2.0 V. **A2** = ADC_RSSI>>4 (raw).
+  **RSSI byte** = `(uint8)rssiDbm`, `rssiDbm = v*18/32 + 65` (v<128) or `v*18/32 - 82` (v>=128) of the CC2500 RSSI register v
+  (cc2500_common.c L62-69); the library inverts it and applies the datasheet conversion (`v/2-72` or `(v-256)/2-72`), so `rssi_dbm` is the drone's
+  received power of our packets (bench bytes 66-80 -> about -67..-60 dBm). `rssi` stays the raw byte.
+- Hub decoding: ACC 0x24-26 (`acc_mg`; stock truncates to whole g), COURSE_BP 0x14 (`heading_deg`, whole degrees), RPM 0x03, TEMP1 0x02, TEMP2 0x05,
+  FUEL 0x04 (percent if capacity set, else mAh), CURRENT 0x28 (0.1 A), VFAS 0x39 (0.1 V) or 0x3A/0x3B ((BP + AP/10)*21/11). Identical consecutive
+  10-byte chunks are dropped (the drone resends its last chunk while out of step with our ids).
+- Armed (`armed`, `armed_source`): patched STATUS bit0 when present ("patched"); else the stock RPM field ("rpm"), frsky_hub.c L186-207: armed ->
+  `rcCommand[THROTTLE]/5` (0, or 200..400, 0 at idle throttle with motor_stop), disarmed -> `batteryCapacity/5`. RPM outside {0}+[200,400] -> disarmed;
+  otherwise the library learns the disarmed value from replies received >= 2 s after it started sending ch7 low (twice the same value): a different
+  value means armed, the same value means disarmed unless it lies in the armed range, then `None`. Limits: with no baseline and RPM 0 or 200..400 it is
+  `None`; an armed drone at idle throttle with motor_stop and capacity 0 also reads 0 (`None`); RPM older than 5 s -> `None`.
+- Throughput: one reply carries at most 10 hub bytes and a trigger comes every ~0.43 s (about 23 B/s), and the drone builds a new hub cycle only after the
+  previous one was fully sent, so slow-rate fields (gyro/attitude of the patched firmware) refresh every few seconds, not at their nominal rate.

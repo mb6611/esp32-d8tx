@@ -3,7 +3,7 @@ name = "d8tx"
 version = "0.1.0"
 description = "ESP32 D8 transmitter client (protocol v1) and Betaflight MSP readback"
 requires-python = ">=3.10"
-dependencies = ["pyserial"]
+dependencies = ["pyserial", "numpy"]
 
 [project.optional-dependencies]
 dev = ["pytest"]

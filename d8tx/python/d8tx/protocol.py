@@ -3,6 +3,12 @@ LO, MID, HI = 1000, 1500, 2000
 ARM_CH = 6  # index of ch7
 ARM_LIMIT = 1300
 SLOT_S = 0.008994
+DEFAULT_FOFS_HZ = -75000  # LO offset for TX and RX; bench: 97.8-100% of telemetry triggers answered here
+TXID = (66, 178)  # bound receiver id (frsky_spi_tx_id), echoed in telemetry replies
+# TLM <every> <cap_us> <gain> <dec> <same> <stream> <ack> <mark> <retry>: trigger every 48 slots (not a multiple of
+# 47 so triggers walk the hop table), 9 ms capture at dec 32, listen on the next hop channel, int8 stream, host TID acks,
+# one on-chip re-trigger.
+TLM_RECIPE = "TLM 48 9000 40 32 0 1 1 0 1"
 MAX_LINE = 95  # firmware line buffer limit
 
 

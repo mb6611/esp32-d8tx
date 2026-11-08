@@ -70,6 +70,7 @@ export function useController() {
     if (MOCK) {
       const m = new MockBackend()
       mock.current = m
+      if (new URLSearchParams(location.search).has('autostart')) m.start(true, -75000)
       let last = performance.now()
       const id = setInterval(() => {
         const now = performance.now()
@@ -92,7 +93,7 @@ export function useController() {
           const m = JSON.parse(ev.data)
           if (m.type === 'telemetry') {
             counts.current.tel++
-            setTel({ esp: m.esp ?? undefined, fc: m.fc ?? undefined })
+            setTel({ esp: m.esp ?? undefined, fc: m.fc ?? undefined, radio: m.radio ?? undefined })
           }
         } catch {
           /* ignore malformed frame */
