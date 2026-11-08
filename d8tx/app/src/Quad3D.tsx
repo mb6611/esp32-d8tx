@@ -77,7 +77,7 @@ export default function Quad3D({ att, dim, tau = 100 }: { att: Att; dim: boolean
       cur.roll += (g.roll - cur.roll) * k
       cur.pitch += (g.pitch - cur.pitch) * k
       cur.yaw += wrap((g.yaw ?? 0) - cur.yaw) * k
-      quad.rotation.set(cur.pitch * rad, -cur.yaw * rad, -cur.roll * rad, 'YXZ') // camera is behind the model (nose -z, away from viewer); Betaflight heading grows clockwise, so the nose turns right as yaw grows (bench: 152->268 deg turning right)
+      quad.rotation.set(-cur.pitch * rad, -cur.yaw * rad, -cur.roll * rad, 'YXZ') // camera is behind the model (nose -z, away from viewer); Betaflight heading grows clockwise, so the nose turns right as yaw grows (bench: 152->268 deg turning right)
       renderer.render(scene, cam)
       raf = requestAnimationFrame(loop)
     }
