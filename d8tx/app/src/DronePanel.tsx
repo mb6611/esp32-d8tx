@@ -66,40 +66,46 @@ export function useDrone(radio?: RadioStatus, fc?: FcStatus) {
   const hub = radio?.hub
   const p = hub?.patched
   const acc = hub?.acc_mg ?? null
-  const gyro = p?.gyro_dps ?? null
+  const fast = radio?.fast ?? null
+  const fastOk = fast != null && fast.age_ms != null && fast.age_ms < STALE_MS
+  const hubGyro = p?.gyro_dps ?? null
   const att = p?.attitude_deg ?? null
   const now = useNow()
   const tAcc = useStamp(acc)
-  const tGyro = useStamp(gyro)
+  const tGyro = useStamp(hubGyro)
+  const fastGyro = fastOk ? fast?.gyro_dps ?? null : null
+  const fastAtt = fastOk ? fast?.attitude_deg ?? null : null
+  const gyro = fastGyro ?? hubGyro
   const tAtt = useStamp(att)
   const tMode = useStamp(p?.flight_mode)
   const ageOf = (t: number | null) => (t == null ? null : Math.max(0, now - t))
-  const aAcc = ageOf(tAcc), aGyro = ageOf(tGyro), aAtt = ageOf(tAtt), aMode = ageOf(tMode)
+  const aAcc = ageOf(tAcc), aGyro = fastGyro ? fast!.age_ms! : ageOf(tGyro), aAtt = ageOf(tAtt), aMode = ageOf(tMode)
   const st = (a: number | null) => a == null || a > STALE_MS
   const fcAtt = fc?.connected ? fc.attitude_deg ?? null : null
   const tFc = useStamp(fcAtt)
   const aFc = ageOf(tFc)
   const useFc = fcAtt != null && !st(aFc)
-  const shown = useFc ? fcAtt : att
-  const attStale = useFc ? false : st(aAtt)
+  const useFast = !useFc && fastAtt != null
+  const shown = useFc ? fcAtt : useFast ? fastAtt : att
+  const attStale = useFc || useFast ? false : st(aAtt)
   const live = !!radio?.enabled && radio.powered
-  return { hub, p, acc, gyro, aAcc, aGyro, aAtt, aMode, st, useFc, shown, attStale, live }
+  return { hub, p, acc, gyro, aAcc, aGyro, aAtt, aMode, st, useFc, useFast, fast, shown, attStale, live }
 }
 export type Drone = ReturnType<typeof useDrone>
 
 /** Centrepiece: square 3D view with attitude numbers and source label. */
 export function DroneView({ d }: { d: Drone }) {
-  const { shown, attStale, useFc, hub, aAtt } = d
+  const { shown, attStale, useFc, useFast, fast, hub, aAtt } = d
   return (
     <div className={`flex w-full flex-col items-center ${attStale ? 'text-muted' : ''}`}>
       <Suspense fallback={<div className="aspect-square w-full" />}>
-        <Quad3D att={{ roll: shown?.[0] ?? 0, pitch: shown?.[1] ?? 0, yaw: shown?.[2] ?? null }} dim={attStale || shown == null} />
+        <Quad3D att={{ roll: shown?.[0] ?? 0, pitch: shown?.[1] ?? 0, yaw: shown?.[2] ?? null }} dim={attStale || shown == null} tau={useFast ? 150 : 100} />
       </Suspense>
       <div className="font-mono text-[11px] leading-tight tabular-nums">
         R {shown?.[0] != null ? shown[0].toFixed(0) : '–'}° P {shown?.[1] != null ? shown[1].toFixed(0) : '–'}° Y {shown?.[2] != null ? shown[2].toFixed(0) : hub?.heading_deg != null ? `${hub.heading_deg.toFixed(0)}h` : '–'}°
       </div>
       <div className="font-mono text-[10px] leading-tight">
-        {useFc ? 'MSP, ~50 Hz' : <>radio, slow · {aAtt == null ? 'no data' : fmtAge(aAtt)}</>}
+        {useFc ? 'MSP, ~50 Hz' : useFast ? `radio, ~6 Hz · ${fast?.rate_hz != null ? fast.rate_hz.toFixed(1) : '–'} Hz · ${fast?.age_ms != null ? fmtAge(fast.age_ms) : '–'}` : <>radio, slow · {aAtt == null ? 'no data' : fmtAge(aAtt)}</>}
       </div>
     </div>
   )

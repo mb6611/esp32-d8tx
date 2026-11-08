@@ -41,7 +41,15 @@ export interface RadioHub {
   raw?: Record<string, number>
   age_ms?: number | null
 }
+export interface RadioFast {
+  attitude_deg?: number[] | null
+  gyro_dps?: number[] | null
+  age_ms?: number | null
+  rate_hz?: number | null
+  seq?: number
+}
 export interface RadioStatus {
+  fast?: RadioFast | null
   hub?: RadioHub
   cfo_khz?: number | null
   enabled?: boolean

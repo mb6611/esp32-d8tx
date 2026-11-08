@@ -7,9 +7,11 @@ const rad = Math.PI / 180
 const wrap = (d: number) => ((((d + 180) % 360) + 360) % 360) - 180
 
 /** Line-drawn quad on a ground grid; rotates with attitude (deg, Betaflight sign convention), eased ~0.3 s. */
-export default function Quad3D({ att, dim }: { att: Att; dim: boolean }) {
+export default function Quad3D({ att, dim, tau = 100 }: { att: Att; dim: boolean; tau?: number }) {
   const host = useRef<HTMLDivElement>(null)
   const target = useRef<Att>(att)
+  const tauRef = useRef(tau)
+  tauRef.current = tau
   useEffect(() => {
     const y = att.yaw ?? target.current.yaw // yaw unknown: keep last
     target.current = { ...att, yaw: y }
@@ -66,7 +68,7 @@ export default function Quad3D({ att, dim }: { att: Att; dim: boolean }) {
     ro.observe(el)
     let last = performance.now(), raf = 0
     const loop = (t: number) => {
-      const k = 1 - Math.exp(-(t - last) / 100) // ~0.3 s to settle
+      const k = 1 - Math.exp(-(t - last) / tauRef.current) // ~0.3 s to settle
       last = t
       const g = target.current
       cur.roll += (g.roll - cur.roll) * k

@@ -30,6 +30,7 @@ export class MockBackend {
   tick(dt: number): Telemetry {
     this.tt += dt
     const T = this.tt
+    const Tq = Math.floor(T * 5.7) / 5.7 // fast block updates at 5.7 Hz
     const truth = [18 * Math.sin(T * 0.8), 12 * Math.sin(T * 0.55 + 1), 40 * Math.sin(T * 0.3)]
     if (T - this.hubAt > 4) { // slow telemetry stream refreshes gyro/attitude every few seconds
       this.hubAt = T
@@ -56,6 +57,7 @@ export class MockBackend {
           catch_rate: 0.98, rssi: 120, vbat_v: q.get('batt') === 'absent' ? 0.2 : 3.9,
           battery: q.get('batt') === 'absent' ? 'absent' : 'present',
           rssi_dbm: -62, cfo_khz: 1.4,
+          fast: { attitude_deg: [18 * Math.sin(Tq * 0.8), 12 * Math.sin(Tq * 0.55 + 1), 40 * Math.sin(Tq * 0.3)].map((v) => Math.round(v * 10) / 10), gyro_dps: this.hubSnap.gyro.map((v) => v / 10), age_ms: Math.round(Math.random() * 170), rate_hz: 5.7, seq: Math.floor(T * 5.7) & 0xffff },
           hub: {
             acc_mg: this.hubSnap.acc, heading_deg: Math.round(((this.hubSnap.att[2] % 360) + 360) % 360), rpm: null, vfas_v: 3.9, current_a: 0.4, fuel: null, temp1: 31, temp2: null,
             patched: { gyro_dps: this.hubSnap.gyro, attitude_deg: [this.hubSnap.att[0], this.hubSnap.att[1], q.get('yaw') === 'null' ? null : this.hubSnap.att[2]], flight_mode: 'ANGLE', armed: radioArmed, failsafe: false },
