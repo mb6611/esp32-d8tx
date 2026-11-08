@@ -18,8 +18,32 @@ export interface FcStatus {
   failsafe?: boolean
   arming_disable?: string[]
   rssi?: number
+  attitude_deg?: number[] | null
+}
+export interface HubPatched {
+  gyro_dps?: number[] | null
+  attitude_deg?: (number | null)[] | null
+  flight_mode?: string | null
+  armed?: boolean | null
+  failsafe?: boolean | null
+  [k: string]: unknown
+}
+export interface RadioHub {
+  acc_mg?: (number | null)[] | null
+  heading_deg?: number | null
+  rpm?: number | null
+  vfas_v?: number | null
+  current_a?: number | null
+  fuel?: number | null
+  temp1?: number | null
+  temp2?: number | null
+  patched?: HubPatched
+  raw?: Record<string, number>
+  age_ms?: number | null
 }
 export interface RadioStatus {
+  hub?: RadioHub
+  cfo_khz?: number | null
   enabled?: boolean
   powered?: boolean
   link?: boolean
@@ -28,6 +52,7 @@ export interface RadioStatus {
   triggers?: number
   replies?: number
   rssi?: number | null
+  rssi_dbm?: number | null
   vbat_v?: number | null
   battery?: 'absent' | 'present' | null
   armed?: boolean | null

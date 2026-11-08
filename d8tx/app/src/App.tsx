@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import Stick from './Stick'
+import DronePanel, { DroneView, useDrone } from './DronePanel'
 import { MOCK, useController } from './useController'
 import type { StartOptions } from './types'
 
@@ -77,10 +78,9 @@ function ArmSwitch({ armed, progress, enabled, onDown, onUp, onDisarm }: {
 }) {
   const lever = armed ? 22 : 62 - progress * 40
   return (
-    <div className="flex flex-col items-center gap-1">
-      <div className="font-sans text-[10px] font-semibold tracking-wider text-muted uppercase">Arm switch · CH7</div>
+    <div className="flex items-center gap-2">
       <svg
-        width="70" height="100" viewBox="0 0 92 132"
+        width="34" height="49" viewBox="0 0 92 132"
         className={`touch-none select-none ${armed || enabled ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
         onPointerDown={() => (armed ? onDisarm() : enabled && onDown())}
         onPointerUp={onUp}
@@ -94,7 +94,8 @@ function ArmSwitch({ armed, progress, enabled, onDown, onUp, onDisarm }: {
         <line x1="46" x2="46" y1="66" y2={lever + 22} stroke="var(--color-fg)" strokeWidth="8" strokeLinecap="butt" />
         <rect x="38" y={lever + 6} width="16" height="16" fill={armed ? 'var(--color-bad)' : progress > 0 ? 'var(--color-warn)' : 'var(--color-fg)'} />
       </svg>
-      <div className="text-center font-sans text-[11px] leading-tight text-muted">
+      <div className="font-sans text-[11px] leading-tight text-muted">
+        <div className="text-[10px] font-semibold tracking-wider uppercase">Arm switch · CH7</div>
         {armed ? <>click or <Key k="X" /> to disarm</> : enabled ? <>hold click or <Key k="R" /> 1 s</> : 'locked until link is ready'}
       </div>
     </div>
@@ -140,6 +141,7 @@ export default function App() {
   const reachable = (c.ws === 'open' || MOCK) && !!esp?.connected
   const fcOn = !!fc?.connected
   const radio = c.tel?.radio
+  const drone = useDrone(radio, fc)
   const [noFcReady, setNoFcReady] = useState(false)
   useEffect(() => {
     if (!linked) return
@@ -282,12 +284,11 @@ export default function App() {
               </div>
             </div>
 
-            <div className="flex w-32 flex-col items-center justify-center gap-2">
+            <div className="flex w-[clamp(180px,36vh,360px)] flex-col items-center justify-center gap-1">
+              <DroneView d={drone} />
               <ArmSwitch armed={c.armed} progress={c.armProgress} enabled={armEnabled}
                 onDown={c.armPress} onUp={c.armRelease} onDisarm={c.disarm} />
-              <div className="w-full border-t border-line pt-2 text-center font-mono text-[11px] text-muted">
-                hold {Math.round(c.armProgress * 100)}%
-              </div>
+              <div className="font-mono text-[10px] text-muted">hold {Math.round(c.armProgress * 100)}%</div>
             </div>
 
             <div className="min-h-0 min-w-0 flex-1 max-w-[400px]">
@@ -297,10 +298,11 @@ export default function App() {
             </div>
           </div>
 
-          <div className="mt-1.5 grid shrink-0 gap-6 border-t border-line pt-1.5 md:grid-cols-[1.6fr_1fr]">
+          <div className="mt-1.5 grid shrink-0 gap-6 border-t border-line pt-1.5 md:grid-cols-[1.3fr_1.5fr_0.7fr]">
             <section>
               <Monitor cmd={c.channels} rc={fc?.connected ? fc.rc : undefined} armed={c.armed} compact />
             </section>
+            <DronePanel d={drone} radio={radio} />
             <section>
               <h2 className="h !mb-1">Keys</h2>
               <dl className="m-0 flex flex-col gap-1 font-sans text-[11px] text-muted">
@@ -331,6 +333,12 @@ export default function App() {
               <Row k="browser to backend" v={`${c.sendHz} Hz`} />
               <Row k="radio replies" v={radio?.enabled ? `${radio.replies ?? 0} / ${radio.triggers ?? 0}` : 'off'} />
               <Row k="radio armed" v={radio?.armed == null ? 'unknown' : radio.armed ? `yes (${radio.armed_source})` : 'no'} />
+              <Row k="radio rssi / cfo" v={`${radio?.rssi_dbm ?? '–'} dBm / ${radio?.cfo_khz ?? '–'} kHz`} />
+              <Row k="radio hub age" v={radio?.hub?.age_ms != null ? `${radio.hub.age_ms} ms` : '–'} />
+              {radio?.hub && Object.entries(radio.hub).filter(([k]) => k !== 'raw' && k !== 'patched' && k !== 'age_ms').map(([k, v]) => <Row key={`hub-${k}`} k={`hub ${k}`} v={v == null ? '–' : JSON.stringify(v)} />)}
+              {radio?.hub?.patched && Object.entries(radio.hub.patched).map(([k, v]) => <Row key={`hp-${k}`} k={`hub patched ${k}`} v={v == null ? '–' : JSON.stringify(v)} />)}
+              {radio?.hub?.raw && Object.entries(radio.hub.raw).map(([k, v]) => <Row key={`hr-${k}`} k={`hub raw ${k}`} v={String(v)} />)}
+              <Row k="fc attitude" v={fc?.attitude_deg ? JSON.stringify(fc.attitude_deg) : '–'} />
               <Row k="telemetry" v={`${c.telHz} Hz`} cls={c.telHz < 10 ? 'text-warn' : ''} />
             </section>
             <section>
