@@ -32,6 +32,8 @@ The bench setup that stages 0–2 share. Exact commands live in `stage0/README.m
 - Stage apps are unicore like esp-sdr and reserve `0x3ffe8000..0x3fff8000` (the 64 KiB sample
   window).
 
+Unattended bench runs: the Mac idle-sleeps on battery and stalls serial/WS for minutes (looked like a server freeze and an ESP that ignored FOFS on 2026-11-08). Keep one `caffeinate -dimsu` alive for the whole session and check `pmset -g log` for Sleep/DarkWake inside run windows.
+
 **Why:** the 2 Mbaud dead-board and the console-baud config trap each cost a debugging session.
 **How to apply:** check the pins and paths still exist before relying on them; the board or venv
 may have been moved.
