@@ -27,6 +27,7 @@ class FakeFc:
     def rc(self): return [1500] * 8
     def rssi(self): return 90
     def attitude(self): return [1.5, -2.0, 90.0]
+    def motors(self): return [1000, 1100, 1200, 1300]
     def status(self): return {"armed": False, "failsafe": False, "arming_disable": ["RXLOSS"]}
 
 
@@ -76,7 +77,7 @@ def test_info_not_called_while_linked_and_fc_keys(tmp_path):
             s = c.get("/api/status").json()
         assert s["esp"]["info"] == {"proto": 1}
         assert calls == [False]
-        assert set(s["fc"]) >= {"connected", "rc", "armed", "failsafe", "arming_disable", "rssi", "error"}
+        assert set(s["fc"]) >= {"connected", "rc", "armed", "failsafe", "arming_disable", "rssi", "error", "motors"}
 
 
 def test_fc_slow_does_not_block_status(tmp_path):

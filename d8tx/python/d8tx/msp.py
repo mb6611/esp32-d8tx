@@ -3,7 +3,7 @@ import struct
 import threading
 import time
 
-MSP_STATUS, MSP_RC, MSP_ATTITUDE, MSP_ANALOG = 101, 105, 108, 110
+MSP_STATUS, MSP_MOTOR, MSP_RC, MSP_ATTITUDE, MSP_ANALOG = 101, 104, 105, 108, 110
 ARMING_DISABLE = ["NO_GYRO", "FAILSAFE", "RX_FAILSAFE", "BAD_RX_RECOVERY", "BOXFAILSAFE", "RUNAWAY_TAKEOFF",
                   "CRASH_DETECTED", "THROTTLE", "ANGLE", "BOOT_GRACE_TIME", "NOPREARM", "LOAD", "CALIBRATING",
                   "CLI", "CMS_MENU", "BST", "MSP", "PARALYZE", "GPS", "RESC", "RPMFILTER", "REBOOT_REQUIRED",
@@ -80,6 +80,12 @@ def parse_status(p):
             "failsafe": "RX_FAILSAFE" in names or "FAILSAFE" in names}
 
 
+def parse_motors(p):
+    """MSP_MOTOR: 8 x uint16, 1000-2000 (DShot already converted by firmware); first 4, 0 = unused/off."""
+    v = struct.unpack("<%dH" % (len(p) // 2), p[:len(p) // 2 * 2])
+    return [int(x) for x in v[:4]]
+
+
 class BetaflightMSP:
     def __init__(self, port, baud=115200, timeout=0.2, serial_obj=None):
         if serial_obj is None:
@@ -100,6 +106,9 @@ class BetaflightMSP:
 
     def status(self):
         return parse_status(self._req(MSP_STATUS))
+
+    def motors(self):
+        return parse_motors(self._req(MSP_MOTOR))
 
     def rssi(self):
         return parse_analog(self._req(MSP_ANALOG))["rssi"]

@@ -285,7 +285,7 @@ export default function App() {
             </div>
 
             <div className="flex w-[clamp(180px,36vh,360px)] flex-col items-center justify-center gap-1">
-              <DroneView d={drone} />
+              <DroneView d={drone} fc={fc} radioArmed={radio?.armed} throttle={c.sticks.throttle} />
               <ArmSwitch armed={c.armed} progress={c.armProgress} enabled={armEnabled}
                 onDown={c.armPress} onUp={c.armRelease} onDisarm={c.disarm} />
               <div className="font-mono text-[10px] text-muted">hold {Math.round(c.armProgress * 100)}%</div>

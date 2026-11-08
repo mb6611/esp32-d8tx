@@ -86,6 +86,7 @@ export class MockBackend {
         failsafe: this.link ? this.slots < 170 : this.slots > 0, // clears ~1.5 s after the link starts
         arming_disable: armed ? [] : this.link ? ['ARMSWITCH'] : ['RXLOSS'],
         rssi: this.link ? 90 + Math.round(Math.random() * 8) : 0,
+        motors: q.get('msp') === 'off' ? null : armed ? [1300, 1350, 1400, 1450] : [1000, 1000, 1000, 1000],
         attitude_deg: q.get('msp') === 'off' ? null : truth.map((v) => Math.round(v * 10) / 10),
       },
     }

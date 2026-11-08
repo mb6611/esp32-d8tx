@@ -19,6 +19,7 @@ export interface FcStatus {
   arming_disable?: string[]
   rssi?: number
   attitude_deg?: number[] | null
+  motors?: number[] | null
 }
 export interface HubPatched {
   gyro_dps?: number[] | null

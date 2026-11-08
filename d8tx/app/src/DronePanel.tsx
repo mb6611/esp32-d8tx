@@ -94,16 +94,22 @@ export function useDrone(radio?: RadioStatus, fc?: FcStatus) {
 export type Drone = ReturnType<typeof useDrone>
 
 /** Centrepiece: square 3D view with attitude numbers and source label. */
-export function DroneView({ d }: { d: Drone }) {
+export function DroneView({ d, fc, radioArmed, throttle }: { d: Drone; fc?: FcStatus; radioArmed?: boolean | null; throttle?: number }) {
   const { shown, attStale, useFc, useFast, fast, hub, aAtt } = d
+  const m = fc?.connected ? fc.motors : null
+  const mot = m && m.length >= 4 ? m.slice(0, 4) : null
+  const est = !mot && radioArmed === true && throttle != null
+  const spin = mot ? mot.map((v) => Math.max(0, Math.min(1, (v - 1000) / 1000))) : est ? [1, 1, 1, 1].map(() => Math.max(0, Math.min(1, throttle!))) : null
+  const motLabel = mot ? 'motors: MSP' : est ? 'motors: throttle (est.)' : 'stopped'
   return (
     <div className={`flex w-full flex-col items-center ${attStale ? 'text-muted' : ''}`}>
       <Suspense fallback={<div className="aspect-square w-full" />}>
-        <Quad3D att={{ roll: shown?.[0] ?? 0, pitch: shown?.[1] ?? 0, yaw: shown?.[2] ?? null }} dim={attStale || shown == null} tau={useFast ? 150 : 100} />
+        <Quad3D att={{ roll: shown?.[0] ?? 0, pitch: shown?.[1] ?? 0, yaw: shown?.[2] ?? null }} dim={attStale || shown == null} tau={useFast ? 150 : 100} spin={spin} src={attStale ? 'stale' : useFc ? 'fc' : useFast ? 'fast' : 'hub'} />
       </Suspense>
       <div className="font-mono text-[11px] leading-tight tabular-nums">
         R {shown?.[0] != null ? shown[0].toFixed(0) : '–'}° P {shown?.[1] != null ? shown[1].toFixed(0) : '–'}° Y {shown?.[2] != null ? shown[2].toFixed(0) : hub?.heading_deg != null ? `${hub.heading_deg.toFixed(0)}h` : '–'}°
       </div>
+      <div className="font-mono text-[10px] leading-tight text-muted">{motLabel}</div>
       <div className="font-mono text-[10px] leading-tight">
         {useFc ? 'MSP, ~50 Hz' : useFast ? `radio, ~6 Hz · ${fast?.rate_hz != null ? fast.rate_hz.toFixed(1) : '–'} Hz · ${fast?.age_ms != null ? fmtAge(fast.age_ms) : '–'}` : <>radio, slow · {aAtt == null ? 'no data' : fmtAge(aAtt)}</>}
       </div>

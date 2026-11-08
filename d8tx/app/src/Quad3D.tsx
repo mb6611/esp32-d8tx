@@ -7,7 +7,14 @@ const rad = Math.PI / 180
 const wrap = (d: number) => ((((d + 180) % 360) + 360) % 360) - 180
 
 /** Line-drawn quad on a ground grid; rotates with attitude (deg, Betaflight sign convention), eased ~0.3 s. */
-export default function Quad3D({ att, dim, tau = 100 }: { att: Att; dim: boolean; tau?: number }) {
+/** Per-motor speed 0..1 in Betaflight order (1 RR, 2 FR, 3 RL, 4 FL); null = stopped. */
+export type Spin = (number | null)[] | null
+const REV_S = 25 // visual revs/s at full speed
+const SPIN: [number, number, number][] = [[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]] // x, z side, dir (+1 = CW from above)
+
+export default function Quad3D({ att, dim, tau = 100, spin = null, src = '' }: { att: Att; dim: boolean; tau?: number; spin?: Spin; src?: string }) {
+  const spinRef = useRef<Spin>(spin)
+  useEffect(() => { spinRef.current = spin }, [spin])
   const host = useRef<HTMLDivElement>(null)
   const target = useRef<Att>(att)
   // Heading is shown relative to a reference: the first heading received counts as 'forward' (nose away
@@ -15,11 +22,14 @@ export default function Quad3D({ att, dim, tau = 100 }: { att: Att; dim: boolean
   const yawZero = useRef<number | null>(null)
   const tauRef = useRef(tau)
   useEffect(() => { tauRef.current = tau }, [tau])
+  const srcRef = useRef(src)
   useEffect(() => {
+    // yaw zero belongs to one attitude source; a different source (radio vs USB MSP) may have another offset or be stale, so re-capture
+    if (srcRef.current !== src) { srcRef.current = src; yawZero.current = null }
     if (att.yaw != null && yawZero.current == null) yawZero.current = att.yaw
     const y = att.yaw != null ? att.yaw - (yawZero.current ?? 0) : target.current.yaw // yaw unknown: keep last
     target.current = { ...att, yaw: y }
-  }, [att.roll, att.pitch, att.yaw]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [att.roll, att.pitch, att.yaw, src]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const el = host.current
@@ -45,13 +55,20 @@ export default function Quad3D({ att, dim, tau = 100 }: { att: Att; dim: boolean
     const s = 1
     for (const [x, z] of [[s, -s], [-s, s]]) pts.push(x * 0.9, 0, z * 0.9, -x * 0.9, 0, -z * 0.9)
     quad.add(new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(pts, 3)), new THREE.LineBasicMaterial({ color: ink })))
-    for (const [x, z] of [[s, -s], [-s, -s], [s, s], [-s, s]]) {
+    const props: { g: THREE.Group; blades: THREE.Mesh; disc: THREE.Mesh; dir: number }[] = []
+    for (const [x, z, dir] of SPIN) {
       const c = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.12, 12), new THREE.MeshBasicMaterial({ color: ink }))
       c.position.set(x * 0.9, 0.06, z * 0.9)
-      const prop = new THREE.Mesh(new THREE.RingGeometry(0.4, 0.43, 28), new THREE.MeshBasicMaterial({ color: z < 0 ? red : grey, side: THREE.DoubleSide })) // front props red
-      prop.rotation.x = -Math.PI / 2
-      prop.position.set(x * 0.9, 0.14, z * 0.9)
-      quad.add(c, prop)
+      const col = z < 0 ? red : grey // front props red
+      const g = new THREE.Group()
+      g.position.set(x * 0.9, 0.15, z * 0.9)
+      const blades = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.07), new THREE.MeshBasicMaterial({ color: col, side: THREE.DoubleSide, transparent: true }))
+      blades.rotation.x = -Math.PI / 2
+      const disc = new THREE.Mesh(new THREE.CircleGeometry(0.4, 28), new THREE.MeshBasicMaterial({ color: col, side: THREE.DoubleSide, transparent: true, opacity: 0.05, depthWrite: false }))
+      disc.rotation.x = -Math.PI / 2
+      g.add(disc, blades)
+      quad.add(c, g)
+      props.push({ g, blades, disc, dir })
     }
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 0.7), new THREE.MeshBasicMaterial({ color: grey }))
     quad.add(body)
@@ -73,13 +90,21 @@ export default function Quad3D({ att, dim, tau = 100 }: { att: Att; dim: boolean
       cam.updateProjectionMatrix()
     })
     ro.observe(el)
-    let last = performance.now(), raf = 0
+    let last = performance.now(), raf = 0, tPrev = last
     const loop = (t: number) => {
       const k = 1 - Math.exp(-(t - last) / tauRef.current) // ~0.3 s to settle
       last = t
       const g = target.current
       cur.roll += (g.roll - cur.roll) * k
       cur.pitch += (g.pitch - cur.pitch) * k
+      const dt = Math.min(0.1, (t - tPrev) / 1000)
+      tPrev = t
+      props.forEach((p, i) => {
+        const f = Math.max(0, Math.min(1, spinRef.current?.[i] ?? 0))
+        p.g.rotation.y -= p.dir * f * REV_S * 2 * Math.PI * dt // CW from above = negative about +y
+        ;(p.blades.material as THREE.MeshBasicMaterial).opacity = 1 - 0.75 * f
+        ;(p.disc.material as THREE.MeshBasicMaterial).opacity = 0.05 + 0.15 * f
+      })
       cur.yaw += wrap((g.yaw ?? 0) - cur.yaw) * k
       quad.rotation.set(-cur.pitch * rad, -cur.yaw * rad, -cur.roll * rad, 'YXZ') // camera is behind the model (nose -z, away from viewer); Betaflight heading grows clockwise, so the nose turns right as yaw grows (bench: 152->268 deg turning right)
       renderer.render(scene, cam)
