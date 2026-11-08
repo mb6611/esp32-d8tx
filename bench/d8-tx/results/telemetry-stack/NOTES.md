@@ -23,3 +23,19 @@ fc_10min_b.jsonl.gz (600 s, backend --fc-port, sticks 20 Hz, arm low, 28580 WS m
 Catch overall 1387/1395 = 0.994 (final catch_rate field 1.0). Per minute: 1.000, 1.000, 0.972, 1.000, 1.000, 1.000, 0.979, 1.000, 0.993, 1.000.
 age_ms p50 215 / p95 410 / max 849. Sender 111 Hz, 66706 sent, skipped 0, max sender gap 26.3 ms, late_max 799 us (earlier 60 s run: 173 us). Never armed (radio and FC), fc error None.
 409 'no reply to FOFS' reproduced twice at first: ESP was found streaming raw 0x80/0x00 data (stale stage firmware output / old link) so did not answer; RTS reset fixed PING (OK proto=1). Then a 409 again because the server's own serial open reboots the ESP (DTR/RTS) and start was posted before boot finished; manual retry a few seconds later returned ok. Workaround: wait ~3 s after server start before /api/link/start (a fix would be a retry/boot wait in link.start - not done, no source edits).
+
+## Hub stall in 10-min run (offline analysis, 2026-11-08; no hardware)
+Symptom (fc_10min_b): hub frames on replies 1-29 only (t <= 12.9 s), none on replies 30..1387, while replies kept arriving.
+Cause: Betaflight, not d8tx. cc2500_frsky_d.c appendFrSkyHubData calls processFrSkyHubTelemetry only on an acked request with an empty buffer,
+and frsky_hub.c L517 skips the cycle while `cmpTimeUs(now, frSkyHubLastCycleTime) < 125000`. cmpTimeUs is (int32)(a - b) on uint32 micros
+(no USE_64BIT_TIME on F411), and a skipped cycle does not update frSkyHubLastCycleTime. So when the gap since the last hub cycle (or boot) is
+2^31..2^32 us (35.8..71.6 min), every ack returns 0 hub bytes until the gap passes 71.6 min. Here: last cycle at the end of nofc_arm (~11:06:01),
+stall from 12:06:44 = 60.7 min; it would have cleared ~12:17:36, ~65 s after the run ended (12:16:31).
+Evidence: hub-stall/model.py replays BF's buffer logic (patched odd cycle: STATUS, ARMING_DISABLE, GYRO, ACC, tail = 33 B; drone left at
+sent 20 / acked 10, expected id 27; server restart reset our id to 0) through the real d8tx Tracker and matches the log reply by reply:
+replies 1-27 = stale resend of bytes 10..19 (GYRO Y/Z only, GYRO X header cut off), 28 = ACC X/Y, 29 = ACC Z + tail, 30+ = nothing; with a
+10-min gap the same model keeps decoding. `d8tx/python/.venv/bin/python hub-stall/model.py e2e/fc_10min_b.jsonl.gz` -> "log matches the model".
+STATUS was never seen because the stall hit the first fresh cycle. Not directly observed: per-reply hub byte counts (the WS snapshot does not
+carry hub_count) and whether the FC rebooted between 11:06 and 12:06 (a boot 36..72 min before 12:06 would stall the same way).
+d8tx library: TID ack/resend, duplicate skip, 0x5D stuffing and chunk splitting behave as Betaflight does; no library change.
+Fix (not done, firmware): in patch 0001 treat a negative delta as due, e.g. `const timeDelta_t d = cmpTimeUs(...); if (d >= 0 && d < CYCLE) return;`.
