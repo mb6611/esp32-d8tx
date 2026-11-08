@@ -64,8 +64,8 @@ cmd_t cmd_parse(char *line) {
         c.kind = CMD_LINK;
         return c;
     }
-    if (!strcmp(tok[0], "TLM")) { /* TLM every [cap_us] [gain] [dec] [same]: telemetry listen for later LINKs */
-        if (n < 2 || n > 6) return fail("args");
+    if (!strcmp(tok[0], "TLM")) { /* TLM every [cap_us] [gain] [dec] [same] [stream] [ack]: telemetry listen for later LINKs */
+        if (n < 2 || n > 8) return fail("args");
         if (!parse_int(tok[1], 0, TLM_EVERY_MAX, &v) || (v && v < TLM_EVERY_MIN)) return fail("every");
         c.tlm_every = (unsigned)v;
         c.cap_us = TLM_CAP_US_DEF; c.gain = TLM_GAIN_DEF; c.dec = TLM_DEC_DEF; c.same = 0;
@@ -73,8 +73,17 @@ cmd_t cmd_parse(char *line) {
         if (n >= 4) { if (!parse_int(tok[3], -1, TLM_GAIN_MAX, &v)) return fail("gain"); c.gain = (int)v; }
         if (n >= 5) { if (!parse_int(tok[4], 16, 64, &v) || (v != 16 && v != 32 && v != 64)) return fail("dec"); c.dec = (unsigned)v; }
         if (n >= 6) { if (!parse_int(tok[5], 0, 1, &v)) return fail("same"); c.same = (int)v; }
+        if (n >= 7) { if (!parse_int(tok[6], 0, 1, &v)) return fail("stream"); c.stream = (int)v; }
+        if (n >= 8) { if (!parse_int(tok[7], 0, 1, &v)) return fail("ack"); c.ack = (int)v; }
         if (c.cap_us * 16u / c.dec > 6000u) return fail("cap_us");
         c.kind = CMD_TLM;
+        return c;
+    }
+    if (!strcmp(tok[0], "TID")) { /* TID n: telemetry id for the next trigger (host ack/resend; silent during LINK) */
+        if (n != 2) return fail("args");
+        if (!parse_int(tok[1], 0, 31, &v)) return fail("tid");
+        c.tid = (unsigned)v;
+        c.kind = CMD_TID;
         return c;
     }
     if (!strcmp(tok[0], "TCAP")) { /* TCAP khz [cap_us] [gain] [dec] [pwr]: one capture; pwr>=0 keys one data packet first */

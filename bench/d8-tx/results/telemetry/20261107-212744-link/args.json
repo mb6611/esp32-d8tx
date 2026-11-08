@@ -1,0 +1,17 @@
+{
+ "port": "/dev/cu.usbserial-0001",
+ "mode": "link",
+ "cap_us": 9000,
+ "gain": 40,
+ "dec": 32,
+ "fofs": -50000,
+ "seconds": 60.0,
+ "every": 48,
+ "power": 127,
+ "timeout": 1000,
+ "same": false,
+ "stream": true,
+ "ack": true,
+ "tid0": 0,
+ "msp": "/dev/cu.usbmodem0x80000001"
+}

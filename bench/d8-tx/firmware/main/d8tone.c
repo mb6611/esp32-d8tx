@@ -28,9 +28,15 @@
  *                              critical section), then WDT feed + UART poll; any UART byte aborts. LO is
  *                              restored to 2412 MHz afterwards. Reply:
  *                              K,hop,slots=N,late_max_us=X,retune_max_us=Y then OK. ERR -> unkeyed.
- *   TLM every [cap_us] [gain] [dec] [same]   telemetry listen for later LINKs (default off; d8tx/PROTOCOL.md):
- *                              every Nth slot sends byte3=2, byte4=tid, then unkeys, retunes to the listen channel
- *                              and runs a 16 MS/s ring capture (tlm_cap.c), shipped as EV tlm + binary.
+ *   TLM every [cap_us] [gain] [dec] [same] [stream] [ack]   telemetry listen for later LINKs (default off;
+ *                              d8tx/PROTOCOL.md): every Nth slot sends byte3=2, byte4=tid, then unkeys, retunes to the
+ *                              listen channel and runs a 16 MS/s ring capture (tlm_cap.c), shipped as EV tlm + binary.
+ *                              stream=0: int16 dump, blocking (LINK sends nothing for ~0.2 s). stream=1: int8 (bits=8,
+ *                              sh=right shift) pushed into the UART FIFO between slots while LINK keeps its schedule; the
+ *                              next trigger waits until the capture is out. ack=1: the id is not advanced by the
+ *                              firmware; the host sends TID n after each capture (n = id+1 if the reply was received,
+ *                              else the same id) and the next trigger waits for it (<=1 s, then resends the same id).
+ *   TID n                      telemetry id for the next trigger (0..31). Silent during LINK; idle: sets the first id.
  *   TCAP khz [cap_us] [gain] [dec] [pwr]     one such capture, optionally right after keying one data packet.
  * Results are printed only after unkey:
  *   K,<mode>,fa,fb,half_us,req_us,pwr,on_us,key_total_us,key_cycles,unkey_cycles,b8_on,b8_end,b8_off,a8_on,a8_off,ntrans
@@ -284,6 +290,37 @@ static void lo_retune(uint32_t f10) {
 
 static bool v1_link; /* current run_hop was started by LINK (protocol v1 events/replies) */
 
+/* ---- telemetry listen state (TLM / TCAP; off unless TLM every > 0 was sent) ---- */
+static struct { unsigned every, cap_us, dec; int gain, same, stream, ack; } tlm = {0, TLM_CAP_US_DEF, TLM_DEC_DEF, TLM_GAIN_DEF, 0, 0, 0};
+static unsigned tlm_tid, tlm_tid_init, tlm_n, gain_max = 127;
+static bool tid_ready; /* ack mode: a TID arrived since the last capture */
+
+/* Background shipping (TLM stream=1): header line, raw bytes, "\n", pushed into the UART TX FIFO with
+ * uart_tx_chars (never blocks) from the LINK idle gaps. Nothing else may print while busy. */
+static struct { char hdr[320]; unsigned hlen, blen, pos; const uint8_t *data; bool busy; } shp;
+/* A finished capture waiting for its int8 conversion (~1.3 ms of CPU), done in the idle gap after the resume slot
+ * so it never delays a packet. */
+static struct { bool on; unsigned after_k, k, ch, tid, n_out, dec; uint32_t u0; unsigned phase, i, m, sh; } shp_pend;
+
+static void ship_pump(void) {
+    while (shp.busy) {
+        const char *p;
+        unsigned n;
+        if (shp.pos < shp.hlen) { p = shp.hdr + shp.pos; n = shp.hlen - shp.pos; }
+        else if (shp.pos < shp.hlen + shp.blen) { p = (const char *)shp.data + (shp.pos - shp.hlen); n = shp.hlen + shp.blen - shp.pos; }
+        else { p = "\n"; n = 1; }
+        int w = uart_tx_chars(UART_NUM_0, p, n);
+        if (w <= 0) return;
+        shp.pos += (unsigned)w;
+        if (shp.pos >= shp.hlen + shp.blen + 1u) shp.busy = false;
+    }
+}
+
+static void ship_finish(void) {
+    while (shp.busy) { ship_pump(); feed(); }
+    uart_wait_tx_done(UART_NUM_0, pdMS_TO_TICKS(1000));
+}
+
 /* Protocol v1 error line: ERR <code> <text>. */
 static void print_err_v1(const char *why) {
     const char *code = err_code(why);
@@ -314,7 +351,9 @@ static int hop_drain(line_in_t *li, const char **err, int64_t *last_s_us) {
             continue;
         }
         if (c.kind == CMD_UNKEY) return 1;
+        if (c.kind == CMD_TID) { tlm_tid = c.tid; tid_ready = true; continue; }
         if (c.kind == CMD_STAT) {
+            if (shp.busy) continue; /* a capture is going out: no text in the middle of it */
             printf("OK keyed=%d link=1 fofs=%d armok=%d\n", keyed, fofs_hz, arm_ok);
             fflush(stdout);
             continue;
@@ -325,10 +364,7 @@ static int hop_drain(line_in_t *li, const char **err, int64_t *last_s_us) {
     return 0;
 }
 
-/* ---- telemetry listen (TLM / TCAP; off unless TLM every > 0 was sent) ---- */
-static struct { unsigned every, cap_us, dec; int gain, same; } tlm = {0, TLM_CAP_US_DEF, TLM_DEC_DEF, TLM_GAIN_DEF, 0};
-static unsigned tlm_tid, tlm_n, gain_max = 127;
-
+/* ---- telemetry listen: capture and shipping ---- */
 /* Called with the mux held, right after the last air bit: unkey, retune to f10, set RX gain, capture.
  * Returns CCOUNT at unkey start (turnaround = r->start_cyc - return value). */
 static uint32_t tlm_listen(uint32_t f10, int gain, unsigned n_out, unsigned dec, tcap_res_t *r) {
@@ -359,6 +395,45 @@ static void tlm_dump(unsigned k, unsigned ch, unsigned tid, unsigned n_out, unsi
     uart_write_bytes(UART_NUM_0, "\n", 1);
     uart_wait_tx_done(UART_NUM_0, pdMS_TO_TICKS(1000));
     feed();
+}
+
+/* Stream mode: int16 capture -> int8 in place (common right shift sh so the peak fits), then queue header + bytes.
+ * Done in chunks of 512 values (phase 0: peak scan, 1: convert) so it fits the ~1.9 ms idle gaps between packets.
+ * Returns true when the capture has been queued for shipping. */
+static bool tlm_ship_step(const tcap_res_t *r) {
+    int16_t *s = tcap_buffer();
+    int8_t *d = (int8_t *)s;
+    const unsigned n = 2u * shp_pend.n_out;
+    unsigned e = shp_pend.i + 512u < n ? shp_pend.i + 512u : n;
+    if (shp_pend.phase == 0) {
+        for (unsigned i = shp_pend.i; i < e; i++) { int v = s[i] < 0 ? -s[i] : s[i]; if ((unsigned)v > shp_pend.m) shp_pend.m = (unsigned)v; }
+        shp_pend.i = e;
+        if (e == n) {
+            shp_pend.sh = 0;
+            while ((shp_pend.m >> shp_pend.sh) > 127u) shp_pend.sh++;
+            shp_pend.phase = 1;
+            shp_pend.i = 0;
+        }
+        return false;
+    }
+    for (unsigned i = shp_pend.i; i < e; i++) d[i] = (int8_t)(s[i] >> shp_pend.sh); /* byte i overwrites s[i/2], already read */
+    shp_pend.i = e;
+    if (e < n) return false;
+    uint32_t crc = esp_rom_crc32_le(0, (const uint8_t *)d, n);
+    uint32_t turn = r->start_cyc - shp_pend.u0;
+    int h = snprintf(shp.hdr, sizeof shp.hdr, "EV tlm k=%u ch=%u tid=%u fs=%u n=%u dec=%u turn_ns=%" PRIu32 " run_us=%" PRIu32
+                     " g0=%" PRIu32 " g1=%" PRIu32 " lost=%" PRIu32 " bad=%" PRIu32 " late=%" PRIu32 " work=%" PRIu32
+                     " units=%" PRIu32 " to=%d bits=8 sh=%u bytes=%u crc=%08" PRIx32 "\n",
+                     shp_pend.k, shp_pend.ch, shp_pend.tid, TCAP_RATE_HZ / shp_pend.dec, shp_pend.n_out, shp_pend.dec,
+                     turn * 1000u / CYC_PER_US, (r->end_cyc - r->start_cyc) / CYC_PER_US, r->gain_first, r->gain_last, r->lost,
+                     r->bad, r->late_max, r->work_max, r->units, r->timeout, shp_pend.sh, n, crc);
+    shp.hlen = h < (int)sizeof shp.hdr ? (unsigned)h : sizeof shp.hdr - 1;
+    shp.data = (const uint8_t *)d;
+    shp.blen = n;
+    shp.pos = 0;
+    shp.busy = true;
+    shp_pend.on = false;
+    return true;
 }
 
 static void run_tcap(const cmd_t *c) {
@@ -396,7 +471,10 @@ static void run_hop(const cmd_t *c) {
     const bool tlm_link = v1_link && tlm.every; /* TLM applies to LINK only */
     const unsigned n_out = tlm.cap_us * 16u / tlm.dec;
     tcap_res_t tr;
-    tlm_tid = 0;
+    tlm_tid = tlm_tid_init;
+    tid_ready = true;
+    unsigned next_trig = tlm.every;
+    int64_t ack_t0 = 0;
     if (v1_link) { printf("OK\n"); fflush(stdout); }
     feed();
     int64_t last_s_us = esp_timer_get_time(), last_st_us = last_s_us;
@@ -404,13 +482,18 @@ static void run_hop(const cmd_t *c) {
     uint32_t slot_start = base; /* scheduled start of the current slot */
     for (unsigned k = 0; (cont || k < c->n_slots) && !abort; k++) {
         d8_build_body(D8_TXID0, D8_TXID1, (uint8_t)k, sticks_raw, body);
-        const bool trig = tlm_link && k >= tlm.every && k % tlm.every == 0;
+        const bool due = tlm.stream ? k >= next_trig && !shp.busy && !shp_pend.on : k >= tlm.every && k % tlm.every == 0;
+        const bool trig = tlm_link && due && (!tlm.ack || tid_ready || esp_timer_get_time() - ack_t0 > 1000000);
         if (trig) { d8_mark_telemetry(body, (uint8_t)tlm_tid); tcap_prepare(n_out); }
         if (!d8_air_bytes(body, D8_BODY_BYTES, air)) { printf("ERR packet\n"); abort = true; abort_pkt = true; why = "packet"; break; }
         uint32_t f10 = d8_channel_f10(tab[k % D8_HOP_CHANNELS]);
         while ((int32_t)(cyc() - slot_start) < 0) { /* wait for the slot (interrupts on) */
+            if (shp_pend.on && k >= shp_pend.after_k && (int32_t)(cyc() - slot_start) < -(int32_t)(400u * CYC_PER_US))
+                tlm_ship_step(&tr);
+            ship_pump();
             if (cont && hop_drain(&hli, &err, &last_s_us)) { abort = true; break; }
         }
+        ship_pump();
         if (abort) { why = err ? "err" : "stop"; break; }
         uint32_t late = cyc() - slot_start;
         if (late > HOP_SLOT_CYC) slot_start = cyc(); /* overran a whole slot: resync, don't burst */
@@ -429,10 +512,30 @@ static void run_hop(const cmd_t *c) {
         else unkey();
         portEXIT_CRITICAL(&mux);
         sent++;
+        if (trig && tlm.stream) { /* resume at the first future slot >= k+2 (k+1 was the listen slot); the capture
+                                   * goes out in the background from the following idle gaps */
+            uint32_t next = slot_start + 2u * HOP_SLOT_CYC;
+            unsigned j = k + 2;
+            while ((int32_t)(cyc() - next) >= 0) { next += HOP_SLOT_CYC; j++; }
+            unsigned lch = tab[(k + (tlm.same ? 0 : 1)) % D8_HOP_CHANNELS];
+            shp_pend.on = true; shp_pend.after_k = j + 1; shp_pend.k = k; shp_pend.ch = lch; shp_pend.tid = tlm_tid;
+            shp_pend.n_out = n_out; shp_pend.dec = tlm.dec; shp_pend.u0 = u0;
+            shp_pend.phase = 0; shp_pend.i = 0; shp_pend.m = 0;
+            if (!tlm.ack) tlm_tid = (tlm_tid + 1u) & 0x1fu;
+            tid_ready = false;
+            ack_t0 = esp_timer_get_time();
+            tlm_n++;
+            next_trig = k + tlm.every;
+            slot_start = next;
+            k = j - 1; /* loop ++ */
+            continue;
+        }
         if (trig) { /* ship the capture, then resume at the first future slot >= k+2 (k+1 was the listen slot) */
             unsigned lch = tab[(k + (tlm.same ? 0 : 1)) % D8_HOP_CHANNELS];
             tlm_dump(k, lch, tlm_tid, n_out, tlm.dec, u0, &tr);
-            tlm_tid = (tlm_tid + 1u) & 0x1fu;
+            if (!tlm.ack) tlm_tid = (tlm_tid + 1u) & 0x1fu;
+            tid_ready = false;
+            ack_t0 = esp_timer_get_time();
             tlm_n++;
             if (hop_drain(&hli, &err, &last_s_us)) { abort = true; why = err ? "err" : "stop"; break; }
             uint32_t next = slot_start + 2u * HOP_SLOT_CYC;
@@ -445,7 +548,7 @@ static void run_hop(const cmd_t *c) {
         slot_start += HOP_SLOT_CYC;
         if (cont) {
             int64_t now = esp_timer_get_time();
-            if (now - last_st_us >= 1000000) { /* <=1 short status line per second */
+            if (now - last_st_us >= 1000000 && !shp.busy) { /* <=1 short status line per second */
                 last_st_us = now;
                 if (v1_link) printf("EV link slots=%u late_max_us=%" PRIu32 "\n", sent, late_max / CYC_PER_US);
                 else printf("K,hop,s=%u\n", sent);
@@ -456,6 +559,8 @@ static void run_hop(const cmd_t *c) {
         }
     }
     if (keyed) unkey();
+    while (shp_pend.on) tlm_ship_step(&tr); /* LINK ended before the capture went out */
+    ship_finish();
     lo_retune(241200000u); /* 2412 MHz = 241,200,000 x 10 Hz */
     lo_off = false;
     if (v1_link) {
@@ -544,9 +649,11 @@ void app_main(void) {
         case CMD_PKT: run_packet(&c); break;
         case CMD_TLM:
             tlm.every = c.tlm_every; tlm.cap_us = c.cap_us; tlm.gain = c.gain; tlm.dec = c.dec; tlm.same = c.same;
-            printf("OK every=%u cap_us=%u gain=%d dec=%u same=%d n=%u gain_max=%u\n", tlm.every, tlm.cap_us, tlm.gain,
-                   tlm.dec, tlm.same, tlm.cap_us * 16u / tlm.dec, gain_max);
+            tlm.stream = c.stream; tlm.ack = c.ack;
+            printf("OK every=%u cap_us=%u gain=%d dec=%u same=%d stream=%d ack=%d n=%u gain_max=%u\n", tlm.every, tlm.cap_us,
+                   tlm.gain, tlm.dec, tlm.same, tlm.stream, tlm.ack, tlm.cap_us * 16u / tlm.dec, gain_max);
             break;
+        case CMD_TID: tlm_tid_init = c.tid; printf("OK tid=%u\n", c.tid); break;
         case CMD_TCAP: run_tcap(&c); break;
         }
         fflush(stdout);

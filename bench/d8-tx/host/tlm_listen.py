@@ -6,8 +6,11 @@ bench/d8-tx/results/telemetry/<run>/, and decodes it with host/esp32sdr/d8.py, l
 for a CRC-valid 18-byte FrSky D8 telemetry frame 0x11, 66, 178, A1, A2, RSSI, hub count,
 telemetry id, hub bytes.
 
-    # battery-on trial: LINK with a telemetry trigger every 47 slots, ~20 s
+    # battery-on trial: LINK with a telemetry trigger every 47 slots, ~20 s (old blocking dump)
     python tlm_listen.py link --seconds 20 --every 47 --power 127 --fofs -50000
+    # LINK keeps sending while the capture goes out (int8), host acks the telemetry id, MSP log
+    python tlm_listen.py link --seconds 60 --every 48 --power 127 --fofs -50000 --stream --ack \
+        --cap-us 9000 --msp /dev/cu.usbmodem0x80000001
     # one capture, no keying (receiver check; 2440 MHz has a 40 MHz crystal harmonic)
     python tlm_listen.py tcap 2439900
     # one capture right after keying one data packet on that channel (turnaround check)
@@ -34,6 +37,8 @@ import numpy as np
 _ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
 sys.path.insert(0, os.path.join(_ROOT, "host"))
 from esp32sdr import d8  # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from d8hub import HubParser, acc_g, next_tid  # noqa: E402
 
 RESULTS = os.path.join(_ROOT, "bench", "d8-tx", "results", "telemetry")
 TXID = (66, 178)
@@ -43,9 +48,9 @@ RE_KV = re.compile(r"(\w+)=(-?[0-9a-fA-F]+)")
 
 
 # ---------------------------------------------------------------- decoding
-def load_iq(raw: bytes, n: int) -> np.ndarray:
-    """int16 LE I,Q interleaved -> complex, Q negated (RF = LO + f, as host CAP16 decoding)."""
-    a = np.frombuffer(raw, "<i2").astype(np.float64).reshape(-1, 2)[:n]
+def load_iq(raw: bytes, n: int, bits: int = 16) -> np.ndarray:
+    """int16 LE (or int8, TLM stream=1) I,Q interleaved -> complex, Q negated (RF = LO + f, as host CAP16 decoding)."""
+    a = np.frombuffer(raw, "<i2" if bits == 16 else "i1").astype(np.float64).reshape(-1, 2)[:n]
     return a[:, 0] - 1j * a[:, 1]
 
 
@@ -152,7 +157,7 @@ def save(run_dir: str, idx: int, meta: dict, data: bytes, extra: dict) -> dict:
     with open(base + ".iq16", "wb") as f:
         f.write(data)
     fs = 16e6 / meta["dec"]
-    iq = load_iq(data, meta["n"])
+    iq = load_iq(data, meta["n"], meta.get("bits", 16))
     rec = dict(meta, **extra, fs=fs, file=os.path.basename(base) + ".iq16")
     rec["stats"] = stats(iq, fs)
     rec["frames"] = decode_capture(iq, fs) if meta["crc_ok"] else []
@@ -207,10 +212,34 @@ def mode_link(a) -> None:
     print(b.cmd("PING"))
     if a.fofs is not None:
         print(b.cmd(f"FOFS {a.fofs}"))
-    print(b.cmd(f"TLM {a.every} {a.cap_us} {a.gain} {a.dec} {1 if a.same else 0}"))
+    print(b.cmd(f"TLM {a.every} {a.cap_us} {a.gain} {a.dec} {1 if a.same else 0} {int(a.stream)} {int(a.ack)}"))
+    print(b.cmd(f"TID {a.tid0}"))
     rd = run_dir_for("link")
     stop = threading.Event()
     lock = threading.Lock()
+    os.makedirs(rd, exist_ok=True)
+    json.dump(vars(a), open(os.path.join(rd, "args.json"), "w"), indent=1)
+    hub = HubParser()
+    hub_bytes = 0
+    msp_th = None
+    if a.msp:
+        import bf_msp
+        import serial
+
+        def msp_watch():
+            port = serial.Serial(a.msp, 115200, timeout=0.05)
+            with open(os.path.join(rd, "msp.log"), "w") as f:
+                while not stop.is_set():
+                    try:
+                        line = bf_msp.row(bf_msp.sample(port))
+                    except (TimeoutError, ValueError) as e:
+                        line = "%.3f ERR %s" % (time.time(), e)
+                    f.write(line + "\n")
+                    f.flush()
+                    time.sleep(0.1)
+            port.close()
+        msp_th = threading.Thread(target=msp_watch, daemon=True)
+        msp_th.start()
 
     def sender():
         nxt = time.perf_counter()
@@ -234,7 +263,6 @@ def mode_link(a) -> None:
     th.start()
     t_end = time.time() + a.seconds
     n_cap = n_tel = 0
-    os.makedirs(rd, exist_ok=True)
     log = open(os.path.join(rd, "events.log"), "w")
     try:
         while time.time() < t_end:
@@ -247,8 +275,19 @@ def mode_link(a) -> None:
                 rec = save(rd, n_cap, meta, data, {"mode": "link", "power": a.power, "fofs": a.fofs,
                                                     "every": a.every, "same": a.same})
                 n_cap += 1
-                n_tel += any(h["telemetry"] for h in rec["frames"])
+                tel = [h for h in rec["frames"] if h["telemetry"]]
+                n_tel += bool(tel)
                 print(summary_line(rec))
+                if tel and tel[0]["hub_count"]:
+                    hb = bytes.fromhex(tel[0]["hub"])
+                    hub_bytes += len(hb)
+                    for f in hub.feed(hb):
+                        print("  hub", f[1], f[2], acc_g([f]) or "")
+                if a.ack:
+                    nt = next_tid(meta["tid"], [h["telemetry_id"] for h in tel])
+                    with lock:
+                        b.s.write(f"TID {nt}\n".encode())
+                    log.write(f"{time.time():.3f} host TID {nt}\n")
             elif line.startswith("EV link_end"):
                 print("<", line)
                 break
@@ -272,7 +311,12 @@ def mode_link(a) -> None:
                 break
         b.cmd("TLM 0")
         log.close()
-    print(f"captures={n_cap} with_telemetry={n_tel} saved {rd}")
+        if msp_th:
+            msp_th.join(1)
+    json.dump({"captures": n_cap, "with_telemetry": n_tel, "hub_bytes": hub_bytes,
+               "hub_frames": [list(f) for f in hub.frames], "acc_g": acc_g(hub.frames)},
+              open(os.path.join(rd, "result.json"), "w"), indent=1)
+    print(f"captures={n_cap} with_telemetry={n_tel} hub_bytes={hub_bytes} hub_frames={len(hub.frames)} saved {rd}")
 
 
 def mode_decode(a) -> None:
@@ -282,7 +326,7 @@ def mode_decode(a) -> None:
         path = os.path.join(a.dir, name)
         rec = json.load(open(path))
         data = open(os.path.join(a.dir, rec["file"]), "rb").read()
-        iq = load_iq(data, rec["n"])
+        iq = load_iq(data, rec["n"], rec.get("bits", 16))
         rec["stats"] = stats(iq, rec["fs"])
         rec["frames"] = decode_capture(iq, rec["fs"])
         json.dump(rec, open(path, "w"), indent=1)
@@ -307,6 +351,10 @@ def main(argv=None) -> None:
     p.add_argument("--power", type=int, default=127)
     p.add_argument("--timeout", type=int, default=1000)
     p.add_argument("--same", action="store_true", help="listen on the trigger channel (default: next hop channel)")
+    p.add_argument("--stream", action="store_true", help="TLM stream=1: int8 capture shipped while LINK keeps sending")
+    p.add_argument("--ack", action="store_true", help="TLM ack=1: host sends TID (id+1 after a reply, same id after a miss)")
+    p.add_argument("--tid0", type=int, default=0, help="first telemetry id")
+    p.add_argument("--msp", default=None, help="FC MSP port: log RSSI/failsafe to msp.log every 0.1 s")
     p = sub.add_parser("tcap")
     common(p)
     p.add_argument("khz", type=int)
