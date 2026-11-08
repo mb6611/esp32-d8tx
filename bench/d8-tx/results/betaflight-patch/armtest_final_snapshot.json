@@ -1,0 +1,73 @@
+{
+ "enabled": true,
+ "powered": true,
+ "link": true,
+ "age_ms": 412,
+ "catch_rate": 1.0,
+ "triggers": 80,
+ "replies": 73,
+ "rssi": 84,
+ "rssi_dbm": -55.1,
+ "a1_raw": 0,
+ "a2_raw": 0,
+ "vbat_v": 0.0,
+ "battery": "absent",
+ "cfo_khz": -13.57,
+ "hub": {
+  "acc_mg": [
+   -28,
+   -47,
+   1004
+  ],
+  "heading_deg": null,
+  "rpm": 0,
+  "vfas_v": 0.0,
+  "current_a": 0.0,
+  "fuel": 0,
+  "temp1": 0,
+  "temp2": null,
+  "patched": {
+   "armed": false,
+   "angle": false,
+   "horizon": true,
+   "failsafe": false,
+   "arming_disabled": false,
+   "acro": false,
+   "flight_mode": "horizon",
+   "arming_disable_flags": 0,
+   "gyro_dps": [
+    -0.1,
+    -0.1,
+    0.0
+   ],
+   "attitude_deg": [
+    -2.6,
+    1.6,
+    357.90000000000003
+   ]
+  },
+  "raw": {
+   "0x02": 0,
+   "0x03": 0,
+   "0x04": 0,
+   "0x06": 0,
+   "0x24": -28,
+   "0x25": -47,
+   "0x26": 1004,
+   "0x28": 0,
+   "0x3A": 0,
+   "0x3B": 0,
+   "0x40": -1,
+   "0x41": -1,
+   "0x42": 0,
+   "0x43": -26,
+   "0x44": 16,
+   "0x45": 3579,
+   "0x46": 4,
+   "0x47": 0
+  },
+  "age_ms": 412
+ },
+ "armed": false,
+ "armed_source": "patched"
+}

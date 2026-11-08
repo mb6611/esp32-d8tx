@@ -1,0 +1,1 @@
+f0f30b990fa51aa044ca39250a6d01f26296109502c77586ccb9fab0fc7fca22  bench/betaflight-patch/out/f9420b39/betaflight_4.2.11_MATEKF411RX_.bin

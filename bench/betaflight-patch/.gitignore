@@ -1,0 +1,5 @@
+work/
+out/*/*
+!out/*/SHA256SUMS
+!out/*/BUILD_ID
+!out/*/size.txt

@@ -1,0 +1,223 @@
+feature
+
+# get frsky_spi
+frsky_spi_autobind = OFF
+Allowed values: OFF, ON
+
+frsky_spi_tx_id = 66,178
+Array length: 2
+Default value: 0,0
+
+frsky_spi_offset = -32
+Allowed range: -127 - 127
+Default value: 0
+
+frsky_spi_bind_hop_data = 0,57,112,167,222,21,76,131,186,241,40,95,150,205,4,59,114,169,224,23,78,133,188,243,42,97,152,207,6,61,116,171,226,25,80,135,190,245,44,99,154,209,8,63,118,173,228,0,0,0
+Array length: 50
+Default value: 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+frsky_spi_a1_source = VBAT
+Allowed values: VBAT, EXTADC, CONST
+
+# get rx_spi
+rx_spi_protocol = FRSKY_D
+Allowed values: V202_250K, V202_1M, SYMA_X, SYMA_X5C, CX10, CX10A, H8_3D, INAV, FRSKY_D, FRSKY_X, FLYSKY, FLYSKY_2A, KN, SFHSS, SPEKTRUM, FRSKY_X_LBT, REDPINE
+Default value: FRSKY_X
+
+rx_spi_bus = 3
+Allowed range: 0 - 3
+
+rx_spi_led_inversion = ON
+Allowed values: OFF, ON
+
+# get current_meter
+current_meter = ADC
+Allowed values: NONE, ADC, VIRTUAL, ESC, MSP
+
+# get battery_meter
+battery_meter = ADC
+Allowed values: NONE, ADC, ESC
+
+# get ibata
+ibata_scale = 179
+Allowed range: -16000 - 16000
+
+ibata_offset = 0
+Allowed range: -32000 - 32000
+
+# get beeper
+beeper_inversion = ON
+Allowed values: OFF, ON
+
+beeper_od = OFF
+Allowed values: OFF, ON
+
+beeper_frequency = 0
+Allowed range: 0 - 16000
+
+beeper_dshot_beacon_tone = 1
+Allowed range: 1 - 5
+
+ledstrip_visual_beeper = OFF
+Allowed values: OFF, ON
+
+ledstrip_visual_beeper_color = ORANGE
+Allowed values: BLACK, WHITE, RED, ORANGE, YELLOW, LIME_GREEN, GREEN, MINT_GREEN, CYAN, LIGHT_BLUE, BLUE, DARK_VIOLET, MAGENTA, DEEP_PINK
+Default value: WHITE
+
+osd_warn_visual_beeper = OFF
+Allowed values: OFF, ON
+Default value: ON
+
+# get dshot_burst
+dshot_burst = AUTO
+Allowed values: OFF, ON, AUTO
+
+# get gyro_1
+gyro_1_bustype = SPI
+Allowed values: NONE, I2C, SPI, SLAVE
+
+gyro_1_spibus = 1
+Allowed range: 0 - 3
+
+gyro_1_i2cBus = 0
+Allowed range: 0 - 3
+
+gyro_1_i2c_address = 0
+Allowed range: 0 - 119
+
+gyro_1_sensor_align = CW180
+Allowed values: DEFAULT, CW0, CW90, CW180, CW270, CW0FLIP, CW90FLIP, CW180FLIP, CW270FLIP, CUSTOM
+
+gyro_1_align_roll = 0
+Allowed range: -3600 - 3600
+
+gyro_1_align_pitch = 0
+Allowed range: -3600 - 3600
+
+gyro_1_align_yaw = 1800
+Allowed range: -3600 - 3600
+
+# get system_hse
+system_hse_mhz = 8
+Allowed range: 0 - 30
+
+# get max7456
+max7456_clock = DEFAULT
+Allowed values: HALF, DEFAULT, FULL
+
+max7456_spi_bus = 2
+Allowed range: 0 - 3
+
+max7456_preinit_opu = OFF
+Allowed values: OFF, ON
+
+displayport_max7456_col_adjust = 0
+Allowed range: -6 - 0
+
+displayport_max7456_row_adjust = 0
+Allowed range: -3 - 0
+
+displayport_max7456_inv = OFF
+Allowed values: OFF, ON
+
+displayport_max7456_blk = 0
+Allowed range: 0 - 3
+
+displayport_max7456_wht = 2
+Allowed range: 0 - 3
+
+# get mag_hard
+###ERROR: get: INVALID NAME###
+
+# get baro_hard
+###ERROR: get: INVALID NAME###
+
+# get ledstrip
+ledstrip_visual_beeper = OFF
+Allowed values: OFF, ON
+
+ledstrip_visual_beeper_color = ORANGE
+Allowed values: BLACK, WHITE, RED, ORANGE, YELLOW, LIME_GREEN, GREEN, MINT_GREEN, CYAN, LIGHT_BLUE, BLUE, DARK_VIOLET, MAGENTA, DEEP_PINK
+Default value: WHITE
+
+ledstrip_grb_rgb = GRB
+Allowed values: GRB, RGB
+
+ledstrip_profile = STATUS
+Allowed values: RACE, BEACON, STATUS
+
+ledstrip_race_color = ORANGE
+Allowed values: BLACK, WHITE, RED, ORANGE, YELLOW, LIME_GREEN, GREEN, MINT_GREEN, CYAN, LIGHT_BLUE, BLUE, DARK_VIOLET, MAGENTA, DEEP_PINK
+
+ledstrip_beacon_color = WHITE
+Allowed values: BLACK, WHITE, RED, ORANGE, YELLOW, LIME_GREEN, GREEN, MINT_GREEN, CYAN, LIGHT_BLUE, BLUE, DARK_VIOLET, MAGENTA, DEEP_PINK
+
+ledstrip_beacon_period_ms = 500
+Allowed range: 50 - 10000
+
+ledstrip_beacon_percent = 50
+Allowed range: 0 - 100
+
+ledstrip_beacon_armed_only = OFF
+Allowed values: OFF, ON
+
+# resource show
+Currently active IO resource assignments:
+(reboot to update)
+--------------------
+A00: FREE
+A01: FREE
+A02: FREE
+A03: FREE
+A04: PREINIT 1
+A05: SPI_SCK 1
+A06: SPI_MISO 1
+A07: SPI_MOSI 1
+A08: RX_SPI_CC2500_TX_EN
+A09: FREE
+A10: FREE
+A11: USB
+A12: USB
+A13: RX_SPI_CC2500_LNA_EN
+A14: RX_SPI_CC2500_ANT_SEL
+A15: RX_SPI_CS
+B00: ADC_BATT
+B01: ADC_CURR
+B02: RX_SPI_BIND
+B03: SPI_SCK 3
+B04: SPI_MISO 3
+B05: SPI_MOSI 3
+B06: FREE
+B07: FREE
+B08: FREE
+B09: LED
+B10: FREE
+B11: FREE
+B12: OSD_CS
+B13: SPI_SCK 2
+B14: SPI_MISO 2
+B15: SPI_MOSI 2
+C00: FREE
+C01: FREE
+C02: FREE
+C03: FREE
+C04: FREE
+C05: FREE
+C06: FREE
+C07: FREE
+C08: FREE
+C09: FREE
+C10: FREE
+C11: FREE
+C12: FREE
+C13: LED 1
+C14: RX_SPI_EXTI
+C15: BEEPER
+D02: FREE
+
+# get cc2500
+cc2500_spi_chip_detect = OFF
+Allowed values: OFF, ON
+
+# 

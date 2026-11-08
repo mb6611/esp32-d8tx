@@ -1,0 +1,87 @@
+diff --git a/src/main/telemetry/frsky_hub.c b/src/main/telemetry/frsky_hub.c
+index 424ac94..6e4abfb 100644
+--- a/src/main/telemetry/frsky_hub.c
++++ b/src/main/telemetry/frsky_hub.c
+@@ -124,6 +124,12 @@ static frSkyHubWriteByteFn *frSkyHubWriteByte = NULL;
+ #define ID_GYRO_X             0x40
+ #define ID_GYRO_Y             0x41
+ #define ID_GYRO_Z             0x42
++// Patched (d8tx) IDs: not sent by stock frsky_hub.c
++#define ID_ATT_ROLL           0x43 // deci-degrees
++#define ID_ATT_PITCH          0x44 // deci-degrees
++#define ID_ATT_YAW            0x45 // deci-degrees, 0..3599
++#define ID_STATUS             0x46 // bit0 armed, 1 angle, 2 horizon, 3 failsafe mode, 4 arming disabled, 5 acro
++#define ID_ARMING_DISABLE     0x47 // low 16 bits of armingDisableFlags
+ 
+ #define ID_VERT_SPEED         0x30 // opentx vario
+ 
+@@ -155,6 +161,11 @@ static void serializeFrSkyHub(uint8_t data)
+     }
+ }
+ 
++static int16_t clampToInt16(int32_t v)
++{
++    return v > 32767 ? 32767 : (v < -32768 ? -32768 : (int16_t)v);
++}
++
+ static void frSkyHubWriteFrame(const uint8_t id, const int16_t data)
+ {
+     frSkyHubWriteByte(PROTOCOL_HEADER);
+@@ -178,11 +189,40 @@ static void frSkyHubWriteByteInternal(const char data)
+ static void sendAccel(void)
+ {
+     for (unsigned i = 0; i < 3; i++) {
+-        frSkyHubWriteFrame(ID_ACC_X + i, ((int16_t)(acc.accADC[i] * acc.dev.acc_1G_rec) * 1000));
++        // true milli-g (stock cast to int16 before *1000, truncating to whole g)
++        frSkyHubWriteFrame(ID_ACC_X + i, clampToInt16(lrintf(acc.accADC[i] * acc.dev.acc_1G_rec * 1000.0f)));
+     }
+ }
+ #endif
+ 
++static void sendStatus(void)
++{
++    uint16_t st = 0;
++    if (ARMING_FLAG(ARMED)) st |= 1 << 0;
++    if (FLIGHT_MODE(ANGLE_MODE)) st |= 1 << 1;
++    if (FLIGHT_MODE(HORIZON_MODE)) st |= 1 << 2;
++    if (FLIGHT_MODE(FAILSAFE_MODE)) st |= 1 << 3;
++    if (isArmingDisabled()) st |= 1 << 4;
++    if (!FLIGHT_MODE(ANGLE_MODE | HORIZON_MODE)) st |= 1 << 5;
++    frSkyHubWriteFrame(ID_STATUS, (int16_t)st);
++    frSkyHubWriteFrame(ID_ARMING_DISABLE, (int16_t)(getArmingDisableFlags() & 0xFFFF));
++}
++
++static void sendGyro(void)
++{
++    for (unsigned i = 0; i < 3; i++) {
++        // 0.1 deg/s units
++        frSkyHubWriteFrame(ID_GYRO_X + i, clampToInt16(lrintf(gyro.gyroADCf[i] * 10.0f)));
++    }
++}
++
++static void sendAttitude(void)
++{
++    for (unsigned i = 0; i < 3; i++) {
++        frSkyHubWriteFrame(ID_ATT_ROLL + i, (int16_t)attitude.raw[i]);
++    }
++}
++
+ static void sendThrottleOrBatterySizeAsRpm(void)
+ {
+     int16_t data = 0;
+@@ -521,6 +561,15 @@ void processFrSkyHubTelemetry(timeUs_t currentTimeUs)
+ 
+     cycleNum++;
+ 
++    // Patched: status every cycle (8 B), gyro on odd cycles (4 Hz, 12 B), attitude on cycleNum%4==2 (2 Hz, 12 B).
++    // Never coincides with the %8 group, so the worst cycle stays well under the 64 B D8 buffer.
++    sendStatus();
++    if (cycleNum & 1) {
++        sendGyro();
++    } else if ((cycleNum & 3) == 2) {
++        sendAttitude();
++    }
++
+ #if defined(USE_ACC)
+     if (sensors(SENSOR_ACC) && telemetryIsSensorEnabled(SENSOR_ACC_X | SENSOR_ACC_Y | SENSOR_ACC_Z)) {
+         // Sent every 125ms

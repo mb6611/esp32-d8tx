@@ -7,7 +7,7 @@ import random
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from d8hub import HubParser, acc_g, hub_frame, next_tid  # noqa: E402
+from d8hub import HubParser, acc_g, hub_frame, next_tid, patched_state  # noqa: E402
 
 
 class BfRx:
@@ -116,3 +116,32 @@ def test_hub_parser_ignores_leading_garbage():
     p = HubParser()
     p.feed(b"\x01\x02" + hub_frame(0x99, 3))
     assert p.frames == [(0x99, "0x99", 3)]
+
+
+def test_patched_acc_true_milli_g():
+    p = HubParser()
+    p.feed(hub_frame(0x24, -37) + hub_frame(0x25, 0x5E5D & 0x7FFF) + hub_frame(0x26, 996) + b"\x5e")
+    assert acc_g(p.frames) == {"X": -0.037, "Y": 0x5E5D / 1000.0, "Z": 0.996}
+
+
+def test_patched_status_gyro_attitude():
+    # one patched cycle: STATUS armed+acro (0x21), ARMING_DISABLE 0x2000, gyro, attitude (0x5E in yaw -> stuffed)
+    yaw = 0x035E  # 862 = 86.2 deg, low byte 0x5E needs stuffing
+    raw = (hub_frame(0x46, 0x21) + hub_frame(0x47, 0x2000) + hub_frame(0x40, -1234) + hub_frame(0x41, 5)
+           + hub_frame(0x42, 20000) + hub_frame(0x43, -153) + hub_frame(0x44, 80) + hub_frame(0x45, yaw) + b"\x5e")
+    assert b"\x5d\x3e" in raw
+    p = HubParser()
+    for i in range(0, len(raw), 10):  # D8 chunks of 10 bytes
+        p.feed(raw[i:i + 10])
+    s = patched_state(p.frames)
+    assert s["status"] == {"armed": True, "angle": False, "horizon": False, "failsafe": False,
+                           "arming_disabled": False, "acro": True}
+    assert s["arming_disable_flags"] == 0x2000
+    assert s["gyro"] == {"X": -123.4, "Y": 0.5, "Z": 2000.0}
+    assert s["att"] == {"roll": -15.3, "pitch": 8.0, "yaw": 86.2}
+
+
+def test_patched_state_empty_on_stock():
+    p = HubParser()
+    p.feed(hub_frame(0x24, 1000) + hub_frame(0x06, 1234) + b"\x5e")
+    assert patched_state(p.frames) == {}

@@ -1,0 +1,1 @@
+{'vbat_dv': 0, 'mah': 0, 'rssi': 0, 'amps_cA': 0, 'vbat_cv': 1}

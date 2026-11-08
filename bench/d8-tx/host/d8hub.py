@@ -21,7 +21,11 @@ HUB_IDS = {
     0x18: "SECOND", 0x24: "ACC_X", 0x25: "ACC_Y", 0x26: "ACC_Z", 0x28: "CURRENT", 0x30: "VERT_SPEED",
     0x39: "VOLTAGE_AMP", 0x3A: "VOLTAGE_AMP_BP", 0x3B: "VOLTAGE_AMP_AP", 0x40: "GYRO_X", 0x41: "GYRO_Y",
     0x42: "GYRO_Z",
+    # patched Betaflight (bench/betaflight-patch): not sent by stock
+    0x43: "ATT_ROLL", 0x44: "ATT_PITCH", 0x45: "ATT_YAW", 0x46: "STATUS", 0x47: "ARMING_DISABLE",
 }
+
+STATUS_BITS = {0: "armed", 1: "angle", 2: "horizon", 3: "failsafe", 4: "arming_disabled", 5: "acro"}
 
 
 def next_tid(sent: int, reply_ids) -> int:
@@ -67,13 +71,32 @@ class HubParser:
 
 
 def acc_g(frames) -> dict:
-    """Latest ACC X/Y/Z in g. Betaflight 4.2 sends (int16_t)(accADC * acc_1G_rec) * 1000: the value is
+    """Latest ACC X/Y/Z in g. Works for both firmwares: the patched one sends true milli-g, stock the
+    truncated whole-g*1000 values described next (both are just value/1000). Betaflight 4.2 sends (int16_t)(accADC * acc_1G_rec) * 1000: the value is
     truncated toward zero to whole g before the x1000, so it is only ever 0, +-1000, +-2000 ... A level
     drone reads Z = 0 whenever its measured Z is a hair under 1 g (bench: 0.996 g -> 0)."""
     d = {}
     for i, name, v in frames:
         if name.startswith("ACC_"):
             d[name[-1]] = v / 1000.0
+    return d
+
+
+def patched_state(frames) -> dict:
+    """Latest values of the patched-Betaflight fields (empty keys if the firmware is stock).
+    gyro in deg/s (wire: 0.1 deg/s), att roll/pitch/yaw in degrees (wire: deci-degrees, yaw 0..359.9),
+    status flags as bools, arming_disable_flags = low 16 bits of armingDisableFlags."""
+    d = {}
+    for _, name, v in frames:
+        if name.startswith("GYRO_"):
+            d.setdefault("gyro", {})[name[-1]] = v / 10.0
+        elif name.startswith("ATT_"):
+            d.setdefault("att", {})[name[4:].lower()] = v / 10.0
+        elif name == "STATUS":
+            u = v & 0xFFFF
+            d["status"] = {n: bool(u >> b & 1) for b, n in STATUS_BITS.items()}
+        elif name == "ARMING_DISABLE":
+            d["arming_disable_flags"] = v & 0xFFFF
     return d
 
 

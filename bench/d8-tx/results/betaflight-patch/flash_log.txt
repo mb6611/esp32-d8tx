@@ -1,0 +1,24 @@
+dfu-util 0.11
+
+Copyright 2005-2009 Weston Schmidt, Harald Welte and OpenMoko Inc.
+Copyright 2010-2021 Tormod Volden and Stefan Schmidt
+This program is Free Software and has ABSOLUTELY NO WARRANTY
+Please report bugs to http://sourceforge.net/p/dfu-util/tickets/
+
+dfu-util: Warning: Invalid DFU suffix signature
+dfu-util: A valid DFU suffix will be required in a future dfu-util release
+Opening DFU capable USB device...
+Device ID 0483:df11
+Device DFU version 011a
+Claiming USB DFU Interface...
+Setting Alternate Interface #0 ...
+Determining device status...
+DFU state(10) = dfuERROR, status(10) = Device's firmware is corrupt. It cannot return to run-time (non-DFU) operations
+Clearing status
+Determining device status...
+DFU state(2) = dfuIDLE, status(0) = No error condition is present
+DFU mode device DFU version 011a
+Device returned transfer size 2048
+DfuSe interface name: "Internal Flash  "
+Downloading element to address = 0x08000000, size = 430792
+Erase   	[                         ]   0%            0 bytesErase   	[                         ]   3%        16384 bytesErase   	[=                        ]   4%        18432 bytesErase   	[==                       ]   8%        34816 bytesErase   	[===                      ]  12%        53248 bytesErase   	[===                      ]  15%        65536 bytesErase   	[====                     ]  16%        69632 bytesErase   	[=====                    ]  20%        88064 bytesErase   	[======                   ]  24%       104448 bytesErase   	[=======                  ]  28%       120832 bytesdfu-util: Error during special command "ERASE_PAGE" get_status

@@ -75,3 +75,22 @@ sends `TLM 0` if a recipe was sent before.
   `None`; an armed drone at idle throttle with motor_stop and capacity 0 also reads 0 (`None`); RPM older than 5 s -> `None`.
 - Throughput: one reply carries at most 10 hub bytes and a trigger comes every ~0.43 s (about 23 B/s), and the drone builds a new hub cycle only after the
   previous one was fully sent, so slow-rate fields (gyro/attitude of the patched firmware) refresh every few seconds, not at their nominal rate.
+
+## Patched Betaflight hub fields
+
+Source: `bench/betaflight-patch/patches/0001-frsky-hub-telemetry.patch` (Betaflight 4.2.11, MATEKF411RX). Same hub framing
+as stock (`5E id lo hi`, int16 LE, 0x5E/0x5D byte-stuffed, one `5E` tail per cycle). All stock IDs keep their meaning
+except ACC.
+
+| ID | Name | Unit / encoding | Rate |
+|---|---|---|---|
+| 0x24-0x26 | ACC X/Y/Z | true milli-g, int16 (stock: whole g x 1000, truncated) | every 125 ms cycle |
+| 0x46 | STATUS | bit0 armed, bit1 ANGLE, bit2 HORIZON, bit3 failsafe mode, bit4 arming disabled, bit5 acro (neither ANGLE nor HORIZON) | every cycle |
+| 0x47 | ARMING_DISABLE | low 16 bits of Betaflight `armingDisableFlags` | every cycle |
+| 0x40-0x42 | GYRO X/Y/Z | 0.1 deg/s, int16, clamped (filtered gyro, roll/pitch/yaw) | odd cycles (4 Hz) |
+| 0x43-0x45 | ATT roll/pitch/yaw | deci-degrees, int16 (yaw 0..3599) | cycles with n%4==2 (2 Hz) |
+
+Byte budget (4 B per frame, 1 B tail per cycle): stock about 132 B/s; patched about 270 B/s (ACC 96, STATUS+ARMING 64,
+gyro 48, attitude 24, tails 8 = 240 B/s, plus 1 s group ~28 and clock ~2). Worst single cycle is 53 B (n%8==0 with the 5 s clock frame),
+under the 64 B `serialBuffer` of `cc2500_frsky_d.c`; the optional fields never share a cycle with the 1 s group.
+The receiver sends 10 hub bytes per D8 packet, so the link is not the limit. `d8hub.patched_state()` decodes these.

@@ -1,0 +1,13 @@
+!! set mag_hardware = NONE set mag_hardware = NONE
+###ERROR: set: INVALID NAME###
+
+#
+!! set baro_hardware = NONE set baro_hardware = NONE
+###ERROR: set: INVALID NAME###
+
+#
+pasted
+pasted
+save
+
+# 

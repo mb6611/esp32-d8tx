@@ -1,0 +1,76 @@
+version
+
+# version
+# Betaflight / MATEKF411RX (M41R) 4.2.11 Nov  8 2026 / 11:20:01 () MSP API: 1.43
+
+# resource show
+Currently active IO resource assignments:
+(reboot to update)
+--------------------
+A00: FREE
+A01: GYRO_EXTI
+A02: SERIAL_TX 2
+A03: FREE
+A04: GYRO_CS 1
+A05: SPI_SCK 1
+A06: SPI_MISO 1
+A07: SPI_MOSI 1
+A08: RX_SPI_CC2500_TX_EN
+A09: FREE
+A10: FREE
+A11: USB
+A12: USB
+A13: RX_SPI_CC2500_LNA_EN
+A14: RX_SPI_CC2500_ANT_SEL
+A15: RX_SPI_CS
+B00: ADC_BATT
+B01: ADC_CURR
+B02: RX_SPI_BIND
+B03: SPI_SCK 3
+B04: SPI_MISO 3
+B05: SPI_MOSI 3
+B06: MOTOR 2
+B07: MOTOR 3
+B08: MOTOR 4
+B09: FREE
+B10: MOTOR 1
+B11: FREE
+B12: OSD_CS
+B13: SPI_SCK 2
+B14: SPI_MISO 2
+B15: SPI_MOSI 2
+C00: FREE
+C01: FREE
+C02: FREE
+C03: FREE
+C04: FREE
+C05: FREE
+C06: FREE
+C07: FREE
+C08: FREE
+C09: FREE
+C10: FREE
+C11: FREE
+C12: FREE
+C13: FREE
+C14: RX_SPI_EXTI
+C15: BEEPER
+D02: FREE
+
+# feature
+Enabled: TELEMETRY OSD AIRMODE RX_SPI ANTI_GRAVITY DYNAMIC_FILTER 
+
+# status
+MCU F411 Clock=108MHz (PLLP-HSE), Vref=3.29V, Core temp=41degC
+Stack size: 2048, Stack address: 0x2001fff0
+Config size: 3719, Max available config: 16384
+Gyros detected: gyro 1
+GYRO=ICM20689, ACC=ICM20689
+OSD: MAX7456
+System Uptime: 27 seconds
+CPU:9%, cycle time: 125, GYRO rate: 8000, RX rate: 33, System rate: 9
+Voltage: 1 * 0.01V (0S battery - NOT PRESENT)
+I2C Errors: 0
+Arming disable flags: RXLOSS CLI
+
+# 

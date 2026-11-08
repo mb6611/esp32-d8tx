@@ -1,0 +1,45 @@
+version
+# Betaflight / MATEKF411RX (M41R) 4.2.11 Nov  8 2026 / 11:20:01 () MSP API: 1.43
+
+# diff all
+
+# version
+# Betaflight / MATEKF411RX (M41R) 4.2.11 Nov  8 2026 / 11:20:01 () MSP API: 1.43
+
+# start the command batch
+batch start
+
+# reset configuration to default settings
+defaults nosave
+
+board_name MATEKF411RX
+mcu_id 004b00363132510531373731
+signature 
+
+profile 0
+
+profile 1
+
+profile 2
+
+# restore original profile selection
+profile 0
+
+rateprofile 0
+
+rateprofile 1
+
+rateprofile 2
+
+rateprofile 3
+
+rateprofile 4
+
+rateprofile 5
+
+# restore original rateprofile selection
+rateprofile 0
+
+# save configuration
+save
+# 
