@@ -44,7 +44,7 @@ export default function Quad3D({ att, dim, tau = 100 }: { att: Att; dim: boolean
     for (const [x, z] of [[s, -s], [-s, -s], [s, s], [-s, s]]) {
       const c = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.12, 12), new THREE.MeshBasicMaterial({ color: ink }))
       c.position.set(x * 0.9, 0.06, z * 0.9)
-      const prop = new THREE.Mesh(new THREE.RingGeometry(0.4, 0.43, 28), new THREE.MeshBasicMaterial({ color: grey, side: THREE.DoubleSide }))
+      const prop = new THREE.Mesh(new THREE.RingGeometry(0.4, 0.43, 28), new THREE.MeshBasicMaterial({ color: z < 0 ? red : grey, side: THREE.DoubleSide })) // front props red
       prop.rotation.x = -Math.PI / 2
       prop.position.set(x * 0.9, 0.14, z * 0.9)
       quad.add(c, prop)
@@ -55,6 +55,9 @@ export default function Quad3D({ att, dim, tau = 100 }: { att: Att; dim: boolean
     nose.rotation.x = -Math.PI / 2 // tip toward -z (front)
     nose.position.set(0, 0.02, -0.6)
     quad.add(nose)
+    // long FRONT arrow so the nose cannot be mistaken for the tail
+    const arrow = new THREE.ArrowHelper(new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 0.05, -0.3), 1.6, red, 0.35, 0.22)
+    quad.add(arrow)
     scene.add(quad)
 
     const cur = { roll: target.current.roll, pitch: target.current.pitch, yaw: target.current.yaw ?? 0 }
@@ -74,7 +77,7 @@ export default function Quad3D({ att, dim, tau = 100 }: { att: Att; dim: boolean
       cur.roll += (g.roll - cur.roll) * k
       cur.pitch += (g.pitch - cur.pitch) * k
       cur.yaw += wrap((g.yaw ?? 0) - cur.yaw) * k
-      quad.rotation.set(cur.pitch * rad, cur.yaw * rad, -cur.roll * rad, 'YXZ') // yaw sign checked on the bench: turning the drone right turns the model right
+      quad.rotation.set(cur.pitch * rad, -cur.yaw * rad, -cur.roll * rad, 'YXZ') // camera is behind the model (nose -z, away from viewer); Betaflight heading grows clockwise, so the nose turns right as yaw grows (bench: 152->268 deg turning right)
       renderer.render(scene, cam)
       raf = requestAnimationFrame(loop)
     }
