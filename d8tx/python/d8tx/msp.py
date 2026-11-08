@@ -3,7 +3,7 @@ import struct
 import threading
 import time
 
-MSP_STATUS, MSP_RC, MSP_ANALOG = 101, 105, 110
+MSP_STATUS, MSP_RC, MSP_ATTITUDE, MSP_ANALOG = 101, 105, 108, 110
 ARMING_DISABLE = ["NO_GYRO", "FAILSAFE", "RX_FAILSAFE", "BAD_RX_RECOVERY", "BOXFAILSAFE", "RUNAWAY_TAKEOFF",
                   "CRASH_DETECTED", "THROTTLE", "ANGLE", "BOOT_GRACE_TIME", "NOPREARM", "LOAD", "CALIBRATING",
                   "CLI", "CMS_MENU", "BST", "MSP", "PARALYZE", "GPS", "RESC", "RPMFILTER", "REBOOT_REQUIRED",
@@ -58,6 +58,11 @@ def parse_rc(p):
     return list(struct.unpack("<%dH" % (len(p) // 2), p[:len(p) // 2 * 2]))
 
 
+def parse_attitude(p):
+    roll, pitch, yaw = struct.unpack("<hhh", p[:6])
+    return [roll / 10.0, pitch / 10.0, float(yaw)]
+
+
 def parse_analog(p):
     v8, mah, rssi, amp, v16 = struct.unpack("<BHHhH", p[:9])
     return {"vbat_dv": v8, "mah": mah, "rssi": rssi, "amps_cA": amp, "vbat_cv": v16}
@@ -89,6 +94,9 @@ class BetaflightMSP:
 
     def rc(self):
         return parse_rc(self._req(MSP_RC))
+
+    def attitude(self):
+        return parse_attitude(self._req(MSP_ATTITUDE))
 
     def status(self):
         return parse_status(self._req(MSP_STATUS))

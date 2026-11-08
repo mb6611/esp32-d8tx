@@ -26,6 +26,7 @@ class FakeEsp:
 class FakeFc:
     def rc(self): return [1500] * 8
     def rssi(self): return 90
+    def attitude(self): return [1.5, -2.0, 90.0]
     def status(self): return {"armed": False, "failsafe": False, "arming_disable": ["RXLOSS"]}
 
 
@@ -35,6 +36,7 @@ def test_status_and_link(tmp_path):
         s = c.get("/api/status").json()
         assert s["esp"]["connected"] and s["esp"]["info"] == {"proto": 1}
         assert s["fc"]["rc"] == [1500] * 8 and s["fc"]["rssi"] == 90
+        assert s["fc"]["attitude_deg"] == [1.5, -2.0, 90.0]
         assert c.post("/api/link/start", json={"power": 50, "allow_arm": True}).json()["ok"]
         assert esp.start_args == (50, 300, True, None, True)
         c.post("/api/link/stop")

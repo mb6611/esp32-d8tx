@@ -18,6 +18,7 @@ class FakeFC:
         stat = struct.pack("<HHHIBHH", 100, 0, 0, 1, 0, 5, 0) + bytes([0]) + bytes([26]) + struct.pack("<I", 1 << 2) + b"\0"
         self.data = {MSP_RC: struct.pack("<8H", *range(1000, 1800, 100)),
                      MSP_STATUS: stat,
+                     108: struct.pack("<hhh", 15, -20, 90),
                      MSP_ANALOG: struct.pack("<BHHhH", 0, 0, 77, 0, 0)}
 
     def write(self, b):
@@ -36,3 +37,4 @@ def test_msp():
     s = m.status()
     assert s["armed"] and s["failsafe"] and s["arming_disable"] == ["RX_FAILSAFE"]
     assert m.rssi() == 77
+    assert m.attitude() == [1.5, -2.0, 90.0]

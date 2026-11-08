@@ -15,7 +15,7 @@ from pydantic import BaseModel
 
 SILENCE_S = 0.25
 TELEMETRY_HZ = 50
-FC_DEFAULT = {"connected": False, "rc": [], "armed": None, "failsafe": None,
+FC_DEFAULT = {"connected": False, "rc": [], "attitude_deg": None, "armed": None, "failsafe": None,
               "arming_disable": [], "rssi": None, "error": None}
 RADIO_DEFAULT = {
     "enabled": False, "powered": False, "link": False, "age_ms": None, "catch_rate": None,
@@ -86,7 +86,8 @@ def create_app(esp: Any, fc: Any = None, dist: Optional[Path] = None,
             prev = state.get("fc") or FC_DEFAULT
             state["fc_n"] = state.get("fc_n", 0) + 1
             out.update(prev)
-            out.update(connected=True, rc=list(fc.rc())[:8], error=None)  # RC every poll (readback latency)
+            out.update(connected=True, rc=list(fc.rc())[:8], error=None,
+                       attitude_deg=list(fc.attitude()))  # RC every poll (readback latency)
             if state["fc_n"] % 5 == 1:  # status/RSSI change slowly: every 5th poll
                 s = dict(fc.status())
                 out.update(rssi=fc.rssi(), armed=s.get("armed"), failsafe=s.get("failsafe"),
