@@ -8,10 +8,9 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "host"))
-sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "host"))
 
 import tlm_listen  # noqa: E402
-from esp32sdr import d8  # noqa: E402
+import d8  # noqa: E402
 
 
 def telemetry_frame(a1=84, a2=0, rssi=0xB0, hub=b"\x5e\x24\x01\x00\x5e", tid=3) -> bytes:

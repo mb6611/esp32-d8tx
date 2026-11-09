@@ -9,11 +9,10 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "host"))
-sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "host"))
 
 import tlm_listen  # noqa: E402
 import tlm_misses as tm  # noqa: E402
-from esp32sdr import d8  # noqa: E402
+import d8  # noqa: E402
 
 FS = 500e3
 N = 4500  # 9 ms, as cap_us 9000 at dec 32

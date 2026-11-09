@@ -45,6 +45,7 @@ figcaption a{display:inline}
 </header>
 <main>
 <p>I wanted to see whether a classic ESP32 DevKit V1, the cheap board with a CP2102 USB-serial chip, could work as a 2.4 GHz software-defined receiver. I built one on the I/Q capture path that <a href="https://github.com/ESPARGOS/esp-sdr">esp-sdr</a> found in the chip, got it streaming without gaps over the board's slow serial link, and tried it on Wi-Fi, Bluetooth LE advertising and a FrSky D8 RC transmitter. In the end it follows the D8 transmitter across all 47 of its hop channels and decodes about 108 packets a second live. Everything here is receive-only.</p>
+<blockquote><p><em>Note:</em> the receive-only code these chapters describe lives in the public RX repository, <a href="https://github.com/mb6611/esp32-devkitv1-sdr">mb6611/esp32-devkitv1-sdr</a>. This repository keeps only the TX work; the RX chapters stay as the story's first half. The TX follow-up is its own chapter: <a href="#tx-chapter">Transmitting one D8 packet</a>.</p></blockquote>
 <hr>
 <h2 id="the-capture-path">The capture path</h2>
 <p>The ESP32's Wi-Fi radio has an undocumented debug feature that copies raw I/Q samples from the receiver into RAM. ESPARGOS figured out how to drive it and wrapped it in firmware with a small serial protocol (tune, capture, spectrum). My project is a fork of theirs.</p>

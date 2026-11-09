@@ -2,7 +2,7 @@
 """Telemetry-listen experiment host (firmware TLM / TCAP, d8tx/PROTOCOL.md "Telemetry listen").
 
 Drives the ESP32 d8tone firmware, saves every `EV tlm` capture under
-bench/d8-tx/results/telemetry/<run>/, and decodes it with host/esp32sdr/d8.py, looking
+bench/d8-tx/results/telemetry/<run>/, and decodes it with bench/d8-tx/host/d8.py, looking
 for a CRC-valid 18-byte FrSky D8 telemetry frame 0x11, 66, 178, A1, A2, RSSI, hub count,
 telemetry id, hub bytes.
 
@@ -35,8 +35,7 @@ import zlib
 import numpy as np
 
 _ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
-sys.path.insert(0, os.path.join(_ROOT, "host"))
-from esp32sdr import d8  # noqa: E402
+import d8  # noqa: E402
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from d8hub import HubParser, acc_g, next_tid  # noqa: E402
 

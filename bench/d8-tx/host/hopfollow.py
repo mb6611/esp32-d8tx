@@ -14,7 +14,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .iqs import MODE2_IF_HZ
+MODE2_IF_HZ = 4_000_000  # mode 2: fs/4 at the 16 MS/s ring (was esp32sdr.iqs)
 
 PAIR_HZ = 16_000_000                   # stream pair clock (16 MS/s ring)
 FLAG_HOP_START = 0x04

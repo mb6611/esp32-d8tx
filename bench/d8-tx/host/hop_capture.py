@@ -20,7 +20,6 @@ import sys
 from dataclasses import dataclass
 
 _ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
-sys.path.insert(0, os.path.join(_ROOT, "host"))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import d8hop  # noqa: E402
@@ -34,7 +33,7 @@ def default_table(start: int = 2, step: int = 55) -> list[int]:
         import d8hop
         return list(d8hop.table(start=start, step=step))
     except ImportError:
-        from esp32sdr.hopfollow import D8_TABLE
+        from hopfollow import D8_TABLE
         return list(D8_TABLE)
 
 

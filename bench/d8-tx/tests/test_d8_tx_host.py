@@ -36,11 +36,10 @@ class T(unittest.TestCase):
         self.assertEqual(v.on_air(1)[:6], bytes.fromhex("aaaaaaaad391"))
 
     def test_matches_reference_decoder_if_available(self):
-        sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "host"))
         try:
-            from esp32sdr import d8
+            import d8
         except Exception:
-            self.skipTest("esp32sdr unavailable")
+            self.skipTest("d8 decoder needs numpy")
         for c in (0, 1, 47, 255):
             ch = (2250, 0, 4095, 1, 0x123, 0xABC, 7, 2250)
             ref = d8.build_packet(counter=0, channels=ch, extra=(c, 1))

@@ -1,14 +1,13 @@
 import os, sys, unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "host"))
-sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "host"))
 import d8hop as h
 import d8_vectors as v
 try:
-    from esp32sdr import hopfollow, d8
+    import hopfollow, d8
 except ImportError:  # no numpy: cross-checks skipped
     hopfollow = d8 = None
-need = unittest.skipIf(hopfollow is None, 'esp32sdr needs numpy')
+need = unittest.skipIf(hopfollow is None, 'd8 decoder needs numpy')
 
 
 class T(unittest.TestCase):

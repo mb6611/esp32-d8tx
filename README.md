@@ -6,14 +6,13 @@ flying a D8 receiver (Betaflight on a CC2500 board) from a browser.
 - `d8tx/` — the product: `d8tone` firmware protocol ([PROTOCOL.md](d8tx/PROTOCOL.md)), Python
   `D8Link` + FastAPI server (`d8tx/python`), React "Sticks" controller (`d8tx/app`). Start here:
   [d8tx/README.md](d8tx/README.md).
-- `bench/d8-tx/` — ESP32 TX firmware (`firmware/`, app `d8tone`), host bench runner, analysis,
-  raw results. [bench/d8-tx/README.md](bench/d8-tx/README.md).
+- `bench/d8-tx/` — ESP32 TX firmware (`firmware/`, app `d8tone`), host bench runner, D8 decoder
+  (`host/d8.py`, `host/hopfollow.py`), analysis, raw results. [bench/d8-tx/README.md](bench/d8-tx/README.md).
 - `bench/cc2500-rxdiag/`, `bench/betaflight-patch/`, `bench/blackbox/`, `bench/register-map/` —
   receiver-side diagnostics, Betaflight patches and radio register notes.
-- `host/esp32sdr/` — host-side D8 decoder and hop table (`d8.py`, `hopfollow.py`, `iqs.py`),
-  plus the RX streaming tools from the earlier RX project.
-- `docs/devkitv1/` — write-up ([TX chapter](docs/devkitv1/writeup/tx.md), [HTML](docs/devkitv1/writeup/index.html))
-  and RX-era notes.
+- `docs/devkitv1/writeup/` — the write-up: [TX chapter](docs/devkitv1/writeup/tx.md) ([HTML](docs/devkitv1/writeup/index.html)).
+  The RX chapters are kept for the story; their code is in the public RX repo
+  [mb6611/esp32-devkitv1-sdr](https://github.com/mb6611/esp32-devkitv1-sdr).
 
 ## Offline checks (no hardware)
 ```sh
