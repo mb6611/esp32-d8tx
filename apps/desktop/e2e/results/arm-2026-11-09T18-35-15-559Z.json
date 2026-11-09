@@ -1,0 +1,4707 @@
+{
+ "phase": "arm",
+ "started": "2026-11-09T18:35:15.935Z",
+ "esp_port": "/dev/cu.usbserial-0001",
+ "fc_port": "/dev/cu.usbmodem0x80000001",
+ "connect_esp_ms": 856,
+ "prefilter_workaround": false,
+ "info": {
+  "proto": 1,
+  "fw": "d8tx-v1",
+  "slot_us": 8994,
+  "channels": 47,
+  "pwr_max": 127,
+  "fofs_max_hz": 200000,
+  "timeout_max_ms": 1000
+ },
+ "pre_arm": {
+  "arming_disable": [],
+  "rc": [
+   1500,
+   1500,
+   1500,
+   1000,
+   1000,
+   1000,
+   1000,
+   1000
+  ],
+  "armok_stat": [
+   1794249324525,
+   "OK keyed=0 link=1 fofs=-75000 armok=1"
+  ]
+ },
+ "arm1": {
+  "ok": true,
+  "fc_armed": true,
+  "arming_disable": [],
+  "stat": [
+   1794249325993,
+   "OK keyed=0 link=1 fofs=-75000 armok=1"
+  ],
+  "last_s": [
+   1794249326059,
+   "S 1000 1500 1500 1500 1000 1000 2000 1000"
+  ]
+ },
+ "ramp_ms": 1024,
+ "hold": [
+  {
+   "t": 1,
+   "rc": [
+    1500,
+    1500,
+    1500,
+    1150,
+    1000,
+    1000,
+    2000,
+    1000
+   ],
+   "motors": [
+    1064,
+    1500,
+    1229,
+    1668
+   ],
+   "armed": true,
+   "s_line": "S 1150 1500 1500 1500 1000 1000 2000 1000"
+  },
+  {
+   "t": 254,
+   "rc": [
+    1500,
+    1500,
+    1500,
+    1150,
+    1000,
+    1000,
+    2000,
+    1000
+   ],
+   "motors": [
+    1065,
+    1737,
+    1326,
+    2000
+   ],
+   "armed": true,
+   "s_line": "S 1150 1500 1500 1500 1000 1000 2000 1000"
+  },
+  {
+   "t": 507,
+   "rc": [
+    1500,
+    1500,
+    1500,
+    1150,
+    1000,
+    1000,
+    2000,
+    1000
+   ],
+   "motors": [
+    1065,
+    1735,
+    1328,
+    2000
+   ],
+   "armed": true,
+   "s_line": "S 1150 1500 1500 1500 1000 1000 2000 1000"
+  },
+  {
+   "t": 758,
+   "rc": [
+    1500,
+    1500,
+    1500,
+    1150,
+    1000,
+    1000,
+    2000,
+    1000
+   ],
+   "motors": [
+    1065,
+    1730,
+    1333,
+    2000
+   ],
+   "armed": true,
+   "s_line": "S 1150 1500 1500 1500 1000 1000 2000 1000"
+  },
+  {
+   "t": 1011,
+   "rc": [
+    1500,
+    1500,
+    1500,
+    1150,
+    1000,
+    1000,
+    2000,
+    1000
+   ],
+   "motors": [
+    1065,
+    1713,
+    1351,
+    2000
+   ],
+   "armed": true,
+   "s_line": "S 1150 1500 1500 1500 1000 1000 2000 1000"
+  },
+  {
+   "t": 1262,
+   "rc": [
+    1500,
+    1500,
+    1500,
+    1150,
+    1000,
+    1000,
+    2000,
+    1000
+   ],
+   "motors": [
+    1065,
+    1666,
+    1396,
+    2000
+   ],
+   "armed": true,
+   "s_line": "S 1150 1500 1500 1500 1000 1000 2000 1000"
+  },
+  {
+   "t": 1515,
+   "rc": [
+    1500,
+    1500,
+    1500,
+    1150,
+    1000,
+    1000,
+    2000,
+    1000
+   ],
+   "motors": [
+    1065,
+    1649,
+    1413,
+    2000
+   ],
+   "armed": true,
+   "s_line": "S 1150 1500 1500 1500 1000 1000 2000 1000"
+  },
+  {
+   "t": 1768,
+   "rc": [
+    1500,
+    1500,
+    1500,
+    1150,
+    1000,
+    1000,
+    2000,
+    1000
+   ],
+   "motors": [
+    1065,
+    1611,
+    1452,
+    2000
+   ],
+   "armed": true,
+   "s_line": "S 1150 1500 1500 1500 1000 1000 2000 1000"
+  },
+  {
+   "t": 2020,
+   "rc": [
+    1500,
+    1500,
+    1500,
+    1150,
+    1000,
+    1000,
+    2000,
+    1000
+   ],
+   "motors": [
+    1065,
+    1597,
+    1466,
+    2000
+   ],
+   "armed": true,
+   "s_line": "S 1150 1500 1500 1500 1000 1000 2000 1000"
+  },
+  {
+   "t": 2273,
+   "rc": [
+    1500,
+    1500,
+    1500,
+    1150,
+    1000,
+    1000,
+    2000,
+    1000
+   ],
+   "motors": [
+    1065,
+    1566,
+    1497,
+    2000
+   ],
+   "armed": true,
+   "s_line": "S 1150 1500 1500 1500 1000 1000 2000 1000"
+  },
+  {
+   "t": 2526,
+   "rc": [
+    1500,
+    1500,
+    1500,
+    1150,
+    1000,
+    1000,
+    2000,
+    1000
+   ],
+   "motors": [
+    1065,
+    1563,
+    1499,
+    2000
+   ],
+   "armed": true,
+   "s_line": "S 1150 1500 1500 1500 1000 1000 2000 1000"
+  },
+  {
+   "t": 2778,
+   "rc": [
+    1500,
+    1500,
+    1500,
+    1150,
+    1000,
+    1000,
+    2000,
+    1000
+   ],
+   "motors": [
+    1065,
+    1564,
+    1499,
+    2000
+   ],
+   "armed": true,
+   "s_line": "S 1150 1500 1500 1500 1000 1000 2000 1000"
+  }
+ ],
+ "hold_stat": [
+  1794249330696,
+  "OK keyed=0 link=1 fofs=-75000 armok=1"
+ ],
+ "disarm": {
+  "ms": 309,
+  "fc_armed": false,
+  "rc": [
+   1500,
+   1500,
+   1500,
+   1000,
+   1000,
+   1000,
+   1000,
+   1000
+  ],
+  "motors": [
+   1000,
+   1000,
+   1000,
+   1000
+  ],
+  "last_s": [
+   1794249331124,
+   "S 1000 1500 1500 1500 1000 1000 1000 1000"
+  ]
+ },
+ "arm2": {
+  "ok": true,
+  "fc_armed": true,
+  "arming_disable": [],
+  "stat": [
+   1794249333816,
+   "OK keyed=0 link=1 fofs=-75000 armok=1"
+  ],
+  "last_s": [
+   1794249333928,
+   "S 1000 1500 1500 1500 1000 1000 2000 1000"
+  ]
+ },
+ "pull_timeline": [
+  {
+   "dt": 2,
+   "link": true,
+   "connected": true,
+   "lost": null,
+   "fc_armed": true,
+   "fs": false,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1064,
+    1266,
+    1129,
+    1329
+   ]
+  },
+  {
+   "dt": 54,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": false,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1064,
+    1266,
+    1129,
+    1329
+   ]
+  },
+  {
+   "dt": 106,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": false,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1064,
+    1266,
+    1129,
+    1329
+   ]
+  },
+  {
+   "dt": 158,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": false,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1064,
+    1266,
+    1129,
+    1329
+   ]
+  },
+  {
+   "dt": 210,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": false,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1064,
+    1265,
+    1131,
+    1330
+   ]
+  },
+  {
+   "dt": 263,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": false,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1064,
+    1265,
+    1131,
+    1330
+   ]
+  },
+  {
+   "dt": 319,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": false,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1064,
+    1265,
+    1131,
+    1330
+   ]
+  },
+  {
+   "dt": 371,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": false,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1064,
+    1266,
+    1129,
+    1331
+   ]
+  },
+  {
+   "dt": 423,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": false,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1064,
+    1266,
+    1129,
+    1331
+   ]
+  },
+  {
+   "dt": 475,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": false,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1064,
+    1266,
+    1129,
+    1331
+   ]
+  },
+  {
+   "dt": 528,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": false,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1064,
+    1266,
+    1129,
+    1331
+   ]
+  },
+  {
+   "dt": 580,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": false,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1064,
+    1266,
+    1129,
+    1331
+   ]
+  },
+  {
+   "dt": 632,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": false,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1064,
+    1266,
+    1129,
+    1333
+   ]
+  },
+  {
+   "dt": 685,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": false,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1064,
+    1266,
+    1129,
+    1333
+   ]
+  },
+  {
+   "dt": 737,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": false,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1064,
+    1266,
+    1129,
+    1333
+   ]
+  },
+  {
+   "dt": 789,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": false,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1064,
+    1267,
+    1128,
+    1330
+   ]
+  },
+  {
+   "dt": 841,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": false,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1064,
+    1267,
+    1128,
+    1330
+   ]
+  },
+  {
+   "dt": 894,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": false,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1064,
+    1267,
+    1128,
+    1330
+   ]
+  },
+  {
+   "dt": 946,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": false,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1064,
+    1265,
+    1130,
+    1330
+   ]
+  },
+  {
+   "dt": 999,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": false,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1064,
+    1265,
+    1130,
+    1330
+   ]
+  },
+  {
+   "dt": 1051,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1064,
+    1265,
+    1130,
+    1330
+   ]
+  },
+  {
+   "dt": 1103,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1064,
+    1265,
+    1130,
+    1330
+   ]
+  },
+  {
+   "dt": 1155,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1064,
+    1264,
+    1126,
+    1326
+   ]
+  },
+  {
+   "dt": 1207,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1064,
+    1264,
+    1126,
+    1326
+   ]
+  },
+  {
+   "dt": 1259,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1064,
+    1264,
+    1126,
+    1326
+   ]
+  },
+  {
+   "dt": 1312,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 1364,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 1416,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 1468,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 1521,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": true,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 1573,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 1626,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 1678,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 1730,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 1781,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 1833,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 1885,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 1937,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 1990,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 2041,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 2094,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 2146,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 2196,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 2249,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 2301,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 2353,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 2405,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 2458,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 2510,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 2562,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 2615,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 2667,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 2719,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 2771,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 2824,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 2876,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 2929,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "dt": 2981,
+   "link": false,
+   "connected": false,
+   "lost": "port_closed",
+   "fc_armed": false,
+   "fs": true,
+   "thr": 1500,
+   "arm_ch": 2000,
+   "motors": [
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  }
+ ],
+ "pull": {
+  "close": {
+   "t": 1794249334737,
+   "how": "stream-level unplug (reads/writes reject NetworkError)",
+   "port": true
+  },
+  "ui_link_lost_ms": 12,
+  "ui_disarmed_ms": 16,
+  "worker_marks": [
+   {
+    "t": 1794249334737,
+    "ev": "close_requested"
+   },
+   {
+    "t": 1794249334748,
+    "ev": "state_link_false",
+    "lost": "port_closed",
+    "connected": false
+   }
+  ],
+  "state_after": {
+   "esp": {
+    "connected": false,
+    "info": {
+     "proto": 1,
+     "fw": "d8tx-v1",
+     "slot_us": 8994,
+     "channels": 47,
+     "pwr_max": 127,
+     "fofs_max_hz": 200000,
+     "timeout_max_ms": 1000
+    },
+    "link": false,
+    "keyed": false,
+    "fofs": -75000,
+    "slots": 1608,
+    "late_max_us": 745,
+    "allow_arm": false,
+    "sender_hz": 106.20353595302055,
+    "sender_max_gap_ms": 26.300000071525574,
+    "skipped": 0,
+    "lost_reason": "port_closed",
+    "protocol_ok": true
+   },
+   "fc_armed": false,
+   "fc_failsafe": true,
+   "fc_rc": [
+    1500,
+    1500,
+    1500,
+    885,
+    1000,
+    1000,
+    2000,
+    1000
+   ],
+   "fc_dis": [
+    "FAILSAFE",
+    "RX_FAILSAFE",
+    "ARM_SWITCH"
+   ]
+  },
+  "series_after": [
+   {
+    "t": 1794249332218,
+    "link": true,
+    "connected": true,
+    "lost": null,
+    "slots": 1284,
+    "hz": 106.15506645773725,
+    "gap": 26.300000071525574,
+    "skipped": 0,
+    "allow": true,
+    "trig": 116,
+    "rep": 112,
+    "age": 46,
+    "rlink": true,
+    "vbat": 0,
+    "rssi": 74,
+    "fcc": true,
+    "att": [
+     -2.3,
+     5.7,
+     32
+    ],
+    "mot": [
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     1000,
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "armed": false,
+    "fs": false,
+    "dis": []
+   },
+   {
+    "t": 1794249333236,
+    "link": true,
+    "connected": true,
+    "lost": null,
+    "slots": 1392,
+    "hz": 106.1695541566393,
+    "gap": 26.300000071525574,
+    "skipped": 0,
+    "allow": true,
+    "trig": 125,
+    "rep": 121,
+    "age": 11,
+    "rlink": true,
+    "vbat": 0,
+    "rssi": 74,
+    "fcc": true,
+    "att": [
+     -2.3,
+     5.7,
+     32
+    ],
+    "mot": [
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     1000,
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "armed": false,
+    "fs": false,
+    "dis": []
+   },
+   {
+    "t": 1794249334253,
+    "link": true,
+    "connected": true,
+    "lost": null,
+    "slots": 1500,
+    "hz": 106.17393713284868,
+    "gap": 26.300000071525574,
+    "skipped": 0,
+    "allow": true,
+    "trig": 133,
+    "rep": 129,
+    "age": 94,
+    "rlink": true,
+    "vbat": 0,
+    "rssi": 74,
+    "fcc": true,
+    "att": [
+     -2.4,
+     5.7,
+     32
+    ],
+    "mot": [
+     1064,
+     1268,
+     1129,
+     1335
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     1000,
+     1000,
+     1000,
+     2000,
+     1000
+    ],
+    "armed": true,
+    "fs": false,
+    "dis": []
+   },
+   {
+    "t": 1794249335254,
+    "link": false,
+    "connected": false,
+    "lost": "port_closed",
+    "slots": 1608,
+    "hz": 106.20353595302055,
+    "gap": 26.300000071525574,
+    "skipped": 0,
+    "allow": false,
+    "trig": 137,
+    "rep": 133,
+    "age": 627,
+    "rlink": true,
+    "vbat": 0,
+    "rssi": 73,
+    "fcc": true,
+    "att": [
+     -2.4,
+     5.6,
+     32
+    ],
+    "mot": [
+     1064,
+     1266,
+     1129,
+     1331
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     1000,
+     1000,
+     1000,
+     2000,
+     1000
+    ],
+    "armed": true,
+    "fs": false,
+    "dis": []
+   },
+   {
+    "t": 1794249336266,
+    "link": false,
+    "connected": false,
+    "lost": "port_closed",
+    "slots": 1608,
+    "hz": 106.20353595302055,
+    "gap": 26.300000071525574,
+    "skipped": 0,
+    "allow": false,
+    "trig": 137,
+    "rep": 133,
+    "age": 1638,
+    "rlink": false,
+    "vbat": 0,
+    "rssi": 73,
+    "fcc": true,
+    "att": [
+     -2.4,
+     5.6,
+     32
+    ],
+    "mot": [
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     885,
+     1000,
+     1000,
+     2000,
+     1000
+    ],
+    "armed": false,
+    "fs": true,
+    "dis": [
+     "FAILSAFE",
+     "RX_FAILSAFE",
+     "ARM_SWITCH"
+    ]
+   },
+   {
+    "t": 1794249337283,
+    "link": false,
+    "connected": false,
+    "lost": "port_closed",
+    "slots": 1608,
+    "hz": 106.20353595302055,
+    "gap": 26.300000071525574,
+    "skipped": 0,
+    "allow": false,
+    "trig": 137,
+    "rep": 133,
+    "age": 2656,
+    "rlink": false,
+    "vbat": 0,
+    "rssi": 73,
+    "fcc": true,
+    "att": [
+     -2.4,
+     5.7,
+     32
+    ],
+    "mot": [
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     885,
+     1000,
+     1000,
+     2000,
+     1000
+    ],
+    "armed": false,
+    "fs": true,
+    "dis": [
+     "FAILSAFE",
+     "RX_FAILSAFE",
+     "ARM_SWITCH"
+    ]
+   }
+  ],
+  "banner": "Link lost: DevKit port closed",
+  "worker_link_false_ms": 54,
+  "fc_failsafe_ms": 1051,
+  "fc_disarmed_ms": 1573,
+  "fc_arm_ch_low_ms": null
+ },
+ "tap": {
+  "esp": {
+   "lines": [
+    [
+     1794249316872,
+     "OK proto=1"
+    ],
+    [
+     1794249316875,
+     "OK proto=1 fw=d8tx-v1 slot_us=8994 channels=47 pwr_max=127 fofs_max_hz=200000 timeout_max_ms=1000"
+    ],
+    [
+     1794249318719,
+     "OK"
+    ],
+    [
+     1794249318720,
+     "OK tid=0"
+    ],
+    [
+     1794249318723,
+     "OK every=12 cap_us=9000 gain=40 dec=64 same=0 stream=1 ack=1 mark=0 retry=1 n=2250 gain_max=72 skip=1000 bits=4"
+    ],
+    [
+     1794249318724,
+     "OK"
+    ],
+    [
+     1794249318725,
+     "OK"
+    ],
+    [
+     1794249318851,
+     "EV tlm_drop k=12 ch=205 tid=0 try=0 nb=0 fit=11 sl=2 rt=232 gap=28 pgap=-54"
+    ],
+    [
+     1794249318995,
+     "EV tlm_drop k=28 ch=61 tid=0 try=0 nb=0 fit=11 sl=0 rt=255 gap=51 pgap=-27"
+    ],
+    [
+     1794249319731,
+     "EV link slots=102 late_max_us=250"
+    ],
+    [
+     1794249320739,
+     "EV link slots=206 late_max_us=250"
+    ],
+    [
+     1794249321791,
+     "EV link slots=314 late_max_us=250"
+    ],
+    [
+     1794249322843,
+     "EV link slots=422 late_max_us=250"
+    ],
+    [
+     1794249323895,
+     "EV link slots=530 late_max_us=270"
+    ],
+    [
+     1794249324948,
+     "EV link slots=638 late_max_us=279"
+    ],
+    [
+     1794249326000,
+     "EV link slots=746 late_max_us=283"
+    ],
+    [
+     1794249327052,
+     "EV link slots=854 late_max_us=283"
+    ],
+    [
+     1794249328104,
+     "EV link slots=962 late_max_us=283"
+    ],
+    [
+     1794249329157,
+     "EV link slots=1070 late_max_us=283"
+    ],
+    [
+     1794249330210,
+     "EV link slots=1178 late_max_us=283"
+    ],
+    [
+     1794249331243,
+     "EV link slots=1284 late_max_us=745"
+    ],
+    [
+     1794249332296,
+     "EV link slots=1392 late_max_us=745"
+    ],
+    [
+     1794249333348,
+     "EV link slots=1500 late_max_us=745"
+    ],
+    [
+     1794249334400,
+     "EV link slots=1608 late_max_us=745"
+    ]
+   ],
+   "sTimes": 0,
+   "sCount": 1701,
+   "sLast": 18770,
+   "sMaxGap": 26.300000071525574,
+   "sGaps50": 0,
+   "sGapsList": [],
+   "lastS": [
+    1794249334732,
+    "S 1000 1500 1500 1500 1000 1000 2000 1000"
+   ],
+   "linked": true,
+   "txOther": [
+    [
+     1794249316318,
+     "PING"
+    ],
+    [
+     1794249316871,
+     "PING"
+    ],
+    [
+     1794249316873,
+     "INFO"
+    ],
+    [
+     1794249318718,
+     "FOFS -75000"
+    ],
+    [
+     1794249318719,
+     "TID 0"
+    ],
+    [
+     1794249318720,
+     "TLM 12 9000 40 64 0 1 1 0 1 1000 4"
+    ],
+    [
+     1794249318723,
+     "ARMOK"
+    ],
+    [
+     1794249318724,
+     "LINK 127 300"
+    ],
+    [
+     1794249318928,
+     "STAT"
+    ],
+    [
+     1794249318949,
+     "STAT"
+    ],
+    [
+     1794249318967,
+     "TID 0"
+    ],
+    [
+     1794249319098,
+     "TID 0"
+    ],
+    [
+     1794249319134,
+     "STAT"
+    ],
+    [
+     1794249319213,
+     "TID 1"
+    ],
+    [
+     1794249319328,
+     "TID 2"
+    ],
+    [
+     1794249319342,
+     "STAT"
+    ],
+    [
+     1794249319446,
+     "TID 3"
+    ],
+    [
+     1794249319549,
+     "STAT"
+    ],
+    [
+     1794249319561,
+     "STAT"
+    ],
+    [
+     1794249319562,
+     "TID 4"
+    ],
+    [
+     1794249319679,
+     "TID 5"
+    ],
+    [
+     1794249319757,
+     "STAT"
+    ],
+    [
+     1794249319796,
+     "STAT"
+    ],
+    [
+     1794249319796,
+     "TID 6"
+    ],
+    [
+     1794249319913,
+     "TID 7"
+    ],
+    [
+     1794249319965,
+     "STAT"
+    ],
+    [
+     1794249320029,
+     "STAT"
+    ],
+    [
+     1794249320030,
+     "TID 8"
+    ],
+    [
+     1794249320147,
+     "TID 9"
+    ],
+    [
+     1794249320171,
+     "STAT"
+    ],
+    [
+     1794249320264,
+     "TID 10"
+    ],
+    [
+     1794249320378,
+     "STAT"
+    ],
+    [
+     1794249320380,
+     "STAT"
+    ],
+    [
+     1794249320381,
+     "TID 11"
+    ],
+    [
+     1794249320497,
+     "TID 12"
+    ],
+    [
+     1794249320586,
+     "STAT"
+    ],
+    [
+     1794249320614,
+     "STAT"
+    ],
+    [
+     1794249320615,
+     "TID 13"
+    ],
+    [
+     1794249320732,
+     "TID 14"
+    ],
+    [
+     1794249320792,
+     "STAT"
+    ],
+    [
+     1794249320847,
+     "STAT"
+    ],
+    [
+     1794249320848,
+     "TID 15"
+    ],
+    [
+     1794249320965,
+     "TID 16"
+    ],
+    [
+     1794249321001,
+     "STAT"
+    ],
+    [
+     1794249321082,
+     "TID 17"
+    ],
+    [
+     1794249321199,
+     "TID 18"
+    ],
+    [
+     1794249321208,
+     "STAT"
+    ],
+    [
+     1794249321316,
+     "TID 19"
+    ],
+    [
+     1794249321415,
+     "STAT"
+    ],
+    [
+     1794249321432,
+     "STAT"
+    ],
+    [
+     1794249321433,
+     "TID 20"
+    ],
+    [
+     1794249321550,
+     "TID 21"
+    ],
+    [
+     1794249321623,
+     "STAT"
+    ],
+    [
+     1794249321667,
+     "STAT"
+    ],
+    [
+     1794249321667,
+     "TID 22"
+    ],
+    [
+     1794249321784,
+     "TID 23"
+    ],
+    [
+     1794249321830,
+     "STAT"
+    ],
+    [
+     1794249321901,
+     "TID 24"
+    ],
+    [
+     1794249322017,
+     "TID 25"
+    ],
+    [
+     1794249322038,
+     "STAT"
+    ],
+    [
+     1794249322135,
+     "TID 26"
+    ],
+    [
+     1794249322245,
+     "STAT"
+    ],
+    [
+     1794249322250,
+     "STAT"
+    ],
+    [
+     1794249322250,
+     "TID 27"
+    ],
+    [
+     1794249322368,
+     "TID 28"
+    ],
+    [
+     1794249322452,
+     "STAT"
+    ],
+    [
+     1794249322484,
+     "STAT"
+    ],
+    [
+     1794249322485,
+     "TID 29"
+    ],
+    [
+     1794249322602,
+     "TID 30"
+    ],
+    [
+     1794249322659,
+     "STAT"
+    ],
+    [
+     1794249322719,
+     "STAT"
+    ],
+    [
+     1794249322719,
+     "TID 31"
+    ],
+    [
+     1794249322836,
+     "TID 0"
+    ],
+    [
+     1794249322866,
+     "STAT"
+    ],
+    [
+     1794249322953,
+     "TID 1"
+    ],
+    [
+     1794249323069,
+     "TID 2"
+    ],
+    [
+     1794249323072,
+     "STAT"
+    ],
+    [
+     1794249323187,
+     "TID 3"
+    ],
+    [
+     1794249323278,
+     "STAT"
+    ],
+    [
+     1794249323303,
+     "STAT"
+    ],
+    [
+     1794249323304,
+     "TID 4"
+    ],
+    [
+     1794249323421,
+     "TID 5"
+    ],
+    [
+     1794249323484,
+     "STAT"
+    ],
+    [
+     1794249323536,
+     "STAT"
+    ],
+    [
+     1794249323537,
+     "TID 6"
+    ],
+    [
+     1794249323655,
+     "TID 7"
+    ],
+    [
+     1794249323693,
+     "STAT"
+    ],
+    [
+     1794249323772,
+     "TID 8"
+    ],
+    [
+     1794249323888,
+     "TID 9"
+    ],
+    [
+     1794249323900,
+     "STAT"
+    ],
+    [
+     1794249324005,
+     "TID 10"
+    ],
+    [
+     1794249324105,
+     "STAT"
+    ],
+    [
+     1794249324121,
+     "STAT"
+    ],
+    [
+     1794249324122,
+     "TID 11"
+    ],
+    [
+     1794249324239,
+     "TID 12"
+    ],
+    [
+     1794249324314,
+     "STAT"
+    ],
+    [
+     1794249324355,
+     "STAT"
+    ],
+    [
+     1794249324356,
+     "TID 13"
+    ],
+    [
+     1794249324473,
+     "TID 14"
+    ],
+    [
+     1794249324520,
+     "STAT"
+    ],
+    [
+     1794249324590,
+     "TID 15"
+    ],
+    [
+     1794249324707,
+     "TID 16"
+    ],
+    [
+     1794249324728,
+     "STAT"
+    ],
+    [
+     1794249324823,
+     "TID 17"
+    ],
+    [
+     1794249324934,
+     "STAT"
+    ],
+    [
+     1794249324940,
+     "STAT"
+    ],
+    [
+     1794249324941,
+     "TID 18"
+    ],
+    [
+     1794249325058,
+     "TID 19"
+    ],
+    [
+     1794249325142,
+     "STAT"
+    ],
+    [
+     1794249325173,
+     "STAT"
+    ],
+    [
+     1794249325174,
+     "TID 20"
+    ],
+    [
+     1794249325291,
+     "TID 21"
+    ],
+    [
+     1794249325344,
+     "STAT"
+    ],
+    [
+     1794249325407,
+     "STAT"
+    ],
+    [
+     1794249325408,
+     "TID 22"
+    ],
+    [
+     1794249325525,
+     "TID 23"
+    ],
+    [
+     1794249325546,
+     "STAT"
+    ],
+    [
+     1794249325642,
+     "TID 24"
+    ],
+    [
+     1794249325747,
+     "STAT"
+    ],
+    [
+     1794249325758,
+     "STAT"
+    ],
+    [
+     1794249325759,
+     "TID 25"
+    ],
+    [
+     1794249325876,
+     "TID 26"
+    ],
+    [
+     1794249325951,
+     "STAT"
+    ],
+    [
+     1794249325991,
+     "STAT"
+    ],
+    [
+     1794249325992,
+     "TID 27"
+    ],
+    [
+     1794249326110,
+     "TID 28"
+    ],
+    [
+     1794249326159,
+     "STAT"
+    ],
+    [
+     1794249326227,
+     "TID 29"
+    ],
+    [
+     1794249326343,
+     "TID 30"
+    ],
+    [
+     1794249326367,
+     "STAT"
+    ],
+    [
+     1794249326461,
+     "TID 31"
+    ],
+    [
+     1794249326572,
+     "STAT"
+    ],
+    [
+     1794249326576,
+     "STAT"
+    ],
+    [
+     1794249326577,
+     "TID 0"
+    ],
+    [
+     1794249326694,
+     "TID 1"
+    ],
+    [
+     1794249326777,
+     "STAT"
+    ],
+    [
+     1794249326810,
+     "STAT"
+    ],
+    [
+     1794249326811,
+     "TID 2"
+    ],
+    [
+     1794249326928,
+     "TID 3"
+    ],
+    [
+     1794249326984,
+     "STAT"
+    ],
+    [
+     1794249327044,
+     "STAT"
+    ],
+    [
+     1794249327045,
+     "TID 4"
+    ],
+    [
+     1794249327163,
+     "TID 5"
+    ],
+    [
+     1794249327192,
+     "STAT"
+    ],
+    [
+     1794249327279,
+     "TID 6"
+    ],
+    [
+     1794249327397,
+     "TID 7"
+    ],
+    [
+     1794249327400,
+     "STAT"
+    ],
+    [
+     1794249327512,
+     "TID 8"
+    ],
+    [
+     1794249327607,
+     "STAT"
+    ],
+    [
+     1794249327629,
+     "STAT"
+    ],
+    [
+     1794249327630,
+     "TID 9"
+    ],
+    [
+     1794249327746,
+     "TID 10"
+    ],
+    [
+     1794249327813,
+     "STAT"
+    ],
+    [
+     1794249327863,
+     "STAT"
+    ],
+    [
+     1794249327864,
+     "TID 11"
+    ],
+    [
+     1794249327980,
+     "TID 12"
+    ],
+    [
+     1794249328018,
+     "STAT"
+    ],
+    [
+     1794249328098,
+     "TID 13"
+    ],
+    [
+     1794249328214,
+     "TID 14"
+    ],
+    [
+     1794249328226,
+     "STAT"
+    ],
+    [
+     1794249328330,
+     "TID 15"
+    ],
+    [
+     1794249328434,
+     "STAT"
+    ],
+    [
+     1794249328447,
+     "STAT"
+    ],
+    [
+     1794249328448,
+     "TID 16"
+    ],
+    [
+     1794249328565,
+     "TID 17"
+    ],
+    [
+     1794249328640,
+     "STAT"
+    ],
+    [
+     1794249328681,
+     "STAT"
+    ],
+    [
+     1794249328682,
+     "TID 18"
+    ],
+    [
+     1794249328799,
+     "TID 19"
+    ],
+    [
+     1794249328845,
+     "STAT"
+    ],
+    [
+     1794249328916,
+     "TID 20"
+    ],
+    [
+     1794249329033,
+     "TID 21"
+    ],
+    [
+     1794249329052,
+     "STAT"
+    ],
+    [
+     1794249329150,
+     "TID 22"
+    ],
+    [
+     1794249329261,
+     "STAT"
+    ],
+    [
+     1794249329266,
+     "STAT"
+    ],
+    [
+     1794249329267,
+     "TID 23"
+    ],
+    [
+     1794249329383,
+     "TID 24"
+    ],
+    [
+     1794249329464,
+     "STAT"
+    ],
+    [
+     1794249329499,
+     "STAT"
+    ],
+    [
+     1794249329500,
+     "TID 25"
+    ],
+    [
+     1794249329617,
+     "TID 26"
+    ],
+    [
+     1794249329667,
+     "STAT"
+    ],
+    [
+     1794249329735,
+     "TID 27"
+    ],
+    [
+     1794249329851,
+     "TID 28"
+    ],
+    [
+     1794249329869,
+     "STAT"
+    ],
+    [
+     1794249329968,
+     "TID 29"
+    ],
+    [
+     1794249330071,
+     "STAT"
+    ],
+    [
+     1794249330085,
+     "STAT"
+    ],
+    [
+     1794249330085,
+     "TID 30"
+    ],
+    [
+     1794249330202,
+     "TID 31"
+    ],
+    [
+     1794249330273,
+     "STAT"
+    ],
+    [
+     1794249330317,
+     "STAT"
+    ],
+    [
+     1794249330318,
+     "TID 0"
+    ],
+    [
+     1794249330427,
+     "TID 1"
+    ],
+    [
+     1794249330479,
+     "STAT"
+    ],
+    [
+     1794249330544,
+     "STAT"
+    ],
+    [
+     1794249330544,
+     "TID 2"
+    ],
+    [
+     1794249330661,
+     "TID 3"
+    ],
+    [
+     1794249330688,
+     "STAT"
+    ],
+    [
+     1794249330777,
+     "TID 4"
+    ],
+    [
+     1794249330893,
+     "STAT"
+    ],
+    [
+     1794249330893,
+     "STAT"
+    ],
+    [
+     1794249330894,
+     "TID 5"
+    ],
+    [
+     1794249331002,
+     "TID 6"
+    ],
+    [
+     1794249331100,
+     "STAT"
+    ],
+    [
+     1794249331118,
+     "STAT"
+    ],
+    [
+     1794249331119,
+     "TID 7"
+    ],
+    [
+     1794249331236,
+     "TID 8"
+    ],
+    [
+     1794249331309,
+     "STAT"
+    ],
+    [
+     1794249331352,
+     "STAT"
+    ],
+    [
+     1794249331353,
+     "TID 9"
+    ],
+    [
+     1794249331470,
+     "TID 10"
+    ],
+    [
+     1794249331512,
+     "STAT"
+    ],
+    [
+     1794249331587,
+     "TID 11"
+    ],
+    [
+     1794249331704,
+     "TID 12"
+    ],
+    [
+     1794249331719,
+     "STAT"
+    ],
+    [
+     1794249331821,
+     "TID 13"
+    ],
+    [
+     1794249331926,
+     "STAT"
+    ],
+    [
+     1794249331937,
+     "STAT"
+    ],
+    [
+     1794249331938,
+     "TID 14"
+    ],
+    [
+     1794249332054,
+     "TID 15"
+    ],
+    [
+     1794249332130,
+     "STAT"
+    ],
+    [
+     1794249332171,
+     "STAT"
+    ],
+    [
+     1794249332172,
+     "TID 16"
+    ],
+    [
+     1794249332288,
+     "TID 17"
+    ],
+    [
+     1794249332334,
+     "STAT"
+    ],
+    [
+     1794249332406,
+     "TID 18"
+    ],
+    [
+     1794249332522,
+     "TID 19"
+    ],
+    [
+     1794249332540,
+     "STAT"
+    ],
+    [
+     1794249332639,
+     "TID 20"
+    ],
+    [
+     1794249332741,
+     "STAT"
+    ],
+    [
+     1794249332755,
+     "STAT"
+    ],
+    [
+     1794249332756,
+     "TID 21"
+    ],
+    [
+     1794249332873,
+     "TID 22"
+    ],
+    [
+     1794249332948,
+     "STAT"
+    ],
+    [
+     1794249332989,
+     "STAT"
+    ],
+    [
+     1794249332990,
+     "TID 23"
+    ],
+    [
+     1794249333106,
+     "TID 24"
+    ],
+    [
+     1794249333153,
+     "STAT"
+    ],
+    [
+     1794249333224,
+     "TID 25"
+    ],
+    [
+     1794249333341,
+     "TID 26"
+    ],
+    [
+     1794249333360,
+     "STAT"
+    ],
+    [
+     1794249333457,
+     "TID 27"
+    ],
+    [
+     1794249333568,
+     "STAT"
+    ],
+    [
+     1794249333574,
+     "STAT"
+    ],
+    [
+     1794249333575,
+     "TID 28"
+    ],
+    [
+     1794249333691,
+     "TID 29"
+    ],
+    [
+     1794249333768,
+     "STAT"
+    ],
+    [
+     1794249333807,
+     "STAT"
+    ],
+    [
+     1794249333808,
+     "TID 30"
+    ],
+    [
+     1794249333925,
+     "TID 31"
+    ],
+    [
+     1794249333972,
+     "STAT"
+    ],
+    [
+     1794249334043,
+     "TID 0"
+    ],
+    [
+     1794249334159,
+     "TID 1"
+    ],
+    [
+     1794249334176,
+     "STAT"
+    ],
+    [
+     1794249334276,
+     "TID 2"
+    ],
+    [
+     1794249334382,
+     "STAT"
+    ],
+    [
+     1794249334393,
+     "STAT"
+    ],
+    [
+     1794249334393,
+     "TID 3"
+    ],
+    [
+     1794249334510,
+     "TID 4"
+    ],
+    [
+     1794249334589,
+     "STAT"
+    ],
+    [
+     1794249334627,
+     "STAT"
+    ],
+    [
+     1794249334627,
+     "TID 5"
+    ]
+   ]
+  },
+  "fc": {
+   "counts": {
+    "101": 45,
+    "104": 111,
+    "105": 223,
+    "108": 222,
+    "110": 45
+   },
+   "motors": [
+    [
+     1794249317176,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249317336,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249317512,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249317736,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249317896,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249318120,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249318280,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249318440,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249318664,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249318824,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249319064,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249319240,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249319400,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249319624,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249319784,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249320008,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249320168,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249320328,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249320552,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249320712,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249320936,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249321112,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249321272,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249321496,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249321656,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249321880,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249322040,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249322200,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249322424,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249322584,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249322808,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249322968,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249323128,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249323352,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249323512,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249323736,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249323896,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249324056,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249324280,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249324440,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249324680,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249324840,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249325000,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249325224,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249325384,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249325608,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249325768,
+     [
+      1064,
+      1271,
+      1127,
+      1333
+     ]
+    ],
+    [
+     1794249325928,
+     [
+      1064,
+      1268,
+      1127,
+      1332
+     ]
+    ],
+    [
+     1794249326152,
+     [
+      1064,
+      1268,
+      1126,
+      1329
+     ]
+    ],
+    [
+     1794249326312,
+     [
+      1064,
+      1264,
+      1126,
+      1328
+     ]
+    ],
+    [
+     1794249326536,
+     [
+      1064,
+      1264,
+      1126,
+      1327
+     ]
+    ],
+    [
+     1794249326696,
+     [
+      1064,
+      1265,
+      1127,
+      1327
+     ]
+    ],
+    [
+     1794249326856,
+     [
+      1064,
+      1265,
+      1126,
+      1325
+     ]
+    ],
+    [
+     1794249327080,
+     [
+      1064,
+      1269,
+      1134,
+      1336
+     ]
+    ],
+    [
+     1794249327240,
+     [
+      1064,
+      1272,
+      1133,
+      1339
+     ]
+    ],
+    [
+     1794249327464,
+     [
+      1064,
+      1403,
+      1188,
+      1528
+     ]
+    ],
+    [
+     1794249327624,
+     [
+      1064,
+      1500,
+      1229,
+      1668
+     ]
+    ],
+    [
+     1794249327784,
+     [
+      1064,
+      1600,
+      1271,
+      1808
+     ]
+    ],
+    [
+     1794249328008,
+     [
+      1065,
+      1737,
+      1326,
+      2000
+     ]
+    ],
+    [
+     1794249328184,
+     [
+      1065,
+      1735,
+      1328,
+      2000
+     ]
+    ],
+    [
+     1794249328408,
+     [
+      1065,
+      1730,
+      1333,
+      2000
+     ]
+    ],
+    [
+     1794249328568,
+     [
+      1065,
+      1713,
+      1351,
+      2000
+     ]
+    ],
+    [
+     1794249328728,
+     [
+      1065,
+      1692,
+      1371,
+      2000
+     ]
+    ],
+    [
+     1794249328952,
+     [
+      1065,
+      1666,
+      1396,
+      2000
+     ]
+    ],
+    [
+     1794249329112,
+     [
+      1065,
+      1649,
+      1413,
+      2000
+     ]
+    ],
+    [
+     1794249329336,
+     [
+      1065,
+      1626,
+      1437,
+      2000
+     ]
+    ],
+    [
+     1794249329496,
+     [
+      1065,
+      1611,
+      1452,
+      2000
+     ]
+    ],
+    [
+     1794249329656,
+     [
+      1065,
+      1597,
+      1466,
+      2000
+     ]
+    ],
+    [
+     1794249329880,
+     [
+      1065,
+      1578,
+      1485,
+      2000
+     ]
+    ],
+    [
+     1794249330040,
+     [
+      1065,
+      1566,
+      1497,
+      2000
+     ]
+    ],
+    [
+     1794249330264,
+     [
+      1065,
+      1563,
+      1499,
+      2000
+     ]
+    ],
+    [
+     1794249330424,
+     [
+      1065,
+      1564,
+      1499,
+      2000
+     ]
+    ],
+    [
+     1794249330584,
+     [
+      1065,
+      1563,
+      1499,
+      2000
+     ]
+    ],
+    [
+     1794249330808,
+     [
+      1065,
+      1563,
+      1499,
+      2000
+     ]
+    ],
+    [
+     1794249330968,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249331192,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249331352,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249331512,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249331752,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249331912,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249332136,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249332296,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249332456,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249332680,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249332840,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249333064,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249333224,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249333384,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249333608,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249333768,
+     [
+      1064,
+      1269,
+      1130,
+      1334
+     ]
+    ],
+    [
+     1794249333992,
+     [
+      1064,
+      1270,
+      1132,
+      1335
+     ]
+    ],
+    [
+     1794249334152,
+     [
+      1064,
+      1268,
+      1129,
+      1335
+     ]
+    ],
+    [
+     1794249334312,
+     [
+      1064,
+      1269,
+      1129,
+      1335
+     ]
+    ],
+    [
+     1794249334536,
+     [
+      1064,
+      1268,
+      1128,
+      1332
+     ]
+    ],
+    [
+     1794249334696,
+     [
+      1064,
+      1266,
+      1129,
+      1329
+     ]
+    ],
+    [
+     1794249334920,
+     [
+      1064,
+      1265,
+      1131,
+      1330
+     ]
+    ],
+    [
+     1794249335080,
+     [
+      1064,
+      1266,
+      1129,
+      1331
+     ]
+    ],
+    [
+     1794249335256,
+     [
+      1064,
+      1266,
+      1129,
+      1333
+     ]
+    ],
+    [
+     1794249335480,
+     [
+      1064,
+      1267,
+      1128,
+      1330
+     ]
+    ],
+    [
+     1794249335640,
+     [
+      1064,
+      1265,
+      1130,
+      1330
+     ]
+    ],
+    [
+     1794249335864,
+     [
+      1064,
+      1264,
+      1126,
+      1326
+     ]
+    ],
+    [
+     1794249336024,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249336184,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249336408,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249336568,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249336792,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249336952,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249337112,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249337336,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249337496,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794249337720,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ]
+   ]
+  },
+  "marks": [
+   {
+    "t": 1794249334737,
+    "ev": "close_requested"
+   },
+   {
+    "t": 1794249334748,
+    "ev": "state_link_false",
+    "lost": "port_closed",
+    "connected": false
+   }
+  ],
+  "series": [
+   {
+    "t": 1794249315988,
+    "link": false,
+    "connected": false,
+    "lost": null,
+    "allow": false,
+    "trig": 0,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": false,
+    "att": null,
+    "mot": null,
+    "rc": [],
+    "dis": []
+   },
+   {
+    "t": 1794249317006,
+    "link": false,
+    "connected": true,
+    "lost": null,
+    "slots": 0,
+    "hz": 0,
+    "gap": 0,
+    "skipped": 0,
+    "allow": false,
+    "trig": 0,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": false,
+    "att": null,
+    "mot": null,
+    "rc": [],
+    "dis": []
+   },
+   {
+    "t": 1794249318018,
+    "link": false,
+    "connected": true,
+    "lost": null,
+    "slots": 0,
+    "hz": 0,
+    "gap": 0,
+    "skipped": 0,
+    "allow": false,
+    "trig": 0,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": true,
+    "att": [
+     -2.3,
+     5.7,
+     32
+    ],
+    "mot": [
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     885,
+     1000,
+     1000,
+     2000,
+     1000
+    ],
+    "armed": false,
+    "fs": true,
+    "dis": [
+     "FAILSAFE",
+     "RX_FAILSAFE",
+     "ARM_SWITCH"
+    ]
+   },
+   {
+    "t": 1794249319030,
+    "link": true,
+    "connected": true,
+    "lost": null,
+    "slots": 0,
+    "hz": 99.17355371900827,
+    "gap": 26.300000071525574,
+    "skipped": 0,
+    "allow": true,
+    "trig": 3,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": true,
+    "att": [
+     -2.4,
+     5.7,
+     32
+    ],
+    "mot": [
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     885,
+     1000,
+     1000,
+     2000,
+     1000
+    ],
+    "armed": false,
+    "fs": true,
+    "dis": [
+     "FAILSAFE",
+     "RX_FAILSAFE",
+     "ARM_SWITCH"
+    ]
+   },
+   {
+    "t": 1794249320048,
+    "link": true,
+    "connected": true,
+    "lost": null,
+    "slots": 102,
+    "hz": 104.84728764245594,
+    "gap": 26.300000071525574,
+    "skipped": 0,
+    "allow": true,
+    "trig": 12,
+    "rep": 8,
+    "age": 18,
+    "rlink": true,
+    "vbat": 0,
+    "rssi": 73,
+    "fcc": true,
+    "att": [
+     -2.3,
+     5.7,
+     32
+    ],
+    "mot": [
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     1000,
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "armed": false,
+    "fs": true,
+    "dis": [
+     "FAILSAFE",
+     "RX_FAILSAFE"
+    ]
+   },
+   {
+    "t": 1794249321063,
+    "link": true,
+    "connected": true,
+    "lost": null,
+    "slots": 206,
+    "hz": 105.10510510510511,
+    "gap": 26.300000071525574,
+    "skipped": 0,
+    "allow": true,
+    "trig": 20,
+    "rep": 16,
+    "age": 98,
+    "rlink": true,
+    "vbat": 0,
+    "rssi": 73,
+    "fcc": true,
+    "att": [
+     -2.4,
+     5.7,
+     32
+    ],
+    "mot": [
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     1000,
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "armed": false,
+    "fs": true,
+    "dis": [
+     "FAILSAFE",
+     "RX_FAILSAFE"
+    ]
+   },
+   {
+    "t": 1794249322079,
+    "link": true,
+    "connected": true,
+    "lost": null,
+    "slots": 314,
+    "hz": 105.38886400955366,
+    "gap": 26.300000071525574,
+    "skipped": 0,
+    "allow": true,
+    "trig": 29,
+    "rep": 25,
+    "age": 62,
+    "rlink": true,
+    "vbat": 0,
+    "rssi": 74,
+    "fcc": true,
+    "att": [
+     -2.3,
+     5.7,
+     32
+    ],
+    "mot": [
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     1000,
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "armed": false,
+    "fs": true,
+    "dis": [
+     "FAILSAFE"
+    ]
+   },
+   {
+    "t": 1794249323093,
+    "link": true,
+    "connected": true,
+    "lost": null,
+    "slots": 422,
+    "hz": 105.71939641275958,
+    "gap": 26.300000071525574,
+    "skipped": 0,
+    "allow": true,
+    "trig": 38,
+    "rep": 34,
+    "age": 24,
+    "rlink": true,
+    "vbat": 0,
+    "rssi": 73,
+    "fcc": true,
+    "att": [
+     -2.4,
+     5.7,
+     32
+    ],
+    "mot": [
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     1000,
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "armed": false,
+    "fs": true,
+    "dis": [
+     "FAILSAFE"
+    ]
+   },
+   {
+    "t": 1794249324105,
+    "link": true,
+    "connected": true,
+    "lost": null,
+    "slots": 530,
+    "hz": 105.86046511627907,
+    "gap": 26.300000071525574,
+    "skipped": 0,
+    "allow": true,
+    "trig": 46,
+    "rep": 42,
+    "age": 100,
+    "rlink": true,
+    "vbat": 0,
+    "rssi": 73,
+    "fcc": true,
+    "att": [
+     -2.4,
+     5.7,
+     32
+    ],
+    "mot": [
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     1000,
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "armed": false,
+    "fs": true,
+    "dis": [
+     "FAILSAFE"
+    ]
+   },
+   {
+    "t": 1794249325120,
+    "link": true,
+    "connected": true,
+    "lost": null,
+    "slots": 638,
+    "hz": 105.9550825573206,
+    "gap": 26.300000071525574,
+    "skipped": 0,
+    "allow": true,
+    "trig": 55,
+    "rep": 51,
+    "age": 62,
+    "rlink": true,
+    "vbat": 0,
+    "rssi": 74,
+    "fcc": true,
+    "att": [
+     -2.4,
+     5.7,
+     32
+    ],
+    "mot": [
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     1000,
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "armed": false,
+    "fs": false,
+    "dis": []
+   },
+   {
+    "t": 1794249326134,
+    "link": true,
+    "connected": true,
+    "lost": null,
+    "slots": 746,
+    "hz": 105.96080125126812,
+    "gap": 26.300000071525574,
+    "skipped": 0,
+    "allow": true,
+    "trig": 64,
+    "rep": 60,
+    "age": 24,
+    "rlink": true,
+    "vbat": 0,
+    "rssi": 73,
+    "fcc": true,
+    "att": [
+     -2.4,
+     5.7,
+     32
+    ],
+    "mot": [
+     1064,
+     1268,
+     1127,
+     1332
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     1000,
+     1000,
+     1000,
+     2000,
+     1000
+    ],
+    "armed": true,
+    "fs": false,
+    "dis": []
+   },
+   {
+    "t": 1794249327151,
+    "link": true,
+    "connected": true,
+    "lost": null,
+    "slots": 854,
+    "hz": 106.0255268625705,
+    "gap": 26.300000071525574,
+    "skipped": 0,
+    "allow": true,
+    "trig": 72,
+    "rep": 68,
+    "age": 105,
+    "rlink": true,
+    "vbat": 0,
+    "rssi": 73,
+    "fcc": true,
+    "att": [
+     -2.4,
+     5.6,
+     32
+    ],
+    "mot": [
+     1064,
+     1269,
+     1134,
+     1336
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     1026,
+     1000,
+     1000,
+     2000,
+     1000
+    ],
+    "armed": true,
+    "fs": false,
+    "dis": []
+   },
+   {
+    "t": 1794249328163,
+    "link": true,
+    "connected": true,
+    "lost": null,
+    "slots": 962,
+    "hz": 106.11682391603944,
+    "gap": 26.300000071525574,
+    "skipped": 0,
+    "allow": true,
+    "trig": 81,
+    "rep": 77,
+    "age": 64,
+    "rlink": true,
+    "vbat": 0,
+    "rssi": 74,
+    "fcc": true,
+    "att": [
+     -2.4,
+     5.6,
+     32
+    ],
+    "mot": [
+     1065,
+     1737,
+     1326,
+     2000
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     1150,
+     1000,
+     1000,
+     2000,
+     1000
+    ],
+    "armed": true,
+    "fs": false,
+    "dis": []
+   },
+   {
+    "t": 1794249329176,
+    "link": true,
+    "connected": true,
+    "lost": null,
+    "slots": 1070,
+    "hz": 106.1264330410543,
+    "gap": 26.300000071525574,
+    "skipped": 0,
+    "allow": true,
+    "trig": 90,
+    "rep": 86,
+    "age": 26,
+    "rlink": true,
+    "vbat": 0,
+    "rssi": 72,
+    "fcc": true,
+    "att": [
+     -2.5,
+     5.6,
+     32
+    ],
+    "mot": [
+     1065,
+     1649,
+     1413,
+     2000
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     1150,
+     1000,
+     1000,
+     2000,
+     1000
+    ],
+    "armed": true,
+    "fs": false,
+    "dis": []
+   },
+   {
+    "t": 1794249330190,
+    "link": true,
+    "connected": true,
+    "lost": null,
+    "slots": 1070,
+    "hz": 106.17322724646448,
+    "gap": 26.300000071525574,
+    "skipped": 0,
+    "allow": true,
+    "trig": 98,
+    "rep": 94,
+    "age": 105,
+    "rlink": true,
+    "vbat": 0,
+    "rssi": 73,
+    "fcc": true,
+    "att": [
+     -2.5,
+     5.6,
+     32
+    ],
+    "mot": [
+     1065,
+     1566,
+     1497,
+     2000
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     1150,
+     1000,
+     1000,
+     2000,
+     1000
+    ],
+    "armed": true,
+    "fs": false,
+    "dis": []
+   },
+   {
+    "t": 1794249331203,
+    "link": true,
+    "connected": true,
+    "lost": null,
+    "slots": 1178,
+    "hz": 106.13992191801168,
+    "gap": 26.300000071525574,
+    "skipped": 0,
+    "allow": true,
+    "trig": 107,
+    "rep": 103,
+    "age": 84,
+    "rlink": true,
+    "vbat": 0,
+    "rssi": 74,
+    "fcc": true,
+    "att": [
+     -2.4,
+     5.7,
+     32
+    ],
+    "mot": [
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     1000,
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "armed": false,
+    "fs": false,
+    "dis": []
+   },
+   {
+    "t": 1794249332218,
+    "link": true,
+    "connected": true,
+    "lost": null,
+    "slots": 1284,
+    "hz": 106.15506645773725,
+    "gap": 26.300000071525574,
+    "skipped": 0,
+    "allow": true,
+    "trig": 116,
+    "rep": 112,
+    "age": 46,
+    "rlink": true,
+    "vbat": 0,
+    "rssi": 74,
+    "fcc": true,
+    "att": [
+     -2.3,
+     5.7,
+     32
+    ],
+    "mot": [
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     1000,
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "armed": false,
+    "fs": false,
+    "dis": []
+   },
+   {
+    "t": 1794249333236,
+    "link": true,
+    "connected": true,
+    "lost": null,
+    "slots": 1392,
+    "hz": 106.1695541566393,
+    "gap": 26.300000071525574,
+    "skipped": 0,
+    "allow": true,
+    "trig": 125,
+    "rep": 121,
+    "age": 11,
+    "rlink": true,
+    "vbat": 0,
+    "rssi": 74,
+    "fcc": true,
+    "att": [
+     -2.3,
+     5.7,
+     32
+    ],
+    "mot": [
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     1000,
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "armed": false,
+    "fs": false,
+    "dis": []
+   },
+   {
+    "t": 1794249334253,
+    "link": true,
+    "connected": true,
+    "lost": null,
+    "slots": 1500,
+    "hz": 106.17393713284868,
+    "gap": 26.300000071525574,
+    "skipped": 0,
+    "allow": true,
+    "trig": 133,
+    "rep": 129,
+    "age": 94,
+    "rlink": true,
+    "vbat": 0,
+    "rssi": 74,
+    "fcc": true,
+    "att": [
+     -2.4,
+     5.7,
+     32
+    ],
+    "mot": [
+     1064,
+     1268,
+     1129,
+     1335
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     1000,
+     1000,
+     1000,
+     2000,
+     1000
+    ],
+    "armed": true,
+    "fs": false,
+    "dis": []
+   },
+   {
+    "t": 1794249335254,
+    "link": false,
+    "connected": false,
+    "lost": "port_closed",
+    "slots": 1608,
+    "hz": 106.20353595302055,
+    "gap": 26.300000071525574,
+    "skipped": 0,
+    "allow": false,
+    "trig": 137,
+    "rep": 133,
+    "age": 627,
+    "rlink": true,
+    "vbat": 0,
+    "rssi": 73,
+    "fcc": true,
+    "att": [
+     -2.4,
+     5.6,
+     32
+    ],
+    "mot": [
+     1064,
+     1266,
+     1129,
+     1331
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     1000,
+     1000,
+     1000,
+     2000,
+     1000
+    ],
+    "armed": true,
+    "fs": false,
+    "dis": []
+   },
+   {
+    "t": 1794249336266,
+    "link": false,
+    "connected": false,
+    "lost": "port_closed",
+    "slots": 1608,
+    "hz": 106.20353595302055,
+    "gap": 26.300000071525574,
+    "skipped": 0,
+    "allow": false,
+    "trig": 137,
+    "rep": 133,
+    "age": 1638,
+    "rlink": false,
+    "vbat": 0,
+    "rssi": 73,
+    "fcc": true,
+    "att": [
+     -2.4,
+     5.6,
+     32
+    ],
+    "mot": [
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     885,
+     1000,
+     1000,
+     2000,
+     1000
+    ],
+    "armed": false,
+    "fs": true,
+    "dis": [
+     "FAILSAFE",
+     "RX_FAILSAFE",
+     "ARM_SWITCH"
+    ]
+   },
+   {
+    "t": 1794249337283,
+    "link": false,
+    "connected": false,
+    "lost": "port_closed",
+    "slots": 1608,
+    "hz": 106.20353595302055,
+    "gap": 26.300000071525574,
+    "skipped": 0,
+    "allow": false,
+    "trig": 137,
+    "rep": 133,
+    "age": 2656,
+    "rlink": false,
+    "vbat": 0,
+    "rssi": 73,
+    "fcc": true,
+    "att": [
+     -2.4,
+     5.7,
+     32
+    ],
+    "mot": [
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     885,
+     1000,
+     1000,
+     2000,
+     1000
+    ],
+    "armed": false,
+    "fs": true,
+    "dis": [
+     "FAILSAFE",
+     "RX_FAILSAFE",
+     "ARM_SWITCH"
+    ]
+   }
+  ]
+ },
+ "ended": "2026-11-09T18:35:37.780Z"
+}

@@ -1,0 +1,8 @@
+<!doctype html><meta charset="utf-8"><title>probe</title>
+<pre id="out">running…</pre>
+<script type="module">
+const out = document.getElementById('out')
+const w = new Worker(new URL('./probe-worker.js', import.meta.url), { type: 'module' })
+w.onmessage = (e) => { out.textContent = JSON.stringify(e.data); document.title = 'probe-done'; window.__probe = e.data }
+w.onerror = (e) => { out.textContent = 'worker error ' + e.message; window.__probe = { error: e.message } }
+</script>

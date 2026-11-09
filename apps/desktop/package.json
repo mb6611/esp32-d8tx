@@ -1,0 +1,28 @@
+{
+  "name": "desktop",
+  "private": true,
+  "version": "0.1.0",
+  "main": "main.cjs",
+  "description": "D8 TX desktop shell",
+  "scripts": {
+    "dev": "pnpm --filter web build && electron .",
+    "package": "pnpm --filter web build && electron-builder --mac dir --publish never",
+    "typecheck": "echo 'no typecheck'",
+    "test": "echo 'no tests'",
+    "build": "echo 'no build'",
+    "lint": "echo 'no lint'"
+  },
+  "build": {
+    "appId": "local.d8tx.desktop",
+    "productName": "D8TX",
+    "directories": { "output": "release" },
+    "files": ["main.cjs", "preload.cjs", "picker.html", "probe.html", "probe-worker.js", "package.json"],
+    "extraResources": [{ "from": "../web/dist", "to": "web" }],
+    "mac": { "identity": null, "target": "dir" }
+  },
+  "devDependencies": {
+    "electron": "^45.2.3",
+    "electron-builder": "^26.0.0",
+    "playwright": "^1.65.0"
+  }
+}
