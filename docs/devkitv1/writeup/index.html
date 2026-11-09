@@ -766,6 +766,14 @@ esp32sdr d8live --follow --gain 40 --open               # live page; #waterfall 
 /tmp/mpl/bin/python docs/devkitv1/writeup/plot_telemetry.py       # Figures 14-17 (--summary prints the Section 9 numbers)
 python3 bench/d8-tx/analysis/plot_tx.py --summary                 # numbers only, standard library</code></pre>
 <p>Offline firmware and host tests: <code>python3 -m unittest discover -s bench/d8-tx/tests</code>, <code>firmware/test/run.sh</code>. No RF hardware is needed for any of this. The script reads only files in this repo.</p>
+<h2 id="since-then">Since then</h2>
+<p>The rest of this write-up is frozen as the story of how it came to work. Three things changed afterwards.</p>
+<ul>
+<li><strong>Over-the-air bind with a per-ESP identity.</strong> Sections 7 to 9 cloned the E8’s transmitter ID. The firmware now draws a random <code>txid</code> and hop table on first boot (kept in NVS) and binds the drone to it: the drone took the new identity within about 4 s of <code>bind_rx</code>, saved it itself, and keeps it across reboots. With that binding, a carrier offset of 0 beat the old -75 kHz workaround (94.9% against 72.9% telemetry catch at power 127). Results: <a href="../../../bench/d8-tx/results/bind/SUMMARY.md"><code>bench/d8-tx/results/bind/SUMMARY.md</code></a>.</li>
+<li><strong>A browser and desktop app with no backend.</strong> The app no longer needs the Python and WebSocket backend of Section 8. The link controller, MSP client and telemetry decoder are TypeScript running in a Web Worker, the demodulator is the same C compiled to WebAssembly, and the DevKit and the drone are both reached through Web Serial (Chrome, Edge) or an Electron shell. A 10-minute minimized-window run held 96.0% telemetry with no stick gap over 50 ms: <a href="../../validation/d8tx-web-desktop.md"><code>docs/validation/d8tx-web-desktop.md</code></a>.</li>
+<li><strong>One-click bind and in-app flashing.</strong> The app’s Bind button does the whole bind over USB, and it installs or updates the DevKit firmware itself (bootloader, partition table and app only, so the identity survives). See <a href="../../getting-started.md">Getting started</a>.</li>
+</ul>
+<p>Still true: output power is estimated, not measured; range has not been tested; only one drone has been used.</p>
 <!-- END TX CHAPTER -->
 </main>
 </body>

@@ -347,3 +347,13 @@ python3 bench/d8-tx/analysis/plot_tx.py --summary                 # numbers only
 ```
 
 Offline firmware and host tests: `python3 -m unittest discover -s bench/d8-tx/tests`, `firmware/test/run.sh`. No RF hardware is needed for any of this. The script reads only files in this repo.
+
+## Since then
+
+The rest of this write-up is frozen as the story of how it came to work. Three things changed afterwards.
+
+- **Over-the-air bind with a per-ESP identity.** Sections 7 to 9 cloned the E8's transmitter ID. The firmware now draws a random `txid` and hop table on first boot (kept in NVS) and binds the drone to it: the drone took the new identity within about 4 s of `bind_rx`, saved it itself, and keeps it across reboots. With that binding, a carrier offset of 0 beat the old -75 kHz workaround (94.9% against 72.9% telemetry catch at power 127). Results: [`bench/d8-tx/results/bind/SUMMARY.md`](../../../bench/d8-tx/results/bind/SUMMARY.md).
+- **A browser and desktop app with no backend.** The app no longer needs the Python and WebSocket backend of Section 8. The link controller, MSP client and telemetry decoder are TypeScript running in a Web Worker, the demodulator is the same C compiled to WebAssembly, and the DevKit and the drone are both reached through Web Serial (Chrome, Edge) or an Electron shell. A 10-minute minimized-window run held 96.0% telemetry with no stick gap over 50 ms: [`docs/validation/d8tx-web-desktop.md`](../../validation/d8tx-web-desktop.md).
+- **One-click bind and in-app flashing.** The app's Bind button does the whole bind over USB, and it installs or updates the DevKit firmware itself (bootloader, partition table and app only, so the identity survives). See [Getting started](../../getting-started.md).
+
+Still true: output power is estimated, not measured; range has not been tested; only one drone has been used.
