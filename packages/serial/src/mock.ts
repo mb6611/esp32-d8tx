@@ -1,5 +1,5 @@
 // Mock transports: a simulated D8 TX firmware (protocol v1) and a simulated Betaflight MSP drone.
-import { crc32, frame, scanFrame, SLOT_S, type Clock, type SerialPort } from '@d8tx/core'
+import { crc32, frame, frameV2, MSP2_BETAFLIGHT_BIND, scanFrame, SLOT_S, type Clock, type SerialPort } from '@d8tx/core'
 
 const enc = new TextEncoder()
 const dec = new TextDecoder()
@@ -319,10 +319,16 @@ export interface MockDroneState {
   armed: boolean
   motors: number[]
   rssi: number
+  /** MSP_STATUS arming-disable mask (bit 2 = RX_FAILSAFE); 0 when absent */
+  armingDisable?: number
 }
 
-/** Simulated Betaflight MSP FC (RC, ATTITUDE, STATUS, MOTOR, ANALOG). */
+/** Simulated Betaflight MSP FC (RC, ATTITUDE, STATUS, MOTOR, ANALOG; v2 MSP2_BETAFLIGHT_BIND). */
 export class MockDronePort implements SerialPort {
+  /** MSP2_BETAFLIGHT_BIND requests received */
+  binds = 0
+  /** answer MSP2_BETAFLIGHT_BIND with an error frame (receiver cannot bind) */
+  bindError = false
   state: MockDroneState = { rc: [1500, 1500, 1000, 1500, 1000, 1000, 1000, 1000], attitude: [1.5, -2.0, 90], armed: false, motors: [0, 0, 0, 0], rssi: 800 }
   requests: number[] = []
   closed = false
@@ -350,8 +356,16 @@ export class MockDronePort implements SerialPort {
       }
       if (!f) break
       this.requests.push(f.cmd)
-      this.q.push(this.respond(f.cmd))
+      this.q.push(f.v2 ? this.respondV2(f.cmd) : this.respond(f.cmd))
     }
+  }
+
+  private respondV2(cmd: number): Uint8Array {
+    const ok = cmd === MSP2_BETAFLIGHT_BIND && !this.bindError
+    if (cmd === MSP2_BETAFLIGHT_BIND) this.binds++
+    const out = frameV2(cmd)
+    out[2] = ok ? 0x3e : 0x21 // '>' or '!'; the crc starts after the direction byte
+    return out
   }
 
   private respond(cmd: number): Uint8Array {
@@ -365,7 +379,7 @@ export class MockDronePort implements SerialPort {
     else if (cmd === 110) p = [126, ...u16(0), ...u16(s.rssi), ...i16(0), ...u16(1260)]
     else if (cmd === 101) {
       const flags = s.armed ? 1 : 0
-      p = [...u16(125), ...u16(0), ...u16(0), flags, 0, 0, 0, 0, ...u16(10), ...u16(0), 0, 26, ...[0, 0, 0, 0]]
+      p = [...u16(125), ...u16(0), ...u16(0), flags, 0, 0, 0, 0, ...u16(10), ...u16(0), 0, 26, ...[0, 8, 16, 24].map((k) => ((s.armingDisable ?? 0) >>> k) & 255)]
     }
     const body = frame(cmd, Uint8Array.from(p))
     body[2] = 0x3e // '>'

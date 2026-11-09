@@ -1,4 +1,4 @@
-// Minimal read-only MSP v1 client for Betaflight (port of python/d8tx/msp.py).
+// Minimal MSP client for Betaflight (port of python/d8tx/msp.py): v1 reads plus the v2 MSP2_BETAFLIGHT_BIND command.
 import type { Clock } from './clock.ts'
 import type { SerialPort } from './port.ts'
 
@@ -7,6 +7,9 @@ export const MSP_MOTOR = 104
 export const MSP_RC = 105
 export const MSP_ATTITUDE = 108
 export const MSP_ANALOG = 110
+/** MSP v2: put the receiver in bind mode (what Configurator's 'Bind receiver' sends). BF 4.2: RX_SPI (FrSky D/X) and SRXL2;
+ * replies with an empty ack, or an error frame when the receiver cannot bind. */
+export const MSP2_BETAFLIGHT_BIND = 0x3000
 export const ARMING_DISABLE = [
   'NO_GYRO', 'FAILSAFE', 'RX_FAILSAFE', 'BAD_RX_RECOVERY', 'BOXFAILSAFE', 'RUNAWAY_TAKEOFF', 'CRASH_DETECTED',
   'THROTTLE', 'ANGLE', 'BOOT_GRACE_TIME', 'NOPREARM', 'LOAD', 'CALIBRATING', 'CLI', 'CMS_MENU', 'BST', 'MSP',
@@ -34,12 +37,33 @@ export function frame(cmd: number, payload: Uint8Array = new Uint8Array(0)): Uin
   return out
 }
 
+/** CRC-8/DVB-S2 (poly 0xD5), the MSP v2 checksum. */
+export function crc8DvbS2(data: ArrayLike<number>, from = 0, to = data.length, crc = 0): number {
+  for (let i = from; i < to; i++) {
+    crc ^= data[i]
+    for (let k = 0; k < 8; k++) crc = crc & 0x80 ? ((crc << 1) ^ 0xd5) & 0xff : (crc << 1) & 0xff
+  }
+  return crc
+}
+
+/** MSP v2 request: `$X<` flag cmd(u16 LE) len(u16 LE) payload crc8_dvb_s2(flag..payload). */
+export function frameV2(cmd: number, payload: Uint8Array = new Uint8Array(0)): Uint8Array {
+  const n = payload.length
+  const out = new Uint8Array(9 + n)
+  out.set([0x24, 0x58, 0x3c, 0, cmd & 255, (cmd >> 8) & 255, n & 255, (n >> 8) & 255])
+  out.set(payload, 8)
+  out[8 + n] = crc8DvbS2(out, 3, 8 + n)
+  return out
+}
+
 export interface MspFrame {
   cmd: number
   payload: Uint8Array
+  /** true for an MSP v2 (`$X`) frame */
+  v2?: boolean
 }
 
-/** Incremental frame scanner mirroring msp.read_frame. Throws MspError('value') on checksum / error reply. */
+/** Incremental frame scanner (v1 `$M` and v2 `$X`) mirroring msp.read_frame. Throws MspError('value') on checksum / error reply. */
 export function scanFrame(buf: number[]): MspFrame | null {
   const i = findMs(buf)
   if (i < 0) {
@@ -47,6 +71,7 @@ export function scanFrame(buf: number[]): MspFrame | null {
     return null
   }
   buf.splice(0, i)
+  if (buf[1] === 0x58) return scanV2(buf)
   if (buf.length >= 5) {
     const n = buf[3]
     if (buf.length >= 6 + n) {
@@ -65,8 +90,26 @@ export function scanFrame(buf: number[]): MspFrame | null {
   return null
 }
 
+function scanV2(buf: number[]): MspFrame | null {
+  if (buf.length < 8) return null
+  const n = buf[6] | (buf[7] << 8)
+  if (n > 4096) {
+    buf.splice(0, 2) // not a sane frame: resync
+    throw new MspError('value', 'bad MSP v2 length')
+  }
+  if (buf.length < 9 + n) return null
+  const d = buf[2]
+  const cmd = buf[4] | (buf[5] << 8)
+  const ok = crc8DvbS2(buf, 3, 8 + n) === buf[8 + n]
+  const payload = Uint8Array.from(buf.slice(8, 8 + n))
+  buf.splice(0, 9 + n)
+  if (!ok) throw new MspError('value', 'bad MSP v2 checksum')
+  if (d === 0x21) throw new MspError('value', `MSP error reply cmd=0x${cmd.toString(16)}`)
+  return { cmd, payload, v2: true }
+}
+
 function findMs(buf: number[]): number {
-  for (let i = 0; i + 1 < buf.length; i++) if (buf[i] === 0x24 && buf[i + 1] === 0x4d) return i
+  for (let i = 0; i + 1 < buf.length; i++) if (buf[i] === 0x24 && (buf[i + 1] === 0x4d || buf[i + 1] === 0x58)) return i
   return -1
 }
 
@@ -175,16 +218,18 @@ export class BetaflightMSP {
     }
   }
 
-  request(cmd: number): Promise<Uint8Array> {
+  /** One request/reply. v2: send as an MSP v2 frame (commands above 255 need it). */
+  request(cmd: number, opts: { v2?: boolean; payload?: Uint8Array } = {}): Promise<Uint8Array> {
+    const v2 = opts.v2 ?? cmd > 255
     const run = async (): Promise<Uint8Array> => {
       const wait = this.tLast + this.minGapMs - this.clock.now()
       if (wait > 0) await new Promise<void>((r) => this.clock.setTimeout(r, wait))
       this.buf.length = 0
       try {
-        await this.port.write(frame(cmd))
+        await this.port.write(v2 ? frameV2(cmd, opts.payload) : frame(cmd, opts.payload))
         for (;;) {
           const f = await this.readFrame()
-          if (f.cmd === cmd) return f.payload
+          if (f.cmd === cmd && !!f.v2 === v2) return f.payload
         }
       } finally {
         this.tLast = this.clock.now()
@@ -200,6 +245,8 @@ export class BetaflightMSP {
   async status() { return parseStatus(await this.request(MSP_STATUS)) }
   async motors() { return parseMotors(await this.request(MSP_MOTOR)) }
   async rssi() { return parseAnalog(await this.request(MSP_ANALOG)).rssi }
+  /** Puts the receiver in bind mode (MSP2_BETAFLIGHT_BIND). Throws MspError('value') when the FC refuses. */
+  async bind(): Promise<void> { await this.request(MSP2_BETAFLIGHT_BIND, { v2: true }) }
 
   async close(): Promise<void> {
     this.closed = true

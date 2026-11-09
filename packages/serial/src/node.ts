@@ -52,6 +52,13 @@ export class NodeSerialPort implements SerialPort {
       // our reads blocking (a threadpool read then pins the fd and close waits for it, up to a minute on the CP2102).
       this.onSideFd((fd) => {
         execFileSync('stty', [String(this.baud), 'raw', '-echo', 'clocal', 'cread', '-crtscts', '-hupcl'], { stdio: [fd, 'ignore', 'ignore'], timeout: 3000 })
+        // Exclusive mode, as Chromium's Web Serial sets it: further open()s of the tty fail EBUSY until our last close
+        // (TIOCEXCL is per tty, so the side fd sets it for ours). Without it a browser could open the DevKit beside us.
+        try {
+          execFileSync('python3', ['-c', 'import fcntl,termios; fcntl.ioctl(0, termios.TIOCEXCL)'], { stdio: [fd, 'ignore', 'ignore'], timeout: 3000 })
+        } catch (e) {
+          process.stderr.write(`[serial] ${this.path}: TIOCEXCL not set, the port is not exclusive (${(e as Error).message})\n`)
+        }
       })
     } catch (e) {
       if (this.fd >= 0) try { fs.closeSync(this.fd) } catch { /* ignore */ }
@@ -126,10 +133,10 @@ export class NodeSerialPort implements SerialPort {
     await settle(this.chain)
     dbg(`io settled ${Date.now() - t0} ms`)
     try {
-      // tcflush(TCIOFLUSH) (Node has no termios binding; best effort) so the last close has no output to drain.
-      this.onSideFd((fd) => {
-        execFileSync('python3', ['-c', 'import termios; termios.tcflush(0, termios.TCIOFLUSH)'], { stdio: [fd, 'ignore', 'ignore'], timeout: 2000 })
-      })
+      // tcflush(TCIOFLUSH) (Node has no termios binding; best effort) so the last close has no output to drain. On our
+      // own fd: the tty is exclusive (TIOCEXCL), so a side fd can no longer be opened. libuv clears O_NONBLOCK on the
+      // child's stdin, which shares our open file description; the helper sets it back.
+      execFileSync('python3', ['-c', 'import fcntl,os,termios; termios.tcflush(0, termios.TCIOFLUSH); fcntl.fcntl(0, fcntl.F_SETFL, fcntl.fcntl(0, fcntl.F_GETFL) | os.O_NONBLOCK)'], { stdio: [this.fd, 'ignore', 'ignore'], timeout: 2000 })
     } catch { /* no python3: close anyway */ }
     dbg(`flushed ${Date.now() - t0} ms`)
     const fd = this.fd

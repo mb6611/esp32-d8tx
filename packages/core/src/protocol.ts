@@ -59,6 +59,9 @@ export function fmtSticks(ch: readonly number[], allowArm = false): { line: stri
 
 export type KV = Record<string, number | string | boolean>
 
+// always text: txid is hex ("0042" must not become 42), ver is the firmware version (INFO)
+const TEXT_KEYS = new Set(['txid', 'ver'])
+
 function kv(tokens: string[]): KV {
   const d: KV = {}
   for (const t of tokens) {
@@ -66,7 +69,7 @@ function kv(tokens: string[]): KV {
     if (i >= 0) {
       const k = t.slice(0, i)
       const v = t.slice(i + 1)
-      d[k] = k !== 'txid' && /^-?\d+$/.test(v) ? Number(v) : v // txid is hex text ("0042" must not become 42)
+      d[k] = !TEXT_KEYS.has(k) && /^-?\d+$/.test(v) ? Number(v) : v
     } else d[t] = true
   }
   return d
