@@ -1,6 +1,6 @@
 {
   "chip": "esp32",
-  "version": "1.0.0+efc1e61c",
+  "version": "1.0.0+d8a54987",
   "flash": {
     "flash_mode": "dio",
     "flash_size": "2MB",
@@ -25,8 +25,8 @@
       "name": "app",
       "offset": 65536,
       "path": "d8tx-app.bin",
-      "size": 659648,
-      "sha256": "17fee24264f425be16e30767fbebacd9b4d87f36de5c9690d2a6196454dfc415"
+      "size": 657408,
+      "sha256": "bceca03dfc301c9c06f100c7b13d97d8b7d5c64418c039e4421611542a4ee3bd"
     }
   ]
 }

@@ -1,0 +1,21 @@
+menu "D8 TX"
+
+config D8_BENCH
+    bool "Bench modes (TONE, ALT, RETUNE, PKT, HOP n_slots>0, keyed TCAP)"
+    default n
+    help
+        Off (default, release build): the keying commands are LINK, BIND and continuous HOP 0; with S, STOP/U, FOFS,
+        ARMOK, INFO, STAT, TLM, TLMX, TID, ID, PING, STICKS and receive-only TCAP. TONE, ALT, RETUNE, PKT, HOP n_slots>0
+        and keyed TCAP are not compiled in and reply "ERR bench-only" (protocol v1: "ERR bench-only bench build required").
+        On: those fixed-channel / CW bench modes compile in. They require an explicit pwr. They are a separate regulatory
+        case from LINK (47 CFR 15.249 fixed channel vs 15.247 frequency hopping); INFO reports bench=1.
+
+config D8_PWR_MAX
+    int "Maximum pwr code accepted by any keying command (raw PBUS(5,1) code, not dBm)"
+    range 0 127
+    default 127
+    help
+        Compile-time cap applied to the pwr argument of LINK, BIND, HOP and (bench build) TONE/ALT/PKT/TCAP.
+        Reported in INFO as pwr_max=. No calibration to dBm exists.
+
+endmenu

@@ -9,7 +9,24 @@
 #define TONE_DUR_MIN_US 50u
 #define ALT_HALF_MIN_US 50u
 #define ALT_MAX_TRANS   255u       /* transitions recorded per window */
+/* Build switches. On the device they come from Kconfig.projbuild (sdkconfig.h); host tests use
+ * -DCONFIG_D8_BENCH=1 / -DCONFIG_D8_PWR_MAX=n. D8_BENCH = 1 compiles the fixed-channel and CW bench modes
+ * (TONE, ALT, RETUNE, PKT, HOP n_slots>0, keyed TCAP); the default release build refuses them ("ERR bench-only"). */
+#if defined(__has_include)
+#if __has_include("sdkconfig.h")
+#include "sdkconfig.h"
+#endif
+#endif
+#ifdef CONFIG_D8_BENCH
+#define D8_BENCH 1
+#else
+#define D8_BENCH 0
+#endif
+#ifdef CONFIG_D8_PWR_MAX
+#define PWR_MAX         CONFIG_D8_PWR_MAX  /* compile-time cap on every keying command's pwr (raw PBUS(5,1) code, not dBm) */
+#else
 #define PWR_MAX         127
+#endif
 #define RETUNE_KHZ_MIN  2404000    /* D8 channel span only */
 #define RETUNE_KHZ_MAX  2478000
 #define RETUNE_TONE_MAX_US 150000u /* TONE after RETUNE (off the 2412 baseline) is capped */

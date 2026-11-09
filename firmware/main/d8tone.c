@@ -2,26 +2,37 @@
  *
  * PHY bring-up, keying and unkeying are adapted from the read-only reference
  * auto-drone/stage2/txeng (K 0 keying: txcal_debuge_mode(0) + ROM start_tx_tone_step + PBUS(5,1)).
- * Boot and idle are RF-silent: nothing keys until a TONE/ALT command arrives.
+ * Boot and idle are RF-silent: nothing keys until a keying command (LINK, BIND, HOP 0, or in a bench build TONE/ALT/
+ * PKT/HOP n/keyed TCAP) arrives.
+ *
+ * Build configurations (firmware/main/Kconfig.projbuild; INFO reports bench=<0|1> at the end of its line):
+ *   release (CONFIG_D8_BENCH=n, default): LINK (continuous 47-channel hopping), BIND, HOP 0 (continuous hop), S, STOP/U,
+ *     FOFS, ARMOK, INFO, STAT, TLM, TLMX, TID, ID, PING, STICKS, receive-only TCAP. The fixed-channel / CW bench
+ *     commands below marked [bench] are not compiled in; the parser answers "ERR bench-only" (protocol v1 TCAP with a
+ *     pwr: "ERR bench-only bench build required").
+ *   bench (CONFIG_D8_BENCH=y): additionally TONE, ALT, RETUNE, PKT, HOP n_slots>0 and keyed TCAP [bench]. pwr is optional
+ *     (default PWR_MAX) as before. They are fixed-channel / CW modes (47 CFR 15.249 case), not LINK.
+ *   CONFIG_D8_PWR_MAX (default 127) caps the pwr of every keying command (LINK, BIND, HOP, bench modes); INFO pwr_max=.
+ *   pwr is a raw PBUS(5,1) code, not dBm; no calibration exists.
  * Channel is the PHY default Wi-Fi ch1 (2412 MHz); the tone offset is added to that.
  *
  * Serial 921600 8N1, line commands (decimal only). Every command ends with "OK" or "ERR <why>":
  *   PING                       -> P,d8tone,1
  *   STAT                       -> S,keyed=0,b8=XXXXXXXX,a8=XXXXXXXX
  *   U                          unkey unconditionally (idempotent)
- *   TONE f dur_us [pwr]        key one tone at step offset f (|f|<=511, 0 = center), for dur_us
- *                              (50..200000), pwr 0..127 (default 127), then unkey
- *   ALT fa fb half_us dur_us [pwr]   key at fa, switch fa<->fb every half_us (>=50, <=255 switches)
- *   PKT hex [pwr]             18-byte length+payload (CRC appended) or 20-byte full U3
- *                             packet including CRC (transmitted verbatim), pwr default 127.
+ *   [bench] TONE f dur_us [pwr] key one tone at step offset f (|f|<=511, 0 = center), for dur_us
+ *                              (50..200000), pwr 0..PWR_MAX (default PWR_MAX), then unkey
+ *   [bench] ALT fa fb half_us dur_us [pwr]   key at fa, switch fa<->fb every half_us (>=50, <=255 switches)
+ *   [bench] PKT hex [pwr]      18-byte length+payload (CRC appended) or 20-byte full U3
+ *                             packet including CRC (transmitted verbatim), pwr default PWR_MAX.
  *                             Example: PKT 1142b2000001cacacaca8888cacacaca8888
- *   RETUNE khz                 move the LO to khz (2404000..2478000) with the fast retune (capacitor-code
+ *   [bench] RETUNE khz         move the LO to khz (2404000..2478000) with the fast retune (capacitor-code
  *                              release + rom_set_rf_freq_offset, ~0.27 ms, no recalibration); no keying.
  *                              Afterwards TONE/ALT (tone offset f=0 is the LO) are capped at 150 ms until
  *                              RETUNE 2412000 restores the boot LO. Refused while keyed.
  *   FOFS hz                    signed LO offset (|hz|<=200000, default 0, RAM only) added to RETUNE and HOP retunes
  *   STICKS c1..c8              eight stick values in us (800..2200) for HOP packets (default 1500 each)
- *   HOP n_slots [pwr]          (n<=940) stream D8 data packets, one per ~8.994 ms slot, on the identity's hop table
+ *   HOP 0 pwr [timeout_ms]     continuous 47-channel hop (release); [bench] HOP n_slots [pwr]: (n<=940) stream D8 data packets, one per ~8.994 ms slot, on the identity's hop table
  *                              (d8_hop_table(start, step), entry 0 = 0; channel n = 2404 MHz + n*299.93 kHz), packet
  *                              counter (byte 4) +1 per packet, the identity's txid, byte-identical to host d8hop
  *                              build(counter_index=4). Per slot: retune, key, 208 bits, unkey (one
@@ -37,9 +48,9 @@
  *                              firmware; the host sends TID n after each capture (n = id+1 if the reply was received,
  *                              else the same id) and the next trigger waits for it (<=1 s, then resends the same id).
  *   TID n                      telemetry id for the next trigger (0..31). Silent during LINK; idle: sets the first id.
- *   TCAP khz [cap_us] [gain] [dec] [pwr]     one such capture, optionally right after keying one data packet.
+ *   TCAP khz [cap_us] [gain] [dec] [pwr]     one such capture; [bench] pwr>=0 keys one data packet first (release: receive-only).
  *   ID | ID new | ID XXXX start step   per-ESP identity (txid + hop table start/step, NVS; random on first boot)
- *   BIND [pwr]                 bind packets on hop channel 0 every slot until STOP or 30 s (protocol/PROTOCOL.md "Bind")
+ *   BIND [pwr]                 bind packets on hop channel 0 every slot until STOP or 30 s; pwr default PWR_MAX (protocol/PROTOCOL.md "Bind")
  * Results are printed only after unkey:
  *   K,<mode>,fa,fb,half_us,req_us,pwr,on_us,key_total_us,key_cycles,unkey_cycles,b8_on,b8_end,b8_off,a8_on,a8_off,ntrans
  *   T,<i>,<due_us>,<actual_us>,<b8_readback>        one per transition (time since tone on, 240 MHz cycles/240)
@@ -176,10 +187,11 @@ static void key_air(const uint8_t air[D8_AIR_BYTES], int pwr, unsigned tail) {
     while ((int32_t)(cyc() - t0 - nb * D8_BIT_CYCLES) < 0) { }
 }
 
+static inline uint32_t cyc(void) { return esp_cpu_get_cycle_count(); }
+
+#if D8_BENCH /* TONE / ALT / PKT: fixed-channel bench modes, compiled out of the release build */
 typedef struct { uint32_t due, actual, rb; } trans_t;
 static trans_t trans[ALT_MAX_TRANS + 1];
-
-static inline uint32_t cyc(void) { return esp_cpu_get_cycle_count(); }
 
 static void run_window(const cmd_t *c) {
     unsigned nt = 0;
@@ -228,6 +240,9 @@ static void run_window(const cmd_t *c) {
     printf("OK\n");
 }
 
+#endif /* D8_BENCH: run_window */
+
+#if D8_BENCH
 /* D8 register values in Betaflight cc2500FrskyDConfig (26 MHz XOSC):
  * MDMCFG4=0xaa, MDMCFG3=0x39: (256+57)*2^10*26MHz/2^28 = 31044.006 baud.
  * DEVIATN=0x42: (8+2)*2^4*26MHz/2^17 = 31738.281 Hz deviation.
@@ -274,6 +289,7 @@ static void run_packet(const cmd_t *c) {
            max_late * 1000u / CYC_PER_US, late_count,
            b8_on, b8_end, b8_off, a8_on, a8_off);
 }
+#endif /* D8_BENCH: run_packet */
 
 static int fofs_hz; /* RAM-only LO offset applied to RETUNE and HOP retunes */
 static volatile bool lo_off; /* LO moved off the boot 2412 MHz */
@@ -373,7 +389,8 @@ static void ship_finish(void) {
 /* Protocol v1 error line: ERR <code> <text>. */
 static void print_err_v1(const char *why) {
     const char *code = err_code(why);
-    const char *text = !strcmp(why, "busy") ? "link active" : !strcmp(why, "long") ? "line too long" : why;
+    const char *text = !strcmp(why, "busy") ? "link active" : !strcmp(why, "long") ? "line too long" :
+                       !strcmp(why, "bench-only") ? "bench build required" : why;
     printf("ERR %s %s\n", code, text);
 }
 
@@ -533,7 +550,9 @@ static void run_tcap(const cmd_t *c) {
     feed();
     lo_retune(f10);
     portENTER_CRITICAL(&mux);
-    if (c->pwr >= 0) key_air(air, c->pwr, 0);
+#if D8_BENCH
+    if (c->pwr >= 0) key_air(air, c->pwr, 0); /* keyed capture: bench build only (the parser refuses it in release) */
+#endif
     uint32_t u0 = tlm_listen(f10, c->gain, n_out, c->dec, &r); /* unkey() is idempotent when not keyed */
     portEXIT_CRITICAL(&mux);
     tlm_dump(0, c->khz, c->pwr >= 0 ? 1u : 0u, n_out, c->dec, u0, &r);
@@ -548,7 +567,7 @@ static void run_hop(const cmd_t *c) {
     uint32_t late_max = 0, rt_max = 0;
     unsigned sent = 0;
     bool abort = false, abort_pkt = false;
-    const bool cont = c->kind == CMD_LINK || c->n_slots == 0;
+    const bool cont = !D8_BENCH || c->kind == CMD_LINK || c->n_slots == 0; /* release: always continuous */
     const char *why = "done", *err = NULL;
     static line_in_t hli;
     hli.len = 0;
@@ -726,8 +745,8 @@ static void run_hop(const cmd_t *c) {
 }
 
 static void print_info(void) {
-    printf("OK proto=1 fw=" FW_ID " slot_us=8994 channels=%u pwr_max=%d fofs_max_hz=%d timeout_max_ms=%d txid=%02x%02x ver=" D8TX_FW_VER "\n",
-           (unsigned)D8_HOP_CHANNELS, PWR_MAX, FOFS_HZ_MAX, HOP_TIMEOUT_MAX_MS, ident.id0, ident.id1);
+    printf("OK proto=1 fw=" FW_ID " slot_us=8994 channels=%u pwr_max=%d fofs_max_hz=%d timeout_max_ms=%d txid=%02x%02x ver=" D8TX_FW_VER " bench=%d\n",
+           (unsigned)D8_HOP_CHANNELS, PWR_MAX, FOFS_HZ_MAX, HOP_TIMEOUT_MAX_MS, ident.id0, ident.id1, D8_BENCH);
 }
 
 /* BIND: one bind packet per 8994 us slot on hop channel 0 (+ FOFS), idx 0,5,..,45 cycling (Multiprotocol FrSkyD
@@ -838,6 +857,7 @@ void app_main(void) {
             printf("OK keyed=%d link=0 fofs=%d armok=%d bind=0\n", keyed, fofs_hz, arm_ok);
             break;
         case CMD_UNKEY: unkey(); printf("OK\n"); break;
+#if D8_BENCH
         case CMD_TONE:
         case CMD_ALT:
             if (lo_off && c.dur_us > RETUNE_TONE_MAX_US) { printf("ERR retuned_dur\n"); break; }
@@ -851,6 +871,7 @@ void app_main(void) {
             lo_off = (int)c.khz * 100 + fofs_hz / 10 != 241200000;
             printf("OK\n");
             break;
+#endif
         case CMD_STICKS:
         case CMD_S:
             for (unsigned i = 0; i < D8_STICKS; i++)
@@ -867,7 +888,9 @@ void app_main(void) {
             for (unsigned i = 0; i < D8_STICKS; i++) /* never leave ARM high in stored sticks */
                 if (i == 6 && sticks_raw[i] > d8_us_to_raw(S_CH7_US_MAX)) sticks_raw[i] = d8_us_to_raw(1000);
             break;
+#if D8_BENCH
         case CMD_PKT: run_packet(&c); break;
+#endif
         case CMD_TLM:
             tlm.every = c.tlm_every; tlm.cap_us = c.cap_us; tlm.gain = c.gain; tlm.dec = c.dec; tlm.same = c.same;
             tlm.stream = c.stream; tlm.ack = c.ack; tlm.mark = c.mark; tlm.retry = c.retry; tlm.skip_us = c.skip_us; tlm.bits = c.bits;
@@ -891,6 +914,9 @@ void app_main(void) {
         case CMD_BIND:
             if (keyed) { print_err_v1("keyed"); break; }
             run_bind(&c);
+            break;
+        default: /* TONE/ALT/PKT/RETUNE in a release build: the parser already answered ERR bench-only */
+            printf("ERR bench-only\n");
             break;
         }
         fflush(stdout);

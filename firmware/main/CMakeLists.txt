@@ -10,7 +10,7 @@ set_source_files_properties(tlm_cap.c PROPERTIES COMPILE_OPTIONS "-O2")
 set(D8TX_FW_SEMVER "1.0.0")
 get_filename_component(_fw_root "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
 file(GLOB _fw_files RELATIVE "${_fw_root}" "${_fw_root}/main/*.c" "${_fw_root}/main/*.h" "${_fw_root}/main/CMakeLists.txt"
-    "${_fw_root}/CMakeLists.txt" "${_fw_root}/sdkconfig.defaults")
+    "${_fw_root}/main/Kconfig.projbuild" "${_fw_root}/CMakeLists.txt" "${_fw_root}/sdkconfig.defaults")
 list(SORT _fw_files)
 set(_fw_cat "")
 foreach(f ${_fw_files})

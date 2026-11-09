@@ -30,7 +30,7 @@ static cmd_t fail(const char *why) {
 const char *err_code(const char *why) {
     if (!strcmp(why, "args") || !strcmp(why, "packet_len") || !strcmp(why, "hex") || !strcmp(why, "length_byte")) return "args";
     if (!strcmp(why, "cmd")) return "unknown";
-    if (!strcmp(why, "long") || !strcmp(why, "keyed") || !strcmp(why, "busy")) return why;
+    if (!strcmp(why, "long") || !strcmp(why, "keyed") || !strcmp(why, "busy") || !strcmp(why, "bench-only")) return why;
     return "range";
 }
 
@@ -138,6 +138,8 @@ cmd_t cmd_parse(char *line) {
         c.kind = CMD_TID;
         return c;
     }
+    if (!D8_BENCH && (!strcmp(tok[0], "TONE") || !strcmp(tok[0], "ALT") || !strcmp(tok[0], "PKT") || !strcmp(tok[0], "RETUNE")))
+        return fail("bench-only"); /* fixed-channel / CW modes exist only in a D8_BENCH build */
     if (!strcmp(tok[0], "TCAP")) { /* TCAP khz [cap_us] [gain] [dec] [pwr]: one capture; pwr>=0 keys one data packet first */
         if (n < 2 || n > 6) return fail("args");
         if (!parse_int(tok[1], RETUNE_KHZ_MIN, RETUNE_KHZ_MAX, &v)) return fail("khz");
@@ -148,6 +150,7 @@ cmd_t cmd_parse(char *line) {
         if (n >= 5) { if (!parse_int(tok[4], 16, 64, &v) || (v != 16 && v != 32 && v != 64)) return fail("dec"); c.dec = (unsigned)v; }
         if (n >= 6) { if (!parse_int(tok[5], -1, PWR_MAX, &v)) return fail("pwr"); c.pwr = (int)v; }
         if (c.cap_us * 16u / c.dec > 6000u) return fail("cap_us");
+        if (!D8_BENCH && c.pwr >= 0) return fail("bench-only"); /* keyed capture; receive-only TCAP stays in release */
         c.kind = CMD_TCAP;
         return c;
     }
@@ -192,6 +195,7 @@ cmd_t cmd_parse(char *line) {
         if (n < 2 || n > 4) return fail("args");
         if (!parse_int(tok[1], 0, HOP_SLOTS_MAX, &v)) return fail("slots");
         c.n_slots = (unsigned)v;
+        if (!D8_BENCH && c.n_slots) return fail("bench-only"); /* only continuous HOP 0 in release */
         c.timeout_ms = HOP_TIMEOUT_DEF_MS;
         if (c.n_slots) {
             if (n > 3) return fail("args");

@@ -4,34 +4,7 @@
 #include "../main/packet.h"
 #include "../main/cmd_parse.h"
 
-/* ---- C port of Betaflight cc2500_frsky_shared.c getBind1/getBind2 (bind state machine after tuning) ----
- * fifo = what the CC2500 FIFO holds: length byte + 17 payload bytes + RSSI + LQI|CRC_OK (CRC stripped, APPEND_STATUS),
- * ccLen = 20. Bind mode filters ADDR 0x03 (PKTCTRL1 0x0D: ADR_CHK=01) -> packet[1] must be 0x03. */
-typedef struct { uint8_t txid[2], hop[50], rxnum; unsigned list_len, bind_idx; int state; } bf_rx_t; /* 1 = bind1, 2 = bind2, 3 = done */
-static void bf_init(bf_rx_t *r) { memset(r, 0, sizeof *r); r->bind_idx = 5; r->state = 1; }
-static void bf_feed(bf_rx_t *r, const uint8_t body[D8_BODY_BYTES]) {
-    uint8_t p[20];
-    memcpy(p, body, 18); p[18] = 0x40; p[19] = 0x80 | 60; /* CRC ok, LQI 60 */
-    const unsigned cc_len = 20;
-    if (p[1] != 0x03 || !(p[cc_len - 1] & 0x80) || p[2] != 0x01) return;
-    if (r->state == 1) {
-        if (p[5] != 0x00) return;
-        r->txid[0] = p[3]; r->txid[1] = p[4];
-        for (unsigned n = 0; n < 5; n++) r->hop[p[5] + n] = p[6 + n];
-        r->rxnum = p[12];
-        r->state = 2;
-    } else if (r->state == 2) {
-        if (r->bind_idx > 120) { r->state = 3; return; }
-        if (p[3] != r->txid[0] || p[4] != r->txid[1] || p[5] != r->bind_idx) return;
-        for (unsigned n = 0; n < 5; n++) {
-            if (p[6 + n] == p[cc_len - 3] || p[6 + n] == 0) {
-                if (r->bind_idx >= 0x2d) { r->list_len = p[5] + n; r->state = 3; return; }
-            }
-            r->hop[p[5] + n] = p[6 + n];
-        }
-        r->bind_idx += 5;
-    }
-}
+#include "bf_bind_port.h"
 /* Firmware BIND schedule: idx 0,5,..,45 cycling from start_idx; returns frames fed until the RX finished. */
 static unsigned bf_bind(bf_rx_t *r, const d8_ident_t *id, unsigned start_idx) {
     uint8_t tab[D8_HOP_CHANNELS], body[D8_BODY_BYTES];
@@ -64,6 +37,14 @@ int main(void) {
     /* U3 bench/d8-tx/host/d8_vectors.py build(0), captured-E8 id and 2250 channels. */
     const char *hex = "1142b2000001cacacaca8888cacacaca8888";
     char line[96]; snprintf(line, sizeof line, "PKT %s", hex);
+#if !D8_BENCH
+    /* release build: bench commands are refused with "bench-only" even when well formed. */
+    snprintf(line, sizeof line, "PKT %s 5", hex); assert(!strcmp(parse(line).err, "bench-only"));
+    assert(!strcmp(parse("HOP 5 100").err, "bench-only") && !strcmp(parse("RETUNE 2441000").err, "bench-only"));
+    assert(parse("HOP 0 64").kind == CMD_HOP && parse("LINK 64").kind == CMD_LINK);
+#else
+    assert(parse(line).kind == CMD_PKT && parse(line).pwr == PWR_MAX); /* omitted pwr = PWR_MAX */
+    snprintf(line, sizeof line, "PKT %s 127", hex);
     cmd_t c = parse(line); assert(c.kind == CMD_PKT && c.packet_len == 18 && c.pwr == 127);
     uint8_t air[D8_AIR_BYTES]; assert(d8_air_bytes(c.packet, c.packet_len, air));
     assert(!memcmp(air, "\xaa\xaa\xaa\xaa\xd3\x91", 6));
@@ -88,6 +69,7 @@ int main(void) {
     assert(parse("PKT 1142b2000001cacacaca8888cacacaca888g").kind == CMD_ERR);
     snprintf(line, sizeof line, "PKT %s 128", hex); assert(parse(line).kind == CMD_ERR);
     snprintf(line, sizeof line, "PKT %s 127", hex); assert(parse(line).kind == CMD_PKT);
+#endif
     /* Hop table = hopfollow.D8_TABLE; body/CRC = host d8_vectors.build. */
     static const uint8_t e8[47] = {0, 57, 112, 167, 222, 21, 76, 131, 186, 241, 40, 95, 150, 205, 4, 59, 114, 169, 224, 23,
         78, 133, 188, 243, 42, 97, 152, 207, 6, 61, 116, 171, 226, 25, 80, 135, 190, 245, 44, 99,
@@ -102,14 +84,19 @@ int main(void) {
     d8_build_body(0x42, 0xb2, 0x35, r2, body);
     static const uint8_t v2[20] = {0x11,0x42,0xb2,0x00,0x35,0x01,0xdc,0xca,0xb8,0xff,0x85,0xfb,0x01,0x23,0xbc,0x00,0x10,0x8a,0x4a,0xf6};
     assert(!memcmp(body, v2, 18) && d8_crc(body, 18) == 0x4af6);
+#if D8_BENCH
     {
         cmd_t k = parse("RETUNE 2441000"); assert(k.kind == CMD_RETUNE && k.khz == 2441000);
         assert(parse("RETUNE 2403999").kind == CMD_ERR && parse("RETUNE 2478001").kind == CMD_ERR);
         assert(parse("RETUNE").kind == CMD_ERR && parse("RETUNE 24x").kind == CMD_ERR);
         k = parse("HOP 940 100"); assert(k.kind == CMD_HOP && k.n_slots == 940 && k.pwr == 100);
-        k = parse("HOP 5"); assert(k.kind == CMD_HOP && k.pwr == 127);
+        assert(parse("HOP 5").kind == CMD_HOP && parse("HOP 5").pwr == PWR_MAX);
         assert(parse("HOP 941").kind == CMD_ERR && parse("HOP 0").kind == CMD_ERR && parse("HOP 5 128").kind == CMD_ERR);
         assert(parse("HOP").kind == CMD_ERR && parse("HOP 5 1 2").kind == CMD_ERR);
+    }
+#endif
+    {
+        cmd_t k;
         k = parse("STICKS 1500 1500 1000 2000 1500 1500 1500 1500");
         assert(k.kind == CMD_STICKS && k.sticks[2] == 1000 && k.sticks[3] == 2000);
         assert(parse("STICKS 1500 1500 1000 2000 1500 1500 1500").kind == CMD_ERR);
