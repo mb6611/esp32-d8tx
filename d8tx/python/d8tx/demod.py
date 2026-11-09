@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
 """FrSky D8 (CC2500) packet demodulator for the telemetry reply captures.
 
 Vendored subset of host/esp32sdr/d8.py (standard decoder only: FM discriminator, M&M clock recovery,

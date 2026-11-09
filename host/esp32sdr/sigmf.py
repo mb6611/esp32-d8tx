@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
 """SigMF recording (cf32_le) with esp32sdr: custom keys."""
 from __future__ import annotations
 

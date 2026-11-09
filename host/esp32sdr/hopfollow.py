@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
 """Hop-following receive helpers (firmware HOPTAB / in-stream HS HA HP HX).
 
 Protocol and measurements: docs/devkitv1/hop-follow.md. Receive only.

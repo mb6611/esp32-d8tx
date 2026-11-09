@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
 """`esp32sdr` command line: info, tune, capture (SigMF) and on-chip spectrum."""
 from __future__ import annotations
 

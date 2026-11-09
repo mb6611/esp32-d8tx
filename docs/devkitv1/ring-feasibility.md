@@ -1,4 +1,3 @@
-<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 # Ring-capture feasibility on the ESP32 DevKit V1 (plan U4)
 
 Measured on 2026-11-05, on the owner's DevKit V1 (ESP32-D0WD-V3, 240 MHz, `/dev/cu.usbserial-0001`,

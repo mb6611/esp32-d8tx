@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-3.0-or-later
 """Orientation check (plan U5.5): sweep the LO 2407..2477 MHz in 5 MHz steps, max-hold
 host PSDs (25 CAP16 bursts) and on-chip SPEC (2 s max) per LO, then test which RF mapping
 keeps ambient features fixed as the LO moves. Run from host/: .venv/bin/python ../docs/devkitv1/bench/orientation_sweep.py"""

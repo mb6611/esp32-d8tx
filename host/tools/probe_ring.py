@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-3.0-or-later
 """Run the RING_PROBE diagnostics (plan U4) against a probe build and log raw replies.
 
 Usage (from host/):

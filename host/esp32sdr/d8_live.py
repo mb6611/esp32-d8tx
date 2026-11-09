@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
 """Live FrSky D8 channel viewer: `esp32sdr d8live [--center 2421.032 --gain 40]`.
 
 Streams 1-bit I/Q at dec 64 (250 kS/s, mode 2) from the board, decodes D8

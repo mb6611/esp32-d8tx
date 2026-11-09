@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
 """In-memory Transport that answers the burst protocol commands."""
 from __future__ import annotations
 

@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
 """Waterfall rows for the d8live web UI (`esp32sdr d8live`, tab "Waterfall").
 
 The stream thread hands every IQS frame to `Waterfall.tap(f)`. With nobody

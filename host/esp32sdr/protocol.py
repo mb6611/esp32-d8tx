@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
 """Pure command builders and reply parsers for the burst serial protocol."""
 from __future__ import annotations
 

@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
 """Decode FrSky D8 packets from a recording: python -m esp32sdr.d8_cli REC.sigmf-data [options].
 
 Reads fs / decimation / bits from the .sigmf-meta next to the data when present."""

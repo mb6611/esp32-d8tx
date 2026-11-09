@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
 """On-chip snapshot spectra (`SPEC`, docs/spectrum.md) driven through a Device.
 
 Kept outside device.py: `spectrum(dev, ...)` sends `SPEC`, reads SPC1 frames

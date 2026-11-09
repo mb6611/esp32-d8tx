@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
 import json
 
 from esp32sdr import sdrpp_launch as S

@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
 """`esp32sdr sdrpp`: one-command live view in SDR++ (docs/devkitv1/live-view.md).
 
 A thin wrapper around `esp32sdr bridge`: it stops an old bridge and SDR++, backs up

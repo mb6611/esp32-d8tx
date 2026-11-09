@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
 """Bench check for 1-bit IQS (docs/devkitv1/iq-stream-uart.md): run one IQS
 stream, read the raw bytes, parse every IQS1 frame and any text lines
 (IQSPROF from an -DIQS_PROF build, IQSEND), report loss and budget fields.

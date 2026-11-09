@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
 """High-level device control over a Transport."""
 from __future__ import annotations
 

@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
 """Hop-following FrSky D8 receive (receive only): `esp32sdr d8follow`, `d8live --follow`.
 
 The firmware owns the hop timing (hop_follow.h): it retunes on the stream's own

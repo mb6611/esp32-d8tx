@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
 """`stream` subcommand: record an IQS stream to SigMF."""
 from __future__ import annotations
 

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-3.0-or-later
 """Host side of the HOP_PROBE fast-retune probe (docs/devkitv1/fast-hop.md).
 
 Library + CLI. Needs a build with -DHOP_PROBE=ON. Usage (from host/):

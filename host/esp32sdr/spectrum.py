@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
 """Power spectra: host PSD and on-chip SPC1 frame parsing (docs/spectrum.md)."""
 from __future__ import annotations
 

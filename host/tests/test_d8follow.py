@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
 """HopFollower against a simulated hopping tx and a simulated firmware schedule."""
 from dataclasses import dataclass
 

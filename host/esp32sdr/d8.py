@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
 """Offline FrSky D8 (CC2500) packet decoder for esp32sdr stream recordings.
 
 PHY, from Betaflight cc2500_frsky_shared.c (cc2500FrskyBaseConfig +

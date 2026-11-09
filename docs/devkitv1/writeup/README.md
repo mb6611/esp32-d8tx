@@ -363,4 +363,4 @@ Following needs the current firmware (it adds `HOPTAB`) and a manual gain; the b
 
 ---
 
-Built on [esp-sdr](https://github.com/ESPARGOS/esp-sdr) by ESPARGOS. GPL-3.0-or-later; see [NOTICE.md](../../../NOTICE.md).
+RX work originally built against [esp-sdr](https://github.com/ESPARGOS/esp-sdr) by ESPARGOS (no esp-sdr code is in this repository).

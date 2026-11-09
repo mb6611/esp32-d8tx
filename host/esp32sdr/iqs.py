@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
 """Continuous IQ stream (`IQS`, docs/iq-stream.md) over a Device.
 
 `parse_iqs1` decodes one frame. `IqsSession` tunes, sends `FOFS`/`IQS`, and

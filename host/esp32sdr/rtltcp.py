@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
 """rtl_tcp server: serve the IQS stream to gqrx, SDR++, GNU Radio (`esp32sdr bridge`).
 
 Protocol: on connect a 12-byte dongle header (`RTL0`, tuner type, gain count; both

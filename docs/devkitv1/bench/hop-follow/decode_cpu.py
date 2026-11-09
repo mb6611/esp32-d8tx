@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
 """Host CPU of the hop-follow segment decode, on recorded single-channel D8 captures.
 
 A locked follower hands the decoder one channel segment per hop: from the retune

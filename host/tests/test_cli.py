@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
 """Each CLI subcommand against the in-memory fake device (no board)."""
 from __future__ import annotations
 

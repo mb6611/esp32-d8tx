@@ -1,4 +1,3 @@
-<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 # IQS over UART: link budget (single source)
 
 Firmware (`receiver.c`) and host (`host/esp32sdr/iqs.py`) both implement exactly

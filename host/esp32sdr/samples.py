@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
 """Decode raw CAP16/CAP20 capture payloads into complex64 samples."""
 from __future__ import annotations
 

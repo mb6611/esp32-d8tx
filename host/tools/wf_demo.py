@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
 """Serve the d8live UI from a recording or a simulated hop-follow tx (no board).
 
   .venv/bin/python tools/wf_demo.py --sigmf /tmp/d8/centred_m2      # plain mode replay
