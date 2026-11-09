@@ -1,6 +1,7 @@
-// Firmware line under the ESP32 port picker in Pairing: the running version, "Flash d8tx firmware" when no d8tx
-// firmware answers, "Update firmware (vX → vY)" when INFO ver differs from the bundled build, and "Reflash" in a small
-// menu. Flashing itself is useFlash (esptool-js on the UI thread).
+// One firmware button under the ESP32 port picker in Pairing. Its label follows what the DevKit reports:
+// "Install firmware" when no d8tx firmware answers, "Update firmware" when INFO ver differs from the bundled build,
+// "Reinstall firmware" when d8tx answers with the bundled version, "Flash firmware" when unknown (not connected).
+// Flashing itself is useFlash (esptool-js on the UI thread).
 import { useState } from 'react'
 import type { PortRef } from '@d8tx/core'
 import { Tip } from '../components/ui/tooltip'
@@ -44,11 +45,9 @@ export function FirmwareControl({ api, esp, ports, saved, armed, enabled }: {
   enabled: boolean
 }) {
   const f = useFlash(api, esp, enabled && !!api)
-  const [menu, setMenu] = useState(false)
   const [confirm, setConfirm] = useState<string | null>(null)
   const info = esp?.connected ? esp.info : undefined
-  const fwText = info ? `${String(info.fw ?? '')} proto=${String(info.proto ?? '?')}${info.ver !== undefined ? ` ver=${String(info.ver)}` : ''}` : null
-  if (!enabled || !api) return fwText ? <span className="font-mono text-[10px] text-muted">{fwText}</span> : null
+  if (!enabled || !api) return null
 
   const target = flashTarget(ports, esp, saved)
   const bundled = f.manifest?.version
@@ -56,37 +55,27 @@ export function FirmwareControl({ api, esp, ports, saved, armed, enabled }: {
   const blocked = armed ? 'Disarm first.' : !target ? 'Add the ESP32 DevKit port first.' : esp?.binding || esp?.bind_state === 'binding' || esp?.bind_state === 'confirming' ? 'Wait for the bind to finish.' : null
   const go = () => {
     setConfirm(null)
-    setMenu(false)
     if (target) void f.flash(target)
   }
-  const ask = (label: string) => {
-    setMenu(false)
-    setConfirm(label)
-  }
+  const ask = (label: string) => setConfirm(label)
   const s = f.state
-  const actionLabel = offer.kind === 'install' ? 'Flash d8tx firmware' : offer.kind === 'update' ? `Update firmware (${offer.from} → ${offer.to})` : null
+  const running = info && String(info.fw ?? '').startsWith('d8tx')
+  const actionLabel = !bundled ? null
+    : offer.kind === 'install' ? 'Install firmware'
+    : offer.kind === 'update' ? 'Update firmware'
+    : running ? 'Reinstall firmware'
+    : 'Flash firmware'
+  const actionTip = offer.kind === 'install' ? `No d8tx firmware answers on this DevKit (blank or other firmware). Installs d8tx ${bundled}. ${KEEP}`
+    : offer.kind === 'update' ? `Running ${offer.from}, this app ships ${offer.to}. ${KEEP}`
+    : running ? `Running ${String(info?.ver ?? '?')}, the same version this app ships. ${KEEP}`
+    : `Writes d8tx ${bundled}. ${KEEP}`
 
   return (
     <div className="flex w-56 flex-col gap-1 text-[11px] leading-snug">
-      <div className="flex items-center justify-between gap-1">
-        <span className="truncate font-mono text-[10px] text-muted" title={fwText ?? undefined}>{fwText ?? (offer.kind === 'install' ? 'no d8tx firmware answers' : '')}</span>
-        {bundled && !f.busy && (
-          <span className="relative">
-            <button aria-label="Firmware menu" className="rounded-sm border border-line px-1 font-mono text-[10px] text-muted hover:border-muted hover:text-fg" onClick={() => setMenu((v) => !v)}>⋯</button>
-            {menu && (
-              <div className="absolute right-0 z-10 mt-1 w-52 rounded-sm border border-fg bg-paper p-1 shadow">
-                <button className="w-full px-2 py-1 text-left hover:bg-paper-2 disabled:text-muted" disabled={!!blocked} title={blocked ?? KEEP} onClick={() => ask(`Reflash firmware (${bundled})`)}>
-                  Reflash firmware ({bundled})
-                </button>
-              </div>
-            )}
-          </span>
-        )}
-      </div>
       {!f.busy && !confirm && actionLabel && (
         blocked
           ? <Tip tip={blocked} className="cursor-not-allowed no-underline"><button className="btn w-full !py-0.5 text-xs" disabled>{actionLabel}</button></Tip>
-          : <Tip tip={KEEP} className="no-underline"><button className={cn('btn w-full !py-0.5 text-xs', offer.kind === 'install' && 'border-warn')} onClick={() => ask(actionLabel)}>{actionLabel}</button></Tip>
+          : <Tip tip={actionTip} className="no-underline"><button className={cn('btn w-full !py-0.5 text-xs', (offer.kind === 'install' || offer.kind === 'update') && 'border-warn')} onClick={() => ask(actionLabel)}>{actionLabel}</button></Tip>
       )}
       {confirm && !f.busy && (
         <div className="flex flex-col gap-1 rounded-sm border border-warn p-1.5">
