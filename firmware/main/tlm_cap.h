@@ -5,7 +5,11 @@
  * writer runs at 16 MS/s as an 8192-word ring, the CPU hands it bank 0 / bank 1 of the
  * 0x3ffe8000 window every TCAP_SESSION pairs and boxcar-sums the bank it owns into
  * dec-pair blocks (dec 16/32/64 -> 1 MS/s / 500 kS/s / 250 kS/s). The caller must hold
- * interrupts off for the whole run (busy-waits on the write pointer). */
+ * interrupts off for the whole run (busy-waits on the write pointer).
+ *
+ * The bank-rotation + sentinel scheme follows ESPARGOS esp-sdr main/common/ring_capture.c
+ * (https://github.com/ESPARGOS/esp-sdr), which follows h0m3us3r/eSpDR capture.c; this is an
+ * independent single-core implementation, not a copy of that code. */
 #ifndef TLM_CAP_H
 #define TLM_CAP_H
 #include <stdint.h>
