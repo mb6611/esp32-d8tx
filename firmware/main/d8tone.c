@@ -294,6 +294,9 @@ static void lo_retune(uint32_t f10) {
 
 #define HOP_SLOT_CYC (8994u * CYC_PER_US)
 #define FW_ID "d8tx-v1"
+#ifndef D8TX_FW_VER /* set by main/CMakeLists.txt: semver + hash of the firmware sources */
+#define D8TX_FW_VER "0.0.0+unknown"
+#endif
 
 static bool v1_link; /* current run_hop was started by LINK (protocol v1 events/replies) */
 
@@ -723,7 +726,7 @@ static void run_hop(const cmd_t *c) {
 }
 
 static void print_info(void) {
-    printf("OK proto=1 fw=" FW_ID " slot_us=8994 channels=%u pwr_max=%d fofs_max_hz=%d timeout_max_ms=%d txid=%02x%02x\n",
+    printf("OK proto=1 fw=" FW_ID " slot_us=8994 channels=%u pwr_max=%d fofs_max_hz=%d timeout_max_ms=%d txid=%02x%02x ver=" D8TX_FW_VER "\n",
            (unsigned)D8_HOP_CHANNELS, PWR_MAX, FOFS_HZ_MAX, HOP_TIMEOUT_MAX_MS, ident.id0, ident.id1);
 }
 

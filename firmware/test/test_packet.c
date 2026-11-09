@@ -166,7 +166,20 @@ int main(void) {
         bad = e8; bad.start = 255; bad.step = 1; assert(!d8_ident_valid(&bad));   /* entry 1 = 0 */
         bad = e8; bad.start = 0; bad.step = 1; assert(!d8_ident_valid(&bad));     /* entry 1 = 1 (bind byte 17) */
         bad = e8; bad.start = 0; bad.step = 6; assert(!d8_ident_valid(&bad));     /* entry 42 = 252 > D8_HOP_CH_MAX */
-        d8_ident_t fb = {0x5c, 0x31, 7, 86}; assert(d8_ident_good(&fb));          /* d8_ident_generate fallback */
+        d8_ident_t fb = {0x5c, 0x31, 51, 73}; assert(d8_ident_good(&fb));         /* d8_ident_generate fallback */
+        /* narrow tables that the old rule accepted (all 47 hops in a ~14 MHz slice) are no longer generated */
+        d8_ident_t nar = {0x5c, 0x31, 94, 1}; assert(d8_ident_valid(&nar) && !d8_ident_good(&nar));
+        nar.start = 165; nar.step = 254; assert(d8_ident_valid(&nar) && !d8_ident_good(&nar));
+        nar.start = 47; nar.step = 3; assert(d8_ident_valid(&nar) && !d8_ident_good(&nar));
+        nar = fb; nar.step = 86; nar.start = 7; assert(d8_ident_valid(&nar) && !d8_ident_good(&nar)); /* old fallback: gap 56 */
+        unsigned ngood = 0;
+        for (unsigned st = 0; st < 256; st++)
+            for (unsigned sp = 0; sp < 256; sp++) {
+                d8_ident_t t = {0x12, 0x34, (uint8_t)st, (uint8_t)sp};
+                if (d8_ident_good(&t)) ngood++;
+            }
+        printf("good start/step pairs: %u\n", ngood);
+        assert(ngood >= 100);
         unsigned nvalid = 0;
         for (unsigned st = 0; st < 256; st++)
             for (unsigned sp = 0; sp < 256; sp++) {
@@ -182,6 +195,21 @@ int main(void) {
         for (unsigned i = 0; i < 200; i++) {
             d8_ident_t g; d8_ident_generate(lcg, &g);
             assert(d8_ident_good(&g) && d8_ident_valid(&g));
+            /* spread check, independent of d8_ident_good: consecutive hops >= 30 channels apart (cyclic, incl. entry 0),
+             * entries span the band (lowest <= 34, highest >= 202) and no 33 consecutive channels are unused */
+            uint8_t h[D8_HOP_CHANNELS]; d8_hop_table(g.start, g.step, h);
+            unsigned lo = 255, hi = 0;
+            for (unsigned k = 0; k < D8_HOP_CHANNELS; k++) {
+                int d = (int)h[(k + 1) % D8_HOP_CHANNELS] - (int)h[k];
+                assert(d >= 30 || d <= -30);
+                if (k) { if (h[k] < lo) lo = h[k]; if (h[k] > hi) hi = h[k]; }
+            }
+            assert(lo <= 34 && hi >= 202);
+            for (unsigned c = 2; c + 32 <= D8_GEN_CH_MAX; c++) {
+                int any = 0;
+                for (unsigned k = 1; k < D8_HOP_CHANNELS; k++) if (h[k] >= c && h[k] <= c + 32) any = 1;
+                assert(any);
+            }
             check_bind(&g, (i % 10) * 5);
         }
         /* a table whose entry 46 were 0 would end the list early in Betaflight: such identities are invalid */

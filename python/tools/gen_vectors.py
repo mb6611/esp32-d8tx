@@ -206,6 +206,8 @@ def write_commands_h(cmds):
 # ---------------------------------------------------------------- replies.json
 REPLY_LINES = [
     "OK", "OK\r", "OK proto=1 fw=abc\r", "  OK  ", "OK proto=1 fw=d8tx-v1 slot_us=8994 channels=47 pwr_max=127",
+    "OK proto=1 fw=d8tx-v1 slot_us=8994 channels=47 pwr_max=127 fofs_max_hz=200000 timeout_max_ms=1000 txid=0042 ver=1.0.0+0a1b2c3d",
+    "OK proto=1 ver=12345678",
     "OK keyed=0 link=0 fofs=-75000 armok=0", "OK a=-5 b=x c= flag", "OK tid=7", "OK n=0x10 m=-", "OKAY",
     "ERR", "ERR busy", "ERR busy link active", "ERR   range   fofs  out of range", "ERR unknown cmd",
     "EV link slots=3 late_max_us=9", "EV link_end why=stop slots=5 late_max_us=7 retune_max_us=3",

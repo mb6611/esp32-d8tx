@@ -56,7 +56,7 @@ def _kv(tokens):
     for t in tokens:
         if "=" in t:
             k, v = t.split("=", 1)
-            d[k] = int(v) if k != "txid" and v.lstrip("-").isdigit() else v  # txid is hex text ("0042")
+            d[k] = int(v) if k not in ("txid", "ver") and v.lstrip("-").isdigit() else v  # txid hex, ver firmware version
         else:
             d[t] = True
     return d

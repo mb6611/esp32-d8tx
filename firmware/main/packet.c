@@ -43,20 +43,28 @@ int d8_ident_valid(const d8_ident_t *id) {
 
 int d8_ident_good(const d8_ident_t *id) {
     if (id->id0 == 0x00 || id->id0 == 0x03 || id->id0 == 0xff || !d8_ident_valid(id)) return 0;
-    uint8_t tab[D8_HOP_CHANNELS];
+    uint8_t tab[D8_HOP_CHANNELS], seen[256] = {0};
     d8_hop_table(id->start, id->step, tab);
-    for (unsigned i = 1; i < D8_HOP_CHANNELS; i++)
-        if (tab[i] > D8_GEN_CH_MAX || tab[i] == 0x5a || tab[i] == 0xdc) return 0;
-    return 1;
+    for (unsigned i = 0; i < D8_HOP_CHANNELS; i++) {
+        unsigned a = tab[i], b = tab[(i + 1) % D8_HOP_CHANNELS]; /* cyclic: 46 -> 0 -> 1 */
+        if (a > D8_GEN_CH_MAX || a == 0x5a || a == 0xdc) return 0;
+        if ((a > b ? a - b : b - a) < D8_GEN_HOP_MIN) return 0;
+        seen[a] = 1;
+    }
+    /* coverage: no run of more than D8_GEN_GAP_MAX channels between used entries (or the band edges 2, D8_GEN_CH_MAX) */
+    unsigned last = 2;
+    for (unsigned c = 2; c <= D8_GEN_CH_MAX; c++)
+        if (seen[c]) { if (c - last > D8_GEN_GAP_MAX) return 0; last = c; }
+    return D8_GEN_CH_MAX - last <= D8_GEN_GAP_MAX;
 }
 
 void d8_ident_generate(uint32_t (*rnd)(void), d8_ident_t *out) {
-    for (unsigned n = 0; n < 100000u; n++) {
+    for (unsigned n = 0; n < 100000u; n++) { /* 142 of 65536 start/step pairs qualify: ~460 draws on average */
         uint32_t r = rnd();
         d8_ident_t c = {(uint8_t)r, (uint8_t)(r >> 8), (uint8_t)(r >> 16), (uint8_t)(r >> 24)};
         if (d8_ident_good(&c)) { *out = c; return; }
     }
-    const d8_ident_t fallback = {0x5c, 0x31, 7, 86}; /* d8_ident_good (test_packet) */
+    const d8_ident_t fallback = {0x5c, 0x31, 51, 73}; /* d8_ident_good (test_packet) */
     *out = fallback;
 }
 

@@ -24,11 +24,15 @@ void d8_hop_table(unsigned start, unsigned step, uint8_t out[D8_HOP_CHANNELS]);
 typedef struct { uint8_t id0, id1, start, step; } d8_ident_t;
 #define D8_HOP_CH_MAX 246u      /* highest usable channel: 2477.78 MHz, inside RETUNE_KHZ_MAX */
 #define D8_GEN_CH_MAX 234u      /* generated identities stay in the reference TX range (< 0xeb) */
+#define D8_GEN_HOP_MIN 30u      /* generated: consecutive hops >= 30 channels (~9 MHz) apart (reference D8 step 0x1e) */
+#define D8_GEN_GAP_MAX 32u      /* generated: used channels cover 2..D8_GEN_CH_MAX with no gap > 32 channels */
 /* Accepted by "ID XXXX S T" (any txid, so existing bindings can be cloned): step != 0, entries 1..46 distinct and
  * each in 2..D8_HOP_CH_MAX (0 = bind channel and list end, 1 = bind byte 17, see d8_build_bind). E8's 42b2 2 55 passes. */
 int d8_ident_valid(const d8_ident_t *id);
 /* Stricter rule for generated identities: valid, entries <= D8_GEN_CH_MAX, none 0x5a / 0xdc (Multiprotocol
- * Frsky_init_hop filter), txid0 not 0x00 / 0x03 (bind address) / 0xff. */
+ * Frsky_init_hop filter), txid0 not 0x00 / 0x03 (bind address) / 0xff, every pair of consecutive table entries
+ * (cyclic, including entry 0) >= D8_GEN_HOP_MIN channels apart, and entries spread over the band (no gap
+ * > D8_GEN_GAP_MAX channels, band edges 2 and D8_GEN_CH_MAX included). */
 int d8_ident_good(const d8_ident_t *id);
 /* Draws from rnd until d8_ident_good (bounded; falls back to a fixed good identity). */
 void d8_ident_generate(uint32_t (*rnd)(void), d8_ident_t *out);
