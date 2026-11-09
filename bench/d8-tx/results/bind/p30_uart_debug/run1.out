@@ -1,0 +1,33 @@
+FC before link: armed=false failsafe=true arming_disable=RX_FAILSAFE
+== DevKit /dev/cu.usbserial-0001, power 30, 60 s, fofs 0, telemetry on, arm disallowed, decoder: wasm
+PING (sync) { proto: 1 }
+INFO { proto: 1, fw: 'd8tx-v1', slot_us: 8994, channels: 47, pwr_max: 127, fofs_max_hz: 200000, timeout_max_ms: 1000, txid: '6ff3' } link.txid [ 111, 243 ]
+ID { txid: '6ff3', start: 205, step: 254 } link.txid [ 111, 243 ]
+t=5.0 hz=111.2 max_gap=25.5 sent=556 skipped=0 link=1 catch10s=0.909 rssi=-81.8
+t=10.0 hz=111.2 max_gap=25.5 sent=1112 skipped=0 link=1 catch10s=0.813 rssi=-83.6
+t=15.0 hz=111.2 max_gap=25.5 sent=1668 skipped=0 link=1 catch10s=0.733 rssi=-81.8
+t=20.0 hz=111.2 max_gap=25.5 sent=2224 skipped=0 link=1 catch10s=0.794 rssi=-84.4
+t=25.0 hz=111.2 max_gap=25.5 sent=2780 skipped=0 link=1 catch10s=0.76 rssi=-82.7
+t=30.0 hz=111.2 max_gap=25.5 sent=3336 skipped=0 link=1 catch10s=0.728 rssi=-85.3
+t=35.0 hz=111.2 max_gap=25.5 sent=3892 skipped=0 link=1 catch10s=0.733 rssi=-82.7
+t=40.0 hz=111.2 max_gap=25.5 sent=4448 skipped=0 link=1 catch10s=0.667 rssi=-83.6
+t=45.0 hz=111.2 max_gap=25.5 sent=5004 skipped=0 link=1 catch10s=0.714 rssi=-84.4
+t=50.0 hz=111.2 max_gap=25.5 sent=5560 skipped=0 link=1 catch10s=0.79 rssi=-81.8
+t=55.0 hz=111.2 max_gap=25.5 sent=6116 skipped=0 link=1 catch10s=0.716 rssi=-83.6
+t=60.0 hz=111.2 max_gap=25.5 sent=6671 skipped=0 link=1 catch10s=0.62 rssi=-85.3
+t=60.0 hz=111.2 max_gap=25.5 sent=6671 skipped=0 link=1 catch10s=0.62 rssi=-85.3
+link_end { name: 'link_end', why: 'stop', slots: 6074, late_max_us: 584, retune_max_us: 389, gap_max_us: 581, gap50: 612, gap100: 76, gap200: 11, g2_min_us: -255, g2_max_us: 562, trig: 615, retry: 119 }
+STAT { keyed: 0, link: 1, fofs: 0, armok: 0, bind: 0 } events { tlm_drop: 119, link: 58, link_end: 1 }
+RESULT sender_hz=111.18 max_gap_ms=25.5 sent=6683 skipped=0 slots=6048 late_max_us=584
+RESULT stat_ok=248 stat_timeouts=0 stat_max_ms=73
+RESULT telemetry triggers=613 decoded_replies=449 tlm_events=0 catch_rate_10s=0.62 total_catch=0.732 rssi_dbm=-82.7 vbat=0
+DevKit PASS
+RESULT fc polls=248 errors=0 failsafe_polls=10 (after lock 0) rx_lock_ms=2452 rc_match=238/238 rc_max_diff=0 last_rc=[1200,1300,1400,1100,1450,1550,1000,1600] expect=[1200,1300,1400,1100,1450,1550,1000,1600] arming_disable=THROTTLE
+FC link PASS
+closing DevKit port
+port closed in 175 ms
+FC after link stop: failsafe=true arming_disable=RX_FAILSAFE
+== FC /dev/cu.usbmodem0x80000001, attitude for 5 s
+RESULT fc_attitude_hz=31.2 n=157 errors=0 last=[-3.8,7,0]
+FC PASS; closing port
+HW CHECK PASS
