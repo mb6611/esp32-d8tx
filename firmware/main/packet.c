@@ -30,6 +30,43 @@ void d8_hop_table(unsigned start, unsigned step, uint8_t out[D8_HOP_CHANNELS]) {
     for (unsigned i = 1; i < D8_HOP_CHANNELS; i++) out[i] = (uint8_t)(start + step * i);
 }
 
+int d8_ident_valid(const d8_ident_t *id) {
+    if (!id->step) return 0;
+    uint8_t tab[D8_HOP_CHANNELS], seen[256] = {0};
+    d8_hop_table(id->start, id->step, tab);
+    for (unsigned i = 1; i < D8_HOP_CHANNELS; i++) {
+        if (tab[i] < 2u || tab[i] > D8_HOP_CH_MAX || seen[tab[i]]) return 0;
+        seen[tab[i]] = 1;
+    }
+    return 1;
+}
+
+int d8_ident_good(const d8_ident_t *id) {
+    if (id->id0 == 0x00 || id->id0 == 0x03 || id->id0 == 0xff || !d8_ident_valid(id)) return 0;
+    uint8_t tab[D8_HOP_CHANNELS];
+    d8_hop_table(id->start, id->step, tab);
+    for (unsigned i = 1; i < D8_HOP_CHANNELS; i++)
+        if (tab[i] > D8_GEN_CH_MAX || tab[i] == 0x5a || tab[i] == 0xdc) return 0;
+    return 1;
+}
+
+void d8_ident_generate(uint32_t (*rnd)(void), d8_ident_t *out) {
+    for (unsigned n = 0; n < 100000u; n++) {
+        uint32_t r = rnd();
+        d8_ident_t c = {(uint8_t)r, (uint8_t)(r >> 8), (uint8_t)(r >> 16), (uint8_t)(r >> 24)};
+        if (d8_ident_good(&c)) { *out = c; return; }
+    }
+    const d8_ident_t fallback = {0x5c, 0x31, 7, 86}; /* d8_ident_good (test_packet) */
+    *out = fallback;
+}
+
+void d8_build_bind(uint8_t id0, uint8_t id1, unsigned idx, const uint8_t hop[D8_HOP_CHANNELS], uint8_t out[D8_BODY_BYTES]) {
+    memset(out, 0, D8_BODY_BYTES);
+    out[0] = 0x11; out[1] = 0x03; out[2] = 0x01; out[3] = id0; out[4] = id1; out[5] = (uint8_t)idx;
+    for (unsigned n = 0; n < 5; n++) out[6 + n] = idx + n < D8_HOP_CHANNELS ? hop[idx + n] : 0;
+    out[17] = D8_BIND_BYTE17;
+}
+
 uint32_t d8_channel_f10(unsigned n) { return 240400000u + n * 29993u; }
 
 uint16_t d8_us_to_raw(int us) {

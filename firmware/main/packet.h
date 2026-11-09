@@ -15,12 +15,30 @@ int d8_air_bytes(const uint8_t *packet, size_t n, uint8_t out[D8_AIR_BYTES]);
 /* Hopping helpers (pure; mirrors host/esp32sdr/d8.py build_packet and hopfollow.D8_TABLE). */
 #define D8_HOP_CHANNELS 47u
 #define D8_STICKS 8u
-#define D8_TXID0 0x42
-#define D8_TXID1 0xb2
 #define D8_STICK_US_MIN 800
 #define D8_STICK_US_MAX 2200
 /* Table: entry 0 = 0, entry i>=1 = (start + step*i) & 0xff (start 2, step 55 = E8 table). */
 void d8_hop_table(unsigned start, unsigned step, uint8_t out[D8_HOP_CHANNELS]);
+
+/* Per-ESP identity (protocol/PROTOCOL.md "Bind"): txid + hop table d8_hop_table(start, step). */
+typedef struct { uint8_t id0, id1, start, step; } d8_ident_t;
+#define D8_HOP_CH_MAX 246u      /* highest usable channel: 2477.78 MHz, inside RETUNE_KHZ_MAX */
+#define D8_GEN_CH_MAX 234u      /* generated identities stay in the reference TX range (< 0xeb) */
+/* Accepted by "ID XXXX S T" (any txid, so existing bindings can be cloned): step != 0, entries 1..46 distinct and
+ * each in 2..D8_HOP_CH_MAX (0 = bind channel and list end, 1 = bind byte 17, see d8_build_bind). E8's 42b2 2 55 passes. */
+int d8_ident_valid(const d8_ident_t *id);
+/* Stricter rule for generated identities: valid, entries <= D8_GEN_CH_MAX, none 0x5a / 0xdc (Multiprotocol
+ * Frsky_init_hop filter), txid0 not 0x00 / 0x03 (bind address) / 0xff. */
+int d8_ident_good(const d8_ident_t *id);
+/* Draws from rnd until d8_ident_good (bounded; falls back to a fixed good identity). */
+void d8_ident_generate(uint32_t (*rnd)(void), d8_ident_t *out);
+
+/* Bind packet (Multiprotocol FrSkyD_build_bind_packet; Betaflight getBind1/getBind2): 11 03 01 id0 id1 idx
+ * hop[idx..idx+4] 00 00 00 00 00 00 01. Entries at index >= 47 are 0 (list end). idx = 0,5,..,45. */
+#define D8_BIND_IDX_STEP 5u
+#define D8_BIND_IDX_MAX 45u
+#define D8_BIND_BYTE17 0x01u
+void d8_build_bind(uint8_t id0, uint8_t id1, unsigned idx, const uint8_t hop[D8_HOP_CHANNELS], uint8_t out[D8_BODY_BYTES]);
 /* Carrier of CC2500 channel n in units of 10 Hz: 2404 MHz + n * 299.93 kHz. */
 uint32_t d8_channel_f10(unsigned n);
 /* us -> raw 12-bit channel value (Betaflight scales raw by 2/3 to us), rounded, clamped 0..4095. */

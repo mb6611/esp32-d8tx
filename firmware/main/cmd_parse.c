@@ -51,6 +51,38 @@ cmd_t cmd_parse(char *line) {
         c.kind = CMD_INFO;
         return c;
     }
+    if (!strcmp(tok[0], "ID")) { /* ID | ID new | ID XXXX start step (hex txid, decimal hop start/step) */
+        if (n == 1) { c.id_op = ID_GET; c.kind = CMD_ID; return c; }
+        if (n == 2) {
+            if (strcmp(tok[1], "new")) return fail("args");
+            c.id_op = ID_NEW; c.kind = CMD_ID; return c;
+        }
+        if (n != 4) return fail("args");
+        if (strlen(tok[1]) != 4) return fail("txid");
+        unsigned id = 0;
+        for (int i = 0; i < 4; i++) {
+            int x = hex_nibble(tok[1][i]);
+            if (x < 0) return fail("txid");
+            id = id << 4 | (unsigned)x;
+        }
+        c.ident.id0 = (uint8_t)(id >> 8); c.ident.id1 = (uint8_t)id;
+        if (!parse_int(tok[2], 0, 255, &v)) return fail("start");
+        c.ident.start = (uint8_t)v;
+        if (!parse_int(tok[3], 1, 255, &v)) return fail("step");
+        c.ident.step = (uint8_t)v;
+        if (!d8_ident_valid(&c.ident)) return fail("hop_table");
+        c.id_op = ID_SET; c.kind = CMD_ID;
+        return c;
+    }
+    if (!strcmp(tok[0], "BIND")) { /* BIND [pwr]: bind packets on channel 0 until STOP or BIND_TIMEOUT_MS */
+        if (n > 2) return fail("args");
+        if (n == 2) {
+            if (!parse_int(tok[1], 0, PWR_MAX, &v)) return fail("pwr");
+            c.pwr = (int)v;
+        }
+        c.kind = CMD_BIND;
+        return c;
+    }
     if (!strcmp(tok[0], "LINK")) { /* LINK <pwr> [timeout_ms]: continuous hopping (HOP 0) */
         if (n < 2 || n > 3) return fail("args");
         if (!parse_int(tok[1], 0, PWR_MAX, &v)) return fail("pwr");

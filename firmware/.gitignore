@@ -7,3 +7,4 @@ managed_components/
 test/test_cmd_parse
 test/test_line_in
 test/test_packet
+test/test_vectors

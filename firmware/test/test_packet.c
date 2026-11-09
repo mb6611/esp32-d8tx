@@ -4,6 +4,59 @@
 #include "../main/packet.h"
 #include "../main/cmd_parse.h"
 
+/* ---- C port of Betaflight cc2500_frsky_shared.c getBind1/getBind2 (bind state machine after tuning) ----
+ * fifo = what the CC2500 FIFO holds: length byte + 17 payload bytes + RSSI + LQI|CRC_OK (CRC stripped, APPEND_STATUS),
+ * ccLen = 20. Bind mode filters ADDR 0x03 (PKTCTRL1 0x0D: ADR_CHK=01) -> packet[1] must be 0x03. */
+typedef struct { uint8_t txid[2], hop[50], rxnum; unsigned list_len, bind_idx; int state; } bf_rx_t; /* 1 = bind1, 2 = bind2, 3 = done */
+static void bf_init(bf_rx_t *r) { memset(r, 0, sizeof *r); r->bind_idx = 5; r->state = 1; }
+static void bf_feed(bf_rx_t *r, const uint8_t body[D8_BODY_BYTES]) {
+    uint8_t p[20];
+    memcpy(p, body, 18); p[18] = 0x40; p[19] = 0x80 | 60; /* CRC ok, LQI 60 */
+    const unsigned cc_len = 20;
+    if (p[1] != 0x03 || !(p[cc_len - 1] & 0x80) || p[2] != 0x01) return;
+    if (r->state == 1) {
+        if (p[5] != 0x00) return;
+        r->txid[0] = p[3]; r->txid[1] = p[4];
+        for (unsigned n = 0; n < 5; n++) r->hop[p[5] + n] = p[6 + n];
+        r->rxnum = p[12];
+        r->state = 2;
+    } else if (r->state == 2) {
+        if (r->bind_idx > 120) { r->state = 3; return; }
+        if (p[3] != r->txid[0] || p[4] != r->txid[1] || p[5] != r->bind_idx) return;
+        for (unsigned n = 0; n < 5; n++) {
+            if (p[6 + n] == p[cc_len - 3] || p[6 + n] == 0) {
+                if (r->bind_idx >= 0x2d) { r->list_len = p[5] + n; r->state = 3; return; }
+            }
+            r->hop[p[5] + n] = p[6 + n];
+        }
+        r->bind_idx += 5;
+    }
+}
+/* Firmware BIND schedule: idx 0,5,..,45 cycling from start_idx; returns frames fed until the RX finished. */
+static unsigned bf_bind(bf_rx_t *r, const d8_ident_t *id, unsigned start_idx) {
+    uint8_t tab[D8_HOP_CHANNELS], body[D8_BODY_BYTES];
+    d8_hop_table(id->start, id->step, tab);
+    bf_init(r);
+    unsigned idx = start_idx, k;
+    for (k = 0; k < 200 && r->state != 3; k++) {
+        d8_build_bind(id->id0, id->id1, idx, tab, body);
+        bf_feed(r, body);
+        idx = idx >= D8_BIND_IDX_MAX ? 0 : idx + D8_BIND_IDX_STEP;
+    }
+    return k;
+}
+static void check_bind(const d8_ident_t *id, unsigned start_idx) {
+    bf_rx_t r;
+    unsigned k = bf_bind(&r, id, start_idx);
+    uint8_t tab[D8_HOP_CHANNELS]; d8_hop_table(id->start, id->step, tab);
+    assert(r.state == 3 && r.list_len == 47 && r.txid[0] == id->id0 && r.txid[1] == id->id1 && r.rxnum == 0);
+    assert(!memcmp(r.hop, tab, D8_HOP_CHANNELS));
+    assert(r.hop[47] == 0 && r.hop[48] == 0 && r.hop[49] == 0);
+    assert(k <= 20); /* <= two idx cycles (~180 ms at 8994 us) */
+}
+static uint32_t lcg_state = 12345;
+static uint32_t lcg(void) { lcg_state = lcg_state * 1103515245u + 12345u; return lcg_state ^ (lcg_state >> 16) * 0x9e3779b9u; }
+
 static cmd_t parse(const char *s) {
     char buf[96]; assert(strlen(s) < sizeof buf); strcpy(buf, s); return cmd_parse(buf);
 }
@@ -67,7 +120,7 @@ int main(void) {
     { /* telemetry request marker: byte3 = 2, byte4 = tid & 0x1f, rest unchanged */
         uint16_t raw[D8_STICKS] = {2250, 2250, 2250, 2250, 2250, 2250, 2250, 2250};
         uint8_t a[D8_BODY_BYTES], b[D8_BODY_BYTES];
-        d8_build_body(D8_TXID0, D8_TXID1, 77, raw, a);
+        d8_build_body(0x42, 0xb2, 77, raw, a);
         memcpy(b, a, sizeof b);
         d8_mark_telemetry(b, 33);
         assert(b[3] == 2 && b[4] == 1 && b[3] % 4 == 2);
@@ -92,5 +145,51 @@ int main(void) {
         assert(d8_reply_seen(11, 11) && d8_reply_seen(9, 11) && !d8_reply_seen(8, 11) && !d8_reply_seen(3, 3) && !d8_reply_seen(5, 8));
     }
     puts("reply detector tests ok");
+    { /* bind packet: Multiprotocol FrSkyD comment capture (real FrSky TX) "11 03 01 d7 2d 00 00 1e 3c 5b 78 00 00 00 00 00 00 01" */
+        uint8_t hop[D8_HOP_CHANNELS] = {0x00, 0x1e, 0x3c, 0x5b, 0x78}, b[D8_BODY_BYTES];
+        d8_build_bind(0xd7, 0x2d, 0, hop, b);
+        assert(!memcmp(b, "\x11\x03\x01\xd7\x2d\x00\x00\x1e\x3c\x5b\x78\x00\x00\x00\x00\x00\x00\x01", 18));
+        /* hand-checked E8 identity (42b2, start 2, step 55): hop 0,57,112,167,222 | 45: 173, 46: 228, then 0s */
+        uint8_t tab[D8_HOP_CHANNELS]; d8_hop_table(2, 55, tab);
+        d8_build_bind(0x42, 0xb2, 0, tab, b);
+        assert(!memcmp(b, "\x11\x03\x01\x42\xb2\x00\x00\x39\x70\xa7\xde\x00\x00\x00\x00\x00\x00\x01", 18));
+        d8_build_bind(0x42, 0xb2, 45, tab, b);
+        assert(!memcmp(b, "\x11\x03\x01\x42\xb2\x2d\xad\xe4\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01", 18));
+        d8_build_bind(0x42, 0xb2, 40, tab, b);
+        assert(b[5] == 40 && b[6] == tab[40] && b[10] == tab[44]);
+        uint8_t air[D8_AIR_BYTES]; assert(d8_air_bytes(b, 18, air) && air[7] == 0x03);
+        /* identity rules */
+        d8_ident_t e8 = {0x42, 0xb2, 2, 55}, bad;
+        assert(d8_ident_valid(&e8) && !d8_ident_good(&e8)); /* E8 table reaches 245 > D8_GEN_CH_MAX: clone-only */
+        bad = e8; bad.step = 0; assert(!d8_ident_valid(&bad));
+        bad = e8; bad.step = 128; assert(!d8_ident_valid(&bad));                  /* repeats */
+        bad = e8; bad.start = 255; bad.step = 1; assert(!d8_ident_valid(&bad));   /* entry 1 = 0 */
+        bad = e8; bad.start = 0; bad.step = 1; assert(!d8_ident_valid(&bad));     /* entry 1 = 1 (bind byte 17) */
+        bad = e8; bad.start = 0; bad.step = 6; assert(!d8_ident_valid(&bad));     /* entry 42 = 252 > D8_HOP_CH_MAX */
+        d8_ident_t fb = {0x5c, 0x31, 7, 86}; assert(d8_ident_good(&fb));          /* d8_ident_generate fallback */
+        unsigned nvalid = 0;
+        for (unsigned st = 0; st < 256; st++)
+            for (unsigned sp = 0; sp < 256; sp++) {
+                d8_ident_t t = {0x12, 0x34, (uint8_t)st, (uint8_t)sp};
+                if (!d8_ident_valid(&t)) continue;
+                nvalid++;
+                uint8_t h[D8_HOP_CHANNELS]; d8_hop_table(st, sp, h);
+                for (unsigned i = 1; i < D8_HOP_CHANNELS; i++) assert(h[i] >= 2 && h[i] <= D8_HOP_CH_MAX && d8_channel_f10(h[i]) / 100 <= RETUNE_KHZ_MAX);
+            }
+        assert(nvalid > 1000);
+        /* Betaflight acceptance: E8 identity and 200 generated ones, starting at every idx of the cycle */
+        for (unsigned s0 = 0; s0 <= D8_BIND_IDX_MAX; s0 += D8_BIND_IDX_STEP) check_bind(&e8, s0);
+        for (unsigned i = 0; i < 200; i++) {
+            d8_ident_t g; d8_ident_generate(lcg, &g);
+            assert(d8_ident_good(&g) && d8_ident_valid(&g));
+            check_bind(&g, (i % 10) * 5);
+        }
+        /* a table whose entry 46 were 0 would end the list early in Betaflight: such identities are invalid */
+        uint8_t t0[D8_HOP_CHANNELS]; d8_hop_table(2, 55, t0); t0[46] = 0;
+        bf_rx_t r; bf_init(&r);
+        for (unsigned idx = 0; idx <= 45; idx += 5) { uint8_t bb[D8_BODY_BYTES]; d8_build_bind(1, 2, idx, t0, bb); bf_feed(&r, bb); }
+        assert(r.state == 3 && r.list_len == 46);
+    }
+    puts("bind tests ok");
     return 0;
 }

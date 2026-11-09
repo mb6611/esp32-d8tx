@@ -33,8 +33,11 @@
 #define TLMX_SETTLE_MAX 300    /* us between unkey and the listen retune */
 #define TLM_SKIP_MAX    6000   /* us of capture start not shipped */
 #define TLM_RETRY_MAX   3      /* re-triggers (stream mode) after an on-chip "no reply" verdict */
+#define BIND_TIMEOUT_MS 30000  /* BIND transmits until STOP or this long */
 
-typedef enum { CMD_NONE, CMD_PING, CMD_STAT, CMD_UNKEY, CMD_TONE, CMD_ALT, CMD_PKT, CMD_RETUNE, CMD_HOP, CMD_STICKS, CMD_S, CMD_FOFS, CMD_ARMOK, CMD_INFO, CMD_LINK, CMD_TLM, CMD_TCAP, CMD_TID, CMD_TLMX, CMD_ERR } cmd_kind_t;
+typedef enum { CMD_NONE, CMD_PING, CMD_STAT, CMD_UNKEY, CMD_TONE, CMD_ALT, CMD_PKT, CMD_RETUNE, CMD_HOP, CMD_STICKS, CMD_S, CMD_FOFS, CMD_ARMOK, CMD_INFO, CMD_LINK, CMD_TLM, CMD_TCAP, CMD_TID, CMD_TLMX, CMD_ID, CMD_BIND, CMD_ERR } cmd_kind_t;
+
+enum { ID_GET, ID_SET, ID_NEW };
 
 typedef struct {
     cmd_kind_t kind;
@@ -64,6 +67,8 @@ typedef struct {
     int tail_all;          /* TLMX: 1 = tail on every LINK packet */
     int probe;             /* TLMX: 1 = mid-way between triggers send one marked data packet (ch8 1400) + a silent slot */
     unsigned tid;          /* TID: telemetry id (0..31) for the next trigger */
+    int id_op;             /* ID: ID_GET / ID_SET (ident valid, d8_ident_valid) / ID_NEW */
+    d8_ident_t ident;      /* ID_SET */
     const char *err;       /* set for CMD_ERR: short reason text */
     int legacy;            /* CMD_ERR from a legacy bench command: print the old bare "ERR <why>" */
 } cmd_t;

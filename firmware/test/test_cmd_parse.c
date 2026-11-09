@@ -89,6 +89,20 @@ int main(void) {
     c = P("TCAP 2440000"); assert(c.kind == CMD_TCAP && c.khz == 2440000 && c.pwr == -1 && c.cap_us == 10000 && c.dec == 32);
     c = P("TCAP 2412000 2000 50 64 127"); assert(c.kind == CMD_TCAP && c.cap_us == 2000 && c.gain == 50 && c.dec == 64 && c.pwr == 127);
     ERR("TCAP 2403999", "khz"); ERR("TCAP 2412000 2000 50 64 128", "pwr"); ERR("TCAP", "args");
+    /* ID / BIND (OTA bind) */
+    c = P("ID"); assert(c.kind == CMD_ID && c.id_op == ID_GET);
+    c = P("ID new"); assert(c.kind == CMD_ID && c.id_op == ID_NEW);
+    c = P("ID 42b2 2 55"); assert(c.kind == CMD_ID && c.id_op == ID_SET && c.ident.id0 == 0x42 && c.ident.id1 == 0xb2 && c.ident.start == 2 && c.ident.step == 55);
+    c = P("ID 42B2 2 55"); assert(c.kind == CMD_ID && c.ident.id1 == 0xb2);
+    c = P("ID 0000 7 86"); assert(c.kind == CMD_ID && c.id_op == ID_SET);
+    ERR("ID NEW", "args"); ERR("ID x", "args"); ERR("ID 42b2 2", "args"); ERR("ID 42b2 2 55 1", "args");
+    ERR("ID 42b 2 55", "txid"); ERR("ID 42b2a 2 55", "txid"); ERR("ID 42g2 2 55", "txid");
+    ERR("ID 42b2 256 55", "start"); ERR("ID 42b2 -1 55", "start"); ERR("ID 42b2 2 0", "step"); ERR("ID 42b2 2 256", "step");
+    ERR("ID 42b2 2 128", "hop_table"); ERR("ID 42b2 0 1", "hop_table");
+    assert(!strcmp(err_code("txid"), "range") && !strcmp(err_code("hop_table"), "range") && !P("ID x").legacy);
+    c = P("BIND"); assert(c.kind == CMD_BIND && c.pwr == PWR_MAX);
+    c = P("BIND 20"); assert(c.kind == CMD_BIND && c.pwr == 20);
+    ERR("BIND 128", "pwr"); ERR("BIND x", "pwr"); ERR("BIND 1 2", "args");
     puts("cmd_parse tests ok");
     return 0;
 }

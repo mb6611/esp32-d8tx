@@ -21,9 +21,9 @@
  *                              RETUNE 2412000 restores the boot LO. Refused while keyed.
  *   FOFS hz                    signed LO offset (|hz|<=200000, default 0, RAM only) added to RETUNE and HOP retunes
  *   STICKS c1..c8              eight stick values in us (800..2200) for HOP packets (default 1500 each)
- *   HOP n_slots [pwr]          (n<=940) stream D8 data packets, one per ~8.994 ms slot, on the E8 hop table
- *                              (start 2, step 55, entry 0 = 0; channel n = 2404 MHz + n*299.93 kHz), packet
- *                              counter (byte 4) +1 per packet, id 42 b2, byte-identical to host d8hop
+ *   HOP n_slots [pwr]          (n<=940) stream D8 data packets, one per ~8.994 ms slot, on the identity's hop table
+ *                              (d8_hop_table(start, step), entry 0 = 0; channel n = 2404 MHz + n*299.93 kHz), packet
+ *                              counter (byte 4) +1 per packet, the identity's txid, byte-identical to host d8hop
  *                              build(counter_index=4). Per slot: retune, key, 208 bits, unkey (one
  *                              critical section), then WDT feed + UART poll; any UART byte aborts. LO is
  *                              restored to 2412 MHz afterwards. Reply:
@@ -38,6 +38,8 @@
  *                              else the same id) and the next trigger waits for it (<=1 s, then resends the same id).
  *   TID n                      telemetry id for the next trigger (0..31). Silent during LINK; idle: sets the first id.
  *   TCAP khz [cap_us] [gain] [dec] [pwr]     one such capture, optionally right after keying one data packet.
+ *   ID | ID new | ID XXXX start step   per-ESP identity (txid + hop table start/step, NVS; random on first boot)
+ *   BIND [pwr]                 bind packets on hop channel 0 every slot until STOP or 30 s (protocol/PROTOCOL.md "Bind")
  * Results are printed only after unkey:
  *   K,<mode>,fa,fb,half_us,req_us,pwr,on_us,key_total_us,key_cycles,unkey_cycles,b8_on,b8_end,b8_off,a8_on,a8_off,ntrans
  *   T,<i>,<due_us>,<actual_us>,<b8_readback>        one per transition (time since tone on, 240 MHz cycles/240)
@@ -59,6 +61,8 @@
 #include "esp_rom_sys.h"
 #include "esp_cpu.h"
 #include "nvs_flash.h"
+#include "nvs.h"
+#include "esp_random.h"
 #include "soc/soc.h"
 #include "soc/rtc.h"
 #include "hal/wdt_hal.h"
@@ -293,6 +297,40 @@ static void lo_retune(uint32_t f10) {
 
 static bool v1_link; /* current run_hop was started by LINK (protocol v1 events/replies) */
 
+/* ---- per-ESP identity (txid + hop table start/step), NVS namespace "d8tx" key "ident" (4-byte blob) ---- */
+static d8_ident_t ident;
+static uint32_t rnd32(void) { return esp_random(); }
+
+static bool ident_store(const d8_ident_t *id) {
+    nvs_handle_t h;
+    if (nvs_open("d8tx", NVS_READWRITE, &h) != ESP_OK) return false;
+    uint8_t b[4] = {id->id0, id->id1, id->start, id->step};
+    bool ok = nvs_set_blob(h, "ident", b, sizeof b) == ESP_OK && nvs_commit(h) == ESP_OK;
+    nvs_close(h);
+    return ok;
+}
+
+/* Boot: stored identity if present and valid, else a new random one (stored). */
+static void ident_load(void) {
+    nvs_handle_t h;
+    uint8_t b[4];
+    size_t n = sizeof b;
+    if (nvs_open("d8tx", NVS_READONLY, &h) == ESP_OK) {
+        esp_err_t e = nvs_get_blob(h, "ident", b, &n);
+        nvs_close(h);
+        if (e == ESP_OK && n == sizeof b) {
+            d8_ident_t id = {b[0], b[1], b[2], b[3]};
+            if (d8_ident_valid(&id)) { ident = id; return; }
+        }
+    }
+    d8_ident_generate(rnd32, &ident);
+    ident_store(&ident);
+}
+
+static void print_ident(void) {
+    printf("OK txid=%02x%02x start=%u step=%u\n", ident.id0, ident.id1, ident.start, ident.step);
+}
+
 /* ---- telemetry listen state (TLM / TCAP; off unless TLM every > 0 was sent) ---- */
 static struct { unsigned every, cap_us, dec, skip_us; int gain, same, stream, ack, mark, retry, bits; } tlm = {0, TLM_CAP_US_DEF, TLM_DEC_DEF, 0, TLM_GAIN_DEF, 0, 0, 0, 0, 0, 8};
 static unsigned tlm_tid, tlm_tid_init, tlm_n, gain_max = 127;
@@ -362,7 +400,7 @@ static int hop_drain(line_in_t *li, const char **err, int64_t *last_s_us) {
         if (c.kind == CMD_TID) { tlm_tid = c.tid; tid_ready = true; continue; }
         if (c.kind == CMD_STAT) {
             if (shp.busy) continue; /* a capture is going out: no text in the middle of it */
-            printf("OK keyed=%d link=1 fofs=%d armok=%d\n", keyed, fofs_hz, arm_ok);
+            printf("OK keyed=%d link=1 fofs=%d armok=%d bind=0\n", keyed, fofs_hz, arm_ok);
             fflush(stdout);
             continue;
         }
@@ -485,7 +523,7 @@ static void run_tcap(const cmd_t *c) {
     uint32_t f10 = (uint32_t)((int)c->khz * 100 + fofs_hz / 10);
     unsigned n_out = c->cap_us * 16u / c->dec;
     uint8_t body[D8_BODY_BYTES], air[D8_AIR_BYTES];
-    d8_build_body(D8_TXID0, D8_TXID1, 0, sticks_raw, body);
+    d8_build_body(ident.id0, ident.id1, 0, sticks_raw, body);
     if (!d8_air_bytes(body, D8_BODY_BYTES, air)) { print_err_v1("packet"); return; }
     tcap_prepare(n_out);
     tcap_res_t r;
@@ -503,7 +541,7 @@ static void run_tcap(const cmd_t *c) {
 
 static void run_hop(const cmd_t *c) {
     uint8_t tab[D8_HOP_CHANNELS], body[D8_BODY_BYTES], air[D8_AIR_BYTES];
-    d8_hop_table(2, 55, tab);
+    d8_hop_table(ident.start, ident.step, tab);
     uint32_t late_max = 0, rt_max = 0;
     unsigned sent = 0;
     bool abort = false, abort_pkt = false;
@@ -541,7 +579,7 @@ static void run_hop(const cmd_t *c) {
         memcpy(raw, sticks_raw, sizeof raw);
         if (tlm_link && tlm.mark) /* ch8 marker, below every aux range */
             raw[7] = d8_us_to_raw(trig ? (retry_due ? 1600 : 1500) : probe ? 1400 : 1000);
-        d8_build_body(D8_TXID0, D8_TXID1, (uint8_t)k, raw, body);
+        d8_build_body(ident.id0, ident.id1, (uint8_t)k, raw, body);
         if (trig) { d8_mark_telemetry(body, (uint8_t)tlm_tid); tcap_prepare(n_out); }
         if (!d8_air_bytes(body, D8_BODY_BYTES, air)) { printf("ERR packet\n"); abort = true; abort_pkt = true; why = "packet"; break; }
         uint32_t f10 = d8_channel_f10(tab[k % D8_HOP_CHANNELS]);
@@ -684,6 +722,79 @@ static void run_hop(const cmd_t *c) {
            late_max / CYC_PER_US, rt_max / CYC_PER_US, why);
 }
 
+static void print_info(void) {
+    printf("OK proto=1 fw=" FW_ID " slot_us=8994 channels=%u pwr_max=%d fofs_max_hz=%d timeout_max_ms=%d txid=%02x%02x\n",
+           (unsigned)D8_HOP_CHANNELS, PWR_MAX, FOFS_HZ_MAX, HOP_TIMEOUT_MAX_MS, ident.id0, ident.id1);
+}
+
+/* BIND: one bind packet per 8994 us slot on hop channel 0 (+ FOFS), idx 0,5,..,45 cycling (Multiprotocol FrSkyD
+ * bind phase), until STOP/U or BIND_TIMEOUT_MS. Every other request still gets its one reply: PING/INFO/STAT/S are
+ * answered, anything else is ERR busy (the bind keeps running). */
+static void run_bind(const cmd_t *c) {
+    uint8_t tab[D8_HOP_CHANNELS], body[D8_BODY_BYTES], air[D8_AIR_BYTES];
+    d8_hop_table(ident.start, ident.step, tab);
+    const uint32_t f10 = d8_channel_f10(0) + (uint32_t)(fofs_hz / 10);
+    static line_in_t bli;
+    bli.len = 0;
+    bool stop = false;
+    unsigned sent = 0, idx = 0;
+    printf("OK\n");
+    fflush(stdout);
+    feed();
+    const int64_t t_start = esp_timer_get_time();
+    uint32_t slot_start = cyc();
+    while (!stop) {
+        d8_build_bind(ident.id0, ident.id1, idx, tab, body);
+        if (!d8_air_bytes(body, D8_BODY_BYTES, air)) break;
+        while (!stop && (int32_t)(cyc() - slot_start) < 0) { /* wait for the slot, answering requests */
+            uint8_t b;
+            if (uart_read_bytes(UART_NUM_0, &b, 1, 0) != 1) continue;
+            if (b != '\n' && b != '\r') {
+                if (bli.len < sizeof bli.buf - 1) bli.buf[bli.len++] = (char)b;
+                else bli.len = sizeof bli.buf;
+                continue;
+            }
+            if (!bli.len) continue;
+            int over = bli.len >= sizeof bli.buf;
+            bli.buf[over ? 0 : bli.len] = 0;
+            bli.len = 0;
+            if (over) { print_err_v1("long"); fflush(stdout); continue; }
+            cmd_t r = cmd_parse(bli.buf);
+            switch (r.kind) {
+            case CMD_NONE: break;
+            case CMD_UNKEY: stop = true; break;
+            case CMD_PING: printf("OK proto=1\n"); break;
+            case CMD_INFO: print_info(); break;
+            case CMD_STAT: printf("OK keyed=%d link=0 fofs=%d armok=%d bind=1\n", keyed, fofs_hz, arm_ok); break;
+            case CMD_S:
+                for (unsigned i = 0; i < D8_STICKS; i++) sticks_raw[i] = d8_us_to_raw(i == 6 ? ch7_gate(r.sticks[i]) : r.sticks[i]);
+                printf("OK\n");
+                break;
+            case CMD_ERR: print_err_v1(r.err); break;
+            default: printf("ERR busy binding\n"); break;
+            }
+            fflush(stdout);
+        }
+        if (stop) break;
+        if (esp_timer_get_time() - t_start > (int64_t)BIND_TIMEOUT_MS * 1000) break;
+        if (cyc() - slot_start > HOP_SLOT_CYC) slot_start = cyc(); /* overran a whole slot: resync */
+        feed();
+        portENTER_CRITICAL(&mux);
+        lo_retune(f10);
+        key_air(air, c->pwr, 0);
+        unkey();
+        portEXIT_CRITICAL(&mux);
+        sent++;
+        idx = idx >= D8_BIND_IDX_MAX ? 0 : idx + D8_BIND_IDX_STEP;
+        slot_start += HOP_SLOT_CYC;
+    }
+    if (keyed) unkey();
+    lo_retune(241200000u);
+    lo_off = false;
+    printf("EV bind_end why=%s slots=%u\n", stop ? "stop" : "timeout", sent);
+    if (stop) printf("OK\n");
+}
+
 /* Bounded 10 ms read straight from the UART driver (not stdin): returns -1 when idle. */
 static int rd_byte(void *ctx) {
     (void)ctx;
@@ -696,6 +807,7 @@ void app_main(void) {
     printf("\nEV boot reason=%d\n", (int)esp_reset_reason());
     fflush(stdout);
     phy_up();
+    ident_load();
     rom_stop_tx_tone(1); /* tone enable off: RF-silent regardless of prior state */
     gain_max = (REG_READ(RX_GAIN) >> 8) & 127;
     vTaskDelay(pdMS_TO_TICKS(100));
@@ -717,11 +829,10 @@ void app_main(void) {
             break;
         case CMD_PING: printf("OK proto=1\n"); break;
         case CMD_INFO:
-            printf("OK proto=1 fw=" FW_ID " slot_us=8994 channels=%u pwr_max=%d fofs_max_hz=%d timeout_max_ms=%d\n",
-                   (unsigned)D8_HOP_CHANNELS, PWR_MAX, FOFS_HZ_MAX, HOP_TIMEOUT_MAX_MS);
+            print_info();
             break;
         case CMD_STAT:
-            printf("OK keyed=%d link=0 fofs=%d armok=%d\n", keyed, fofs_hz, arm_ok);
+            printf("OK keyed=%d link=0 fofs=%d armok=%d bind=0\n", keyed, fofs_hz, arm_ok);
             break;
         case CMD_UNKEY: unkey(); printf("OK\n"); break;
         case CMD_TONE:
@@ -767,6 +878,17 @@ void app_main(void) {
             printf("OK tail=%u settle=%u all=%d probe=%d\n", tlmx_tail, tlmx_settle, tlmx_all, tlmx_probe);
             break;
         case CMD_TCAP: run_tcap(&c); break;
+        case CMD_ID:
+            if (c.id_op == ID_GET) { print_ident(); break; }
+            if (c.id_op == ID_NEW) d8_ident_generate(rnd32, &c.ident);
+            if (!ident_store(&c.ident)) { printf("ERR range nvs write failed\n"); break; }
+            ident = c.ident;
+            print_ident();
+            break;
+        case CMD_BIND:
+            if (keyed) { print_err_v1("keyed"); break; }
+            run_bind(&c);
+            break;
         }
         fflush(stdout);
     }

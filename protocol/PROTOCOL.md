@@ -5,26 +5,48 @@ ASCII lines at 921600 8N1. Lines end in `\n` (`\r\n` accepted), at most 95 chara
 | Command | Reply | Notes |
 |---|---|---|
 | `PING` | `OK proto=1` | |
-| `INFO` | `OK proto=1 fw=d8tx-v1 slot_us=8994 channels=47 pwr_max=127 fofs_max_hz=200000 timeout_max_ms=1000` | |
-| `STAT` | `OK keyed=0\|1 link=0\|1 fofs=<hz> armok=0\|1` | also while linked |
+| `INFO` | `OK proto=1 fw=d8tx-v1 slot_us=8994 channels=47 pwr_max=127 fofs_max_hz=200000 timeout_max_ms=1000 txid=<xxxx>` | txid = this ESP's identity (4 hex digits, lowercase) |
+| `STAT` | `OK keyed=0\|1 link=0\|1 fofs=<hz> armok=0\|1 bind=0\|1` | also while linked or binding |
 | `FOFS <hz>` | `OK` | signed, \|hz\| ≤ 200000, idle only; else `ERR range` |
 | `ARMOK` | `OK` | allows ch7 > 1300 for the next `LINK` only; cleared when it ends |
 | `LINK <pwr> [timeout_ms]` | `OK`, then continuous hopping | pwr 0..127; timeout 1..1000, default 300 |
 | `S c1..c8` | none while linked; `OK` when idle | µs, clamped 1000–2000; ch7 ≤ 1300 unless ARMOK |
-| `STOP` (alias `U`) | `OK` | ends the link (the `EV link_end` precedes the `OK`) |
+| `STOP` (alias `U`) | `OK` | ends the link or bind (the `EV link_end` / `EV bind_end` precedes the `OK`) |
+| `ID` | `OK txid=<xxxx> start=<s> step=<t>` | this ESP's identity (see "Bind") |
+| `ID <xxxx> <s> <t>` | same as `ID` | set + persist (clone/restore a binding); hex txid, decimal start 0..255, step 1..255; `ERR range hop_table` if the table is not valid; idle only |
+| `ID new` | same as `ID` | new random identity, persisted; bound receivers must re-bind; idle only |
+| `BIND [pwr]` | `OK`, then bind packets | pwr 0..127 (default 127); until `STOP` or 30 s; idle only |
 
 Channel order TAER1234 (ch1 throttle, ch2 roll, ch3 pitch, ch4 yaw, ch5–8 AUX1–4); ARM = ch7.
 
 ## Events
 - `EV boot reason=<n>` at reset (RF-silent; any link or ARMOK is gone).
 - `EV link slots=<n> late_max_us=<n>` once per second while linked.
+- `EV bind_end why=stop|timeout slots=<n>` when `BIND` ends; `stop` is followed by `OK`, `timeout` (30 s) has no reply line.
 - `EV link_end why=stop|timeout|err slots=<n> late_max_us=<n> retune_max_us=<n> gap_max_us=.. gap50=.. gap100=.. gap200=.. g2_min_us=.. g2_max_us=.. trig=.. retry=..`. gap = packet start minus the previous packet start minus 8994 us (gapN: consecutive slots with |gap| > N us; g2: first slot after a skipped one); trig/retry: telemetry triggers sent / re-triggers. `timeout` (no `S` for timeout_ms) has no reply line; `stop` is followed by `OK`; `err` by the `ERR` line for the offending request.
 
 ## Linked behaviour
 While linked, `S`, `STOP`/`U` and `STAT` are handled. Any other request ends the link with `EV link_end why=err` then `ERR busy link active`. A malformed line (bad `S`, overlong line) also ends the link with its own error (`ERR range ...`, `ERR args ...`, `ERR long ...`). `LINK` while keyed → `ERR keyed`.
 
+## Bind
+Each ESP has its own identity `{txid0, txid1, start, step}` in NVS (namespace `d8tx`, key `ident`, 4-byte blob). On the first boot without a stored (valid) identity the firmware draws a random one (`esp_random`) and stores it. The hop table is `d8_hop_table(start, step)`: entry 0 = 0 (the bind channel), entry i = (start + step·i) mod 256 for i = 1..46. Data packets carry txid0, txid1 in bytes 1, 2.
+
+Valid identity (`ID <xxxx> <s> <t>`, `firmware/main/packet.c` `d8_ident_valid`): any txid; step ≠ 0; entries 1..46 pairwise distinct and each in 2..246 (0 is the bind channel and Betaflight's list-end marker, 1 equals bind byte 17 which Betaflight also treats as list end, 246 = 2477.78 MHz is the top of our LO range). The E8 binding `42b2 2 55` is valid. Generated identities (`ID new`, first boot, `d8_ident_good`) also keep every entry ≤ 234 and off 0x5a/0xdc (the reference TX's range and filter, below) and use txid0 ∉ {0x00, 0x03, 0xff}; about 1550 of the 65536 start/step pairs qualify.
+
+`BIND` transmits one bind packet per 8994 µs slot on hop channel 0 (+ the current `FOFS`), idx cycling 0, 5, …, 45 (one full cycle = 10 slots ≈ 90 ms):
+
+`11 03 01 txid0 txid1 idx h[idx] h[idx+1] h[idx+2] h[idx+3] h[idx+4] 00 00 00 00 00 00 01` + CRC, entries ≥ 47 sent as 0.
+
+`D8Link.bind(power, fofs)` sends `FOFS` (default `DEFAULT_FOFS_HZ`) before `BIND`, so the receiver tunes to the offset later links use rather than whatever an earlier link left in the firmware's RAM.
+
+While binding, `STOP`/`U` ends it, `STAT` (bind=1), `PING`, `INFO` and `S` are answered as when idle, any other request gets `ERR busy binding` and the bind keeps running.
+
+Receiver side (Betaflight `src/main/rx/cc2500_frsky_shared.c`): bind mode listens on channel 0 with address filter 0x03 (byte 1). Tuning sweeps FSCTRL0 −126…+126 in steps of 5 every 50 ms and keeps the first offset with a CRC-ok bind packet (byte 2 = 0x01) and LQI > 50 as `frsky_spi_offset`, so the receiver tunes itself to our carrier. Bind1 takes idx 0 (txid, h[0..4], rxNum = byte 12 = 0); Bind2 takes idx 5, 10, … strictly in order and ends at idx ≥ 45 at the first entry that is 0 or equals byte 17 → list length 47 for our tables (entry 47 = 0). `firmware/test/test_packet.c` runs a C port of getBind1/getBind2 on our frames (E8 identity + 200 generated ones, every start idx) and checks the recovered txid and hop list.
+
+Reference TX (DIY-Multiprotocol-TX-Module, `Multiprotocol/FrSkyD_cc2500.ino`, `FrSkyDVX_common.ino`, checked Nov 2026): `FRSKYD_build_bind_packet` is the layout above with byte 17 = `rx_tx_addr[1]` (set to 1 for D8; the comment capture of a real FrSky TX `11 03 01 d7 2d 00 00 1e 3c 5b 78 00 00 00 00 00 00 01` is a unit-test vector); bind packets go out on channel 0 every 9000 µs with idx = ((state) mod 10)·5. Its D8 hop table is fixed (`(i·0x1e) mod 0xeb`, entry 47 = 1 as list end); its generic `Frsky_init_hop` steps `(ch + spacing) mod 0xeb`, bumps 0x00/0x5a/0xdc by one and zeroes entries > 46. We keep the mod-256 `d8_hop_table` (the E8 binding uses it) and enforce the same constraints by validation instead.
+
 ## Error mapping
-`args` wrong argument count or malformed hex; `range` a value out of range or non-numeric; `busy` link active; `keyed` radio is keyed; `unknown` unknown command; `long` line too long.
+`args` wrong argument count or malformed hex; `range` a value out of range or non-numeric; `busy` link or bind active; `keyed` radio is keyed; `unknown` unknown command; `long` line too long.
 
 ## Legacy bench commands
 `TONE`, `ALT`, `RETUNE`, `PKT`, `HOP`, `STICKS` still exist but are not part of the API. They keep their old bare `ERR <why>` replies and `K,...` report lines. `HOP 0 <pwr> [timeout]` is the legacy twin of `LINK`. Changed vs. the earlier bench firmware: `PING` is `OK proto=1` (was `P,d8tone,1`), `STAT` is the v1 form (was `S,keyed=...`), boot line is `EV boot` (was `I,boot`), and the `I,ready` line is gone.
@@ -49,8 +71,10 @@ With `TLM every>0`, slot k of a `LINK` is a trigger when k ≥ every and k % eve
 
 ## Telemetry in the library
 `D8Link.start(..., telemetry=True)` (default) sends `TID <next id>` and `TLM 12 9000 40 64 0 1 1 0 1 1000 4` (`protocol.TLM_RECIPE`: every 12 slots, dec 64, int4 payload from 1 ms on; older: every 48 slots,
-9 ms capture, dec 32, gain 40, next hop channel, stream=1, ack=1, retry=1) before `LINK`, and sets FOFS to `DEFAULT_FOFS_HZ = -75000` when no
-`fofs_hz` is given. The firmware keeps the recipe (RAM) across LINKs, so no firmware change was needed; the library keeps the id sequence across
+9 ms capture, dec 32, gain 40, next hop channel, stream=1, ack=1, retry=1) before `LINK`, and sets FOFS to `DEFAULT_FOFS_HZ = 0` when no
+`fofs_hz` is given. 0 is right for a receiver bound to this ESP over the air: bind tunes the receiver to our carrier (bench, Tinyhawk bound to the ESP:
+94.9% of triggers answered at FOFS 0 against 72.9% at -75 kHz, `bench/d8-tx/results/bind/SUMMARY.md`). The old default -75000 only suited the cloned E8
+binding, whose receiver offset was tuned to the E8's carrier; pass it explicitly when you clone an identity instead of binding. The firmware keeps the recipe (RAM) across LINKs, so no firmware change was needed; the library keeps the id sequence across
 links so the drone's expected id stays locked. A firmware answering `ERR` to `TLM` leaves telemetry off and the link still starts; `telemetry=False`
 sends `TLM 0` if a recipe was sent before.
 - Reader thread: byte-oriented, so `EV tlm ... bytes=N` + N payload bytes + `\n` can be interleaved with `OK`/`EV` lines. Payloads go to a worker thread
