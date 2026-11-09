@@ -4,8 +4,9 @@ const path = require('node:path')
 const fs = require('node:fs')
 const { pathToFileURL } = require('node:url')
 
-const ESP = { vid: 0x10c4, pid: 0xea60, env: 'D8TX_ESP_PORT', name: 'DevKit' }
-const FC = { vid: 0x0483, pid: 0x5740, env: 'D8TX_FC_PORT', name: 'FC' }
+// USB IDs per role; keep in step with USB_DEVICES in packages/serial/src/web.ts (DevKits ship CP2102, CH340 or CH9102).
+const ESP = { ids: [[0x10c4, 0xea60], [0x1a86, 0x7523], [0x1a86, 0x55d4]], env: 'D8TX_ESP_PORT', name: 'DevKit' }
+const FC = { ids: [[0x0483, 0x5740]], env: 'D8TX_FC_PORT', name: 'FC' }
 const SCHEME = 'app'
 const HOST = 'd8tx'
 
@@ -25,13 +26,14 @@ const num = (v) => (typeof v === 'string' ? parseInt(v, v.startsWith('0x') ? 16 
 function roleOf(filters) {
   for (const f of filters || []) {
     const v = num(f.usbVendorId ?? f.vendorId), p = num(f.usbProductId ?? f.productId)
-    for (const r of [ESP, FC]) if (v === r.vid && (p === undefined || p === r.pid)) return r
+    for (const r of [ESP, FC]) if (r.ids.some(([vid, pid]) => v === vid && (p === undefined || p === pid))) return r
   }
   return null
 }
 
 function matches(port, role) {
-  return num(port.vendorId) === role.vid && num(port.productId) === role.pid
+  const v = num(port.vendorId), p = num(port.productId)
+  return role.ids.some(([vid, pid]) => v === vid && p === pid)
 }
 
 function serveFile(root, rel) {

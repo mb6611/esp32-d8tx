@@ -1,0 +1,1554 @@
+{
+ "phase": "autolink",
+ "started": "2026-11-09T20:45:56.555Z",
+ "esp_port": "/dev/cu.usbserial-0001",
+ "fc_port": "/dev/cu.usbmodem0x80000001",
+ "connect": {
+  "link_ms": 197,
+  "telemetry_ms": 831,
+  "power": 127,
+  "allow_arm": false,
+  "info": {
+   "proto": 1,
+   "fw": "d8tx-v1",
+   "slot_us": 8994,
+   "channels": 47,
+   "pwr_max": 127,
+   "fofs_max_hz": 200000,
+   "timeout_max_ms": 1000,
+   "txid": "3537"
+  },
+  "fc_connect_ms": 196
+ },
+ "settings_change": {
+  "link_down_ms": 638,
+  "link_ms": 690,
+  "telemetry_ms": 5593,
+  "note": "from the field edit; includes the UI 600 ms settings debounce",
+  "lines": [
+   "STOP",
+   "FOFS 0",
+   "LINK 100 300"
+  ]
+ },
+ "port_loss": {
+  "lost_ms": 54,
+  "lost_state": "lost",
+  "lost_reason": "port_closed",
+  "link_ms": 565,
+  "telemetry_ms": 3635
+ },
+ "reload": {
+  "link_ms": 337,
+  "telemetry_ms": 1329,
+  "power": 100,
+  "allow_arm": false,
+  "arm_fix_restart": false,
+  "settings_kept": true,
+  "fc_connected": true
+ },
+ "app_close_ms": 214,
+ "app_restart": {
+  "link_ms": 1193,
+  "telemetry_ms": 1662,
+  "power": 100,
+  "allow_arm": false,
+  "arm_fix_restart": false,
+  "settings_kept": true,
+  "fc_connected": true
+ },
+ "two_instances": {
+  "a_baseline": {
+   "seconds": 10.1,
+   "slots_per_s": 100.5,
+   "replies_per_s": 6.44,
+   "stat_replies_per_s": 0,
+   "s_frames_per_s": 0,
+   "s_max_gap_ms": 0,
+   "link_end_events": 0,
+   "link_losses": 0,
+   "link_up_throughout": true
+  },
+  "b_esp_in_use_ms": 91,
+  "b_esp_text_ms": 92,
+  "b_fc_in_use_ms": 118,
+  "b_errors": [
+   {
+    "t": 1794257195732,
+    "ev": "worker_error",
+    "role": "esp",
+    "kind": "port_in_use",
+    "message": "port in use (NetworkError: Failed to execute 'open' on 'SerialPort': Failed to open serial port.)"
+   },
+   {
+    "t": 1794257195848,
+    "ev": "worker_error",
+    "role": "fc",
+    "kind": "port_in_use",
+    "message": "port in use (NetworkError: Failed to execute 'open' on 'SerialPort': Failed to open serial port.)"
+   }
+  ],
+  "a_during_b": {
+   "seconds": 20.2,
+   "slots_per_s": 101.8,
+   "replies_per_s": 6.69,
+   "stat_replies_per_s": 0,
+   "s_frames_per_s": 0,
+   "s_max_gap_ms": 0,
+   "link_end_events": 0,
+   "link_losses": 0,
+   "link_up_throughout": true
+  },
+  "b_state": {
+   "link_state": "lost",
+   "retry_reason": "port_in_use",
+   "attempt": 11,
+   "connected": false,
+   "fc_in_use": true
+  },
+  "b_text": [
+   "DevKit in use",
+   "in use by another app",
+   "in use by another app",
+   "DevKit in use by another app or tab: close it there and this app takes the DevKit over (retrying every 2 s).",
+   "link DevKit in use (DevKit in use by another app or tab)",
+   "DevKit in use by another app or tab. Close it there; retrying every 2 s.",
+   "Drone USB in use by another app or tab. Close it there; retrying every 2 s."
+  ],
+  "takeover": {
+   "link_ms": 1739,
+   "telemetry_ms": 1951,
+   "power": 127,
+   "allow_arm": false,
+   "fc_connected": true,
+   "fc_ms": 1952
+  },
+  "b_after": {
+   "seconds": 5,
+   "slots_per_s": 102.6,
+   "replies_per_s": 7.93,
+   "stat_replies_per_s": 5.15,
+   "s_frames_per_s": 106.2,
+   "s_max_gap_ms": 13.5,
+   "link_end_events": 0,
+   "link_losses": 0,
+   "link_up_throughout": true
+  }
+ },
+ "tap": {
+  "esp": {
+   "lines": [
+    [
+     1794257218026,
+     "OK proto=1"
+    ],
+    [
+     1794257218029,
+     "OK proto=1 fw=d8tx-v1 slot_us=8994 channels=47 pwr_max=127 fofs_max_hz=200000 timeout_max_ms=1000 txid=3537"
+    ],
+    [
+     1794257218031,
+     "OK"
+    ],
+    [
+     1794257218033,
+     "OK tid=0"
+    ],
+    [
+     1794257218036,
+     "OK every=12 cap_us=9000 gain=40 dec=64 same=0 stream=1 ack=1 mark=0 retry=1 n=2250 gain_max=72 skip=1000 bits=4"
+    ],
+    [
+     1794257218038,
+     "OK"
+    ],
+    [
+     1794257218397,
+     "EV tlm_drop k=38 ch=195 tid=2 try=0 nb=0 fit=11 sl=0 rt=195 gap=-108 pgap=-26"
+    ],
+    [
+     1794257218532,
+     "EV tlm_drop k=53 ch=227 tid=2 try=0 nb=0 fit=11 sl=0 rt=275 gap=-30 pgap=91"
+    ],
+    [
+     1794257218667,
+     "EV tlm_drop k=68 ch=156 tid=3 try=0 nb=0 fit=11 sl=3 rt=279 gap=4 pgap=-26"
+    ],
+    [
+     1794257219044,
+     "EV link slots=101 late_max_us=283"
+    ],
+    [
+     1794257219270,
+     "EV tlm_drop k=135 ch=232 tid=8 try=0 nb=0 fit=11 sl=0 rt=271 gap=-9 pgap=80"
+    ],
+    [
+     1794257219872,
+     "EV tlm_drop k=202 ch=155 tid=13 try=0 nb=0 fit=11 sl=0 rt=279 gap=-1 pgap=-28"
+    ],
+    [
+     1794257220096,
+     "EV link slots=208 late_max_us=326"
+    ],
+    [
+     1794257220475,
+     "EV tlm_drop k=269 ch=231 tid=18 try=0 nb=0 fit=11 sl=1 rt=279 gap=1 pgap=76"
+    ],
+    [
+     1794257220961,
+     "EV tlm_drop k=323 ch=232 tid=22 try=0 nb=0 fit=11 sl=0 rt=279 gap=-4 pgap=81"
+    ],
+    [
+     1794257221103,
+     "EV link slots=309 late_max_us=326"
+    ],
+    [
+     1794257221806,
+     "EV tlm_drop k=417 ch=232 tid=29 try=0 nb=0 fit=11 sl=0 rt=271 gap=-12 pgap=81"
+    ],
+    [
+     1794257222146,
+     "EV link slots=416 late_max_us=326"
+    ],
+    [
+     1794257222525,
+     "EV tlm_drop k=497 ch=230 tid=3 try=0 nb=0 fit=11 sl=1 rt=279 gap=0 pgap=78"
+    ],
+    [
+     1794257222894,
+     "EV tlm_drop k=538 ch=156 tid=6 try=0 nb=0 fit=11 sl=3 rt=279 gap=2 pgap=0"
+    ],
+    [
+     1794257223146,
+     "EV tlm_drop k=566 ch=7 tid=8 try=0 nb=0 fit=11 sl=266 rt=306 gap=211 pgap=80"
+    ],
+    [
+     1794257223172,
+     "EV link slots=518 late_max_us=326"
+    ],
+    [
+     1794257223389,
+     "EV link_end why=stop slots=541 late_max_us=326 retune_max_us=382 gap_max_us=315 gap50=209 gap100=91 gap200=17 g2_min_us=-372 g2_max_us=311 trig=54 retry=11"
+    ],
+    [
+     1794257223389,
+     "OK"
+    ]
+   ],
+   "sTimes": 0,
+   "sCount": 565,
+   "sLast": 28197.600000023842,
+   "sMaxGap": 13.5,
+   "sGaps50": 0,
+   "sGapsList": [],
+   "lastS": [
+    1794257223360,
+    "S 1000 1500 1500 1500 1000 1000 1000 1000"
+   ],
+   "linked": false,
+   "txOther": [
+    [
+     1794257218025,
+     "PING"
+    ],
+    [
+     1794257218026,
+     "INFO"
+    ],
+    [
+     1794257218029,
+     "FOFS 0"
+    ],
+    [
+     1794257218031,
+     "TID 0"
+    ],
+    [
+     1794257218033,
+     "TLM 12 9000 40 64 0 1 1 0 1 1000 4"
+    ],
+    [
+     1794257218036,
+     "LINK 127 300"
+    ],
+    [
+     1794257218242,
+     "STAT"
+    ],
+    [
+     1794257218244,
+     "STAT"
+    ],
+    [
+     1794257218250,
+     "TID 1"
+    ],
+    [
+     1794257218361,
+     "TID 2"
+    ],
+    [
+     1794257218445,
+     "STAT"
+    ],
+    [
+     1794257218496,
+     "STAT"
+    ],
+    [
+     1794257218500,
+     "TID 2"
+    ],
+    [
+     1794257218631,
+     "TID 3"
+    ],
+    [
+     1794257218646,
+     "STAT"
+    ],
+    [
+     1794257218767,
+     "TID 4"
+    ],
+    [
+     1794257218851,
+     "STAT"
+    ],
+    [
+     1794257218882,
+     "STAT"
+    ],
+    [
+     1794257218882,
+     "TID 5"
+    ],
+    [
+     1794257219000,
+     "TID 6"
+    ],
+    [
+     1794257219056,
+     "STAT"
+    ],
+    [
+     1794257219117,
+     "STAT"
+    ],
+    [
+     1794257219118,
+     "TID 7"
+    ],
+    [
+     1794257219233,
+     "TID 8"
+    ],
+    [
+     1794257219264,
+     "STAT"
+    ],
+    [
+     1794257219270,
+     "STAT"
+    ],
+    [
+     1794257219368,
+     "TID 9"
+    ],
+    [
+     1794257219472,
+     "STAT"
+    ],
+    [
+     1794257219485,
+     "STAT"
+    ],
+    [
+     1794257219486,
+     "TID 10"
+    ],
+    [
+     1794257219602,
+     "TID 11"
+    ],
+    [
+     1794257219677,
+     "STAT"
+    ],
+    [
+     1794257219719,
+     "STAT"
+    ],
+    [
+     1794257219719,
+     "TID 12"
+    ],
+    [
+     1794257219836,
+     "TID 13"
+    ],
+    [
+     1794257219880,
+     "STAT"
+    ],
+    [
+     1794257219971,
+     "TID 14"
+    ],
+    [
+     1794257220086,
+     "STAT"
+    ],
+    [
+     1794257220088,
+     "STAT"
+    ],
+    [
+     1794257220088,
+     "TID 15"
+    ],
+    [
+     1794257220205,
+     "TID 16"
+    ],
+    [
+     1794257220286,
+     "STAT"
+    ],
+    [
+     1794257220322,
+     "STAT"
+    ],
+    [
+     1794257220322,
+     "TID 17"
+    ],
+    [
+     1794257220439,
+     "TID 18"
+    ],
+    [
+     1794257220488,
+     "STAT"
+    ],
+    [
+     1794257220574,
+     "TID 19"
+    ],
+    [
+     1794257220691,
+     "TID 20"
+    ],
+    [
+     1794257220694,
+     "STAT"
+    ],
+    [
+     1794257220808,
+     "TID 21"
+    ],
+    [
+     1794257220902,
+     "STAT"
+    ],
+    [
+     1794257220924,
+     "STAT"
+    ],
+    [
+     1794257220924,
+     "TID 22"
+    ],
+    [
+     1794257221059,
+     "TID 23"
+    ],
+    [
+     1794257221109,
+     "STAT"
+    ],
+    [
+     1794257221185,
+     "TID 24"
+    ],
+    [
+     1794257221302,
+     "TID 25"
+    ],
+    [
+     1794257221314,
+     "STAT"
+    ],
+    [
+     1794257221419,
+     "TID 26"
+    ],
+    [
+     1794257221522,
+     "STAT"
+    ],
+    [
+     1794257221536,
+     "STAT"
+    ],
+    [
+     1794257221536,
+     "TID 27"
+    ],
+    [
+     1794257221652,
+     "TID 28"
+    ],
+    [
+     1794257221728,
+     "STAT"
+    ],
+    [
+     1794257221769,
+     "STAT"
+    ],
+    [
+     1794257221770,
+     "TID 29"
+    ],
+    [
+     1794257221905,
+     "TID 30"
+    ],
+    [
+     1794257221936,
+     "STAT"
+    ],
+    [
+     1794257222022,
+     "TID 31"
+    ],
+    [
+     1794257222139,
+     "TID 0"
+    ],
+    [
+     1794257222142,
+     "STAT"
+    ],
+    [
+     1794257222255,
+     "TID 1"
+    ],
+    [
+     1794257222350,
+     "STAT"
+    ],
+    [
+     1794257222372,
+     "STAT"
+    ],
+    [
+     1794257222372,
+     "TID 2"
+    ],
+    [
+     1794257222490,
+     "TID 3"
+    ],
+    [
+     1794257222557,
+     "STAT"
+    ],
+    [
+     1794257222624,
+     "TID 4"
+    ],
+    [
+     1794257222741,
+     "TID 5"
+    ],
+    [
+     1794257222765,
+     "STAT"
+    ],
+    [
+     1794257222858,
+     "TID 6"
+    ],
+    [
+     1794257222971,
+     "STAT"
+    ],
+    [
+     1794257222993,
+     "STAT"
+    ],
+    [
+     1794257222993,
+     "TID 7"
+    ],
+    [
+     1794257223109,
+     "TID 8"
+    ],
+    [
+     1794257223178,
+     "STAT"
+    ],
+    [
+     1794257223246,
+     "TID 9"
+    ],
+    [
+     1794257223383,
+     "STOP"
+    ]
+   ]
+  },
+  "fc": {
+   "counts": {
+    "101": 12,
+    "104": 29,
+    "105": 58,
+    "108": 58,
+    "110": 12
+   },
+   "motors": [
+    [
+     1794257218017,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257218210,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257218370,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257218530,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257218754,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257218914,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257219138,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257219298,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257219458,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257219682,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257219842,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257220066,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257220226,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257220386,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257220610,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257220770,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257220994,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257221154,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257221314,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257221554,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257221714,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257221938,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257222098,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257222258,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257222482,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257222642,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257222866,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257223026,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ],
+    [
+     1794257223186,
+     [
+      1000,
+      1000,
+      1000,
+      1000
+     ]
+    ]
+   ]
+  },
+  "marks": [
+   {
+    "t": 1794257195732,
+    "ev": "worker_error",
+    "role": "esp",
+    "kind": "port_in_use",
+    "message": "port in use (NetworkError: Failed to execute 'open' on 'SerialPort': Failed to open serial port.)"
+   },
+   {
+    "t": 1794257195848,
+    "ev": "worker_error",
+    "role": "fc",
+    "kind": "port_in_use",
+    "message": "port in use (NetworkError: Failed to execute 'open' on 'SerialPort': Failed to open serial port.)"
+   },
+   {
+    "t": 1794257223364,
+    "ev": "state_link_false",
+    "lost": null,
+    "connected": false
+   },
+   {
+    "t": 1794257223389,
+    "ev": "esp_read_done"
+   }
+  ],
+  "radioMsgs": [
+   {
+    "t": 1794257195178,
+    "type": "radio",
+    "power": 127,
+    "fofs_hz": 0,
+    "timeout_ms": 300,
+    "allow_arm": false
+   },
+   {
+    "t": 1794257195677,
+    "type": "radio",
+    "power": 127,
+    "fofs_hz": 0,
+    "timeout_ms": 300,
+    "allow_arm": false
+   }
+  ],
+  "series": [
+   {
+    "t": 1794257195187,
+    "link": false,
+    "connected": false,
+    "lost": null,
+    "allow": false,
+    "trig": 0,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": false,
+    "att": null,
+    "mot": null,
+    "rc": [],
+    "dis": []
+   },
+   {
+    "t": 1794257196195,
+    "link": false,
+    "connected": false,
+    "lost": "port_in_use",
+    "allow": false,
+    "trig": 0,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": false,
+    "att": null,
+    "mot": null,
+    "rc": [],
+    "dis": []
+   },
+   {
+    "t": 1794257197211,
+    "link": false,
+    "connected": false,
+    "lost": "port_in_use",
+    "allow": false,
+    "trig": 0,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": false,
+    "att": null,
+    "mot": null,
+    "rc": [],
+    "dis": []
+   },
+   {
+    "t": 1794257198225,
+    "link": false,
+    "connected": false,
+    "lost": "port_in_use",
+    "allow": false,
+    "trig": 0,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": false,
+    "att": null,
+    "mot": null,
+    "rc": [],
+    "dis": []
+   },
+   {
+    "t": 1794257199225,
+    "link": false,
+    "connected": false,
+    "lost": "port_in_use",
+    "allow": false,
+    "trig": 0,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": false,
+    "att": null,
+    "mot": null,
+    "rc": [],
+    "dis": []
+   },
+   {
+    "t": 1794257200225,
+    "link": false,
+    "connected": false,
+    "lost": "port_in_use",
+    "allow": false,
+    "trig": 0,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": false,
+    "att": null,
+    "mot": null,
+    "rc": [],
+    "dis": []
+   },
+   {
+    "t": 1794257201245,
+    "link": false,
+    "connected": false,
+    "lost": "port_in_use",
+    "allow": false,
+    "trig": 0,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": false,
+    "att": null,
+    "mot": null,
+    "rc": [],
+    "dis": []
+   },
+   {
+    "t": 1794257202246,
+    "link": false,
+    "connected": false,
+    "lost": "port_in_use",
+    "allow": false,
+    "trig": 0,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": false,
+    "att": null,
+    "mot": null,
+    "rc": [],
+    "dis": []
+   },
+   {
+    "t": 1794257203260,
+    "link": false,
+    "connected": false,
+    "lost": "port_in_use",
+    "allow": false,
+    "trig": 0,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": false,
+    "att": null,
+    "mot": null,
+    "rc": [],
+    "dis": []
+   },
+   {
+    "t": 1794257204277,
+    "link": false,
+    "connected": false,
+    "lost": "port_in_use",
+    "allow": false,
+    "trig": 0,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": false,
+    "att": null,
+    "mot": null,
+    "rc": [],
+    "dis": []
+   },
+   {
+    "t": 1794257205295,
+    "link": false,
+    "connected": false,
+    "lost": "port_in_use",
+    "allow": false,
+    "trig": 0,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": false,
+    "att": null,
+    "mot": null,
+    "rc": [],
+    "dis": []
+   },
+   {
+    "t": 1794257206306,
+    "link": false,
+    "connected": false,
+    "lost": "port_in_use",
+    "allow": false,
+    "trig": 0,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": false,
+    "att": null,
+    "mot": null,
+    "rc": [],
+    "dis": []
+   },
+   {
+    "t": 1794257207306,
+    "link": false,
+    "connected": false,
+    "lost": "port_in_use",
+    "allow": false,
+    "trig": 0,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": false,
+    "att": null,
+    "mot": null,
+    "rc": [],
+    "dis": []
+   },
+   {
+    "t": 1794257208306,
+    "link": false,
+    "connected": false,
+    "lost": "port_in_use",
+    "allow": false,
+    "trig": 0,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": false,
+    "att": null,
+    "mot": null,
+    "rc": [],
+    "dis": []
+   },
+   {
+    "t": 1794257209306,
+    "link": false,
+    "connected": false,
+    "lost": "port_in_use",
+    "allow": false,
+    "trig": 0,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": false,
+    "att": null,
+    "mot": null,
+    "rc": [],
+    "dis": []
+   },
+   {
+    "t": 1794257210306,
+    "link": false,
+    "connected": false,
+    "lost": "port_in_use",
+    "allow": false,
+    "trig": 0,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": false,
+    "att": null,
+    "mot": null,
+    "rc": [],
+    "dis": []
+   },
+   {
+    "t": 1794257211324,
+    "link": false,
+    "connected": false,
+    "lost": "port_in_use",
+    "allow": false,
+    "trig": 0,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": false,
+    "att": null,
+    "mot": null,
+    "rc": [],
+    "dis": []
+   },
+   {
+    "t": 1794257212325,
+    "link": false,
+    "connected": false,
+    "lost": "port_in_use",
+    "allow": false,
+    "trig": 0,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": false,
+    "att": null,
+    "mot": null,
+    "rc": [],
+    "dis": []
+   },
+   {
+    "t": 1794257213343,
+    "link": false,
+    "connected": false,
+    "lost": "port_in_use",
+    "allow": false,
+    "trig": 0,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": false,
+    "att": null,
+    "mot": null,
+    "rc": [],
+    "dis": []
+   },
+   {
+    "t": 1794257214345,
+    "link": false,
+    "connected": false,
+    "lost": "port_in_use",
+    "allow": false,
+    "trig": 0,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": false,
+    "att": null,
+    "mot": null,
+    "rc": [],
+    "dis": []
+   },
+   {
+    "t": 1794257215365,
+    "link": false,
+    "connected": false,
+    "lost": "port_in_use",
+    "allow": false,
+    "trig": 0,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": false,
+    "att": null,
+    "mot": null,
+    "rc": [],
+    "dis": []
+   },
+   {
+    "t": 1794257216381,
+    "link": false,
+    "connected": false,
+    "lost": "port_in_use",
+    "allow": false,
+    "trig": 0,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": false,
+    "att": null,
+    "mot": null,
+    "rc": [],
+    "dis": []
+   },
+   {
+    "t": 1794257217399,
+    "link": false,
+    "connected": false,
+    "lost": "port_in_use",
+    "allow": false,
+    "trig": 0,
+    "rep": 0,
+    "age": null,
+    "rlink": false,
+    "vbat": null,
+    "rssi": null,
+    "fcc": false,
+    "att": null,
+    "mot": null,
+    "rc": [],
+    "dis": []
+   },
+   {
+    "t": 1794257218417,
+    "link": true,
+    "connected": true,
+    "lost": null,
+    "slots": 0,
+    "hz": 104.44563471475678,
+    "gap": 13.5,
+    "skipped": 0,
+    "allow": false,
+    "trig": 3,
+    "rep": 2,
+    "age": 55,
+    "rlink": true,
+    "vbat": 0,
+    "rssi": 50,
+    "fcc": true,
+    "att": [
+     -3.8,
+     7.2,
+     1
+    ],
+    "mot": [
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     1000,
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "armed": false,
+    "fs": true,
+    "dis": [
+     "RX_FAILSAFE"
+    ]
+   },
+   {
+    "t": 1794257219430,
+    "link": true,
+    "connected": true,
+    "lost": null,
+    "slots": 101,
+    "hz": 105.34670611336436,
+    "gap": 13.5,
+    "skipped": 0,
+    "allow": false,
+    "trig": 14,
+    "rep": 9,
+    "age": 62,
+    "rlink": true,
+    "vbat": 0,
+    "rssi": 54,
+    "fcc": true,
+    "att": [
+     -3.8,
+     7.2,
+     1
+    ],
+    "mot": [
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     1000,
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "armed": false,
+    "fs": true,
+    "dis": [
+     "RX_FAILSAFE"
+    ]
+   },
+   {
+    "t": 1794257220445,
+    "link": true,
+    "connected": true,
+    "lost": null,
+    "slots": 208,
+    "hz": 105.30697190426638,
+    "gap": 13.5,
+    "skipped": 0,
+    "allow": false,
+    "trig": 24,
+    "rep": 18,
+    "age": 4,
+    "rlink": true,
+    "vbat": 0,
+    "rssi": 41,
+    "fcc": true,
+    "att": [
+     -3.8,
+     7.2,
+     1
+    ],
+    "mot": [
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     1000,
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "armed": false,
+    "fs": true,
+    "dis": [
+     "RX_FAILSAFE"
+    ]
+   },
+   {
+    "t": 1794257221459,
+    "link": true,
+    "connected": true,
+    "lost": null,
+    "slots": 309,
+    "hz": 105.59260559407835,
+    "gap": 13.5,
+    "skipped": 0,
+    "allow": false,
+    "trig": 34,
+    "rep": 26,
+    "age": 39,
+    "rlink": true,
+    "vbat": 0,
+    "rssi": 56,
+    "fcc": true,
+    "att": [
+     -3.8,
+     7.2,
+     1
+    ],
+    "mot": [
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     1000,
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "armed": false,
+    "fs": false,
+    "dis": []
+   },
+   {
+    "t": 1794257222472,
+    "link": true,
+    "connected": true,
+    "lost": null,
+    "slots": 416,
+    "hz": 105.76271186440678,
+    "gap": 13.5,
+    "skipped": 0,
+    "allow": false,
+    "trig": 43,
+    "rep": 34,
+    "age": 99,
+    "rlink": true,
+    "vbat": 0,
+    "rssi": 58,
+    "fcc": true,
+    "att": [
+     -3.8,
+     7.2,
+     1
+    ],
+    "mot": [
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "rc": [
+     1500,
+     1500,
+     1500,
+     1000,
+     1000,
+     1000,
+     1000,
+     1000
+    ],
+    "armed": false,
+    "fs": false,
+    "dis": []
+   }
+  ]
+ },
+ "ended": "2026-11-09T20:47:03.447Z"
+}

@@ -3,7 +3,8 @@
 //  - DevKit RX text lines (EV/OK/ERR), DevKit TX lines (S frame write times -> host-side S gaps),
 //  - FC RX MSP v1 replies (per-command counts, attitude reply times),
 //  - every state message the worker posts to the UI (latest kept, 1 Hz series).
-// It also keeps the real SerialPort objects so the harness can close (forget) the DevKit port.
+// It also keeps the real SerialPort objects so the harness can simulate a port loss (unplug), and it forces
+// allow_arm=false on every radio settings message (arming disallowed for the whole run).
 export function installTap() {
   if (self.__e2e) return 'already'
   const T = (self.__e2e = {
@@ -16,12 +17,27 @@ export function installTap() {
     ports: {},
     marks: [],
     kill: {},
+    /** unplug generation per role: streams handed out before an unplug fail, later ones (after a reopen) work */
+    gen: { esp: 0, fc: 0 },
+    noArm: true,
+    radioMsgs: [],
   })
+  // --- arming disallowed: rewrite radio settings from the UI before the host sees them
+  const om = self.onmessage
+  self.onmessage = (ev) => {
+    const d = ev.data
+    if (T.noArm && d && (d.type === 'radio' || d.type === 'start')) {
+      T.radioMsgs.push({ t: Date.now(), ...d, allow_arm: false })
+      return om.call(self, new MessageEvent('message', { data: { ...d, allow_arm: false } }))
+    }
+    return om.call(self, ev)
+  }
   const lost = () => new DOMException('The device has been lost.', 'NetworkError')
   const killers = {}
   const killP = (role) => new Promise((_, rej) => { killers[role] = () => rej(lost()) })
-  // Simulated unplug: pending and later reads/writes on the role's port reject like Chrome on device loss.
-  T.unplug = (role) => { T.kill[role] = Date.now(); if (killers[role]) killers[role]() }
+  // Simulated unplug: pending and later reads/writes on the role's current streams reject like Chrome on device loss;
+  // streams opened afterwards (the host reopens the port) work again, as after a replug.
+  T.unplug = (role) => { T.kill[role] = Date.now(); T.gen[role]++; if (killers[role]) killers[role]() }
   const now = () => Date.now()
   const VID = { 0x10c4: 'esp', 0x0483: 'fc' }
 
@@ -146,8 +162,9 @@ export function installTap() {
             const read = r.read.bind(r)
             const kp = killP(role)
             kp.catch(() => undefined)
+            const g = T.gen[role]
             r.read = async () => {
-              if (T.kill[role]) throw lost()
+              if (T.gen[role] !== g) throw lost()
               const res = await Promise.race([read(), kp])
               if (res.value) { try { (role === 'esp' ? espRx : fcRx)(res.value) } catch (e) { T.marks.push({ t: now(), ev: 'tap_err', e: String(e) }) } }
               if (res.done) T.marks.push({ t: now(), ev: `${role}_read_done` })
@@ -169,7 +186,8 @@ export function installTap() {
           s.getWriter = (...a) => {
             const w = gw(...a)
             const write = w.write.bind(w)
-            w.write = (chunk) => { if (T.kill[role]) return Promise.reject(lost()); try { espTx(chunk) } catch { /* ignore */ } return write(chunk) }
+            const g = T.gen[role]
+            w.write = (chunk) => { if (T.gen[role] !== g) return Promise.reject(lost()); try { espTx(chunk) } catch { /* ignore */ } return write(chunk) }
             return w
           }
         }
