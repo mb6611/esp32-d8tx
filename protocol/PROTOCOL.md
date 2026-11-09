@@ -1,21 +1,32 @@
 # d8tx UART protocol v1
 
-ASCII lines at 921600 8N1. Lines end in `\n` (`\r\n` accepted), at most 95 characters (longer → `ERR long`). Every request gets exactly one final reply, `OK[ k=v ...]` or `ERR <code> <text>`. Asynchronous events are `EV <name>[ k=v ...]`. Error codes: `args`, `range`, `busy`, `keyed`, `unknown`, `long`.
+ASCII lines at 921600 8N1. Lines end in `\n` (`\r\n` accepted), at most 95 characters (longer → `ERR long`). Every request gets exactly one final reply, `OK[ k=v ...]` or `ERR <code> <text>`. Asynchronous events are `EV <name>[ k=v ...]`. Error codes: `args`, `range`, `busy`, `keyed`, `unknown`, `long`, `bench-only`.
 
 | Command | Reply | Notes |
 |---|---|---|
 | `PING` | `OK proto=1` | |
-| `INFO` | `OK proto=1 fw=d8tx-v1 slot_us=8994 channels=47 pwr_max=127 fofs_max_hz=200000 timeout_max_ms=1000 txid=<xxxx> ver=<semver>+<hash8>` | txid = this ESP's identity (4 hex digits, lowercase); ver = firmware build version (last field; text, never a number; see "Firmware version") |
+| `INFO` | `OK proto=1 fw=d8tx-v1 slot_us=8994 channels=47 pwr_max=127 fofs_max_hz=200000 timeout_max_ms=1000 txid=<xxxx> ver=<semver>+<hash8> bench=<0\|1>` | txid = this ESP's identity (4 hex digits, lowercase); ver = firmware build version (text, never a number; see "Firmware version"; `bench=` follows it). `pwr_max` = the build's compile-time power cap (`CONFIG_D8_PWR_MAX`, default 127). `bench` = 1 only in a `CONFIG_D8_BENCH` build; the last key. Hosts must ignore unknown keys and treat missing ones as absent: older firmware has no `bench` (assume 0, release command set) and may lack `pwr_max` (assume 127) |
 | `STAT` | `OK keyed=0\|1 link=0\|1 fofs=<hz> armok=0\|1 bind=0\|1` | also while linked or binding |
 | `FOFS <hz>` | `OK` | signed, \|hz\| ≤ 200000, idle only; else `ERR range` |
 | `ARMOK` | `OK` | allows ch7 > 1300 for the next `LINK` only; cleared when it ends |
-| `LINK <pwr> [timeout_ms]` | `OK`, then continuous hopping | pwr 0..127; timeout 1..1000, default 300 |
+| `LINK <pwr> [timeout_ms]` | `OK`, then continuous hopping | pwr 0..`pwr_max` (raw PBUS code, see "Power"); timeout 1..1000, default 300 |
 | `S c1..c8` | none while linked; `OK` when idle | µs, clamped 1000–2000; ch7 ≤ 1300 unless ARMOK |
 | `STOP` (alias `U`) | `OK` | ends the link or bind (the `EV link_end` / `EV bind_end` precedes the `OK`) |
 | `ID` | `OK txid=<xxxx> start=<s> step=<t>` | this ESP's identity (see "Bind") |
 | `ID <xxxx> <s> <t>` | same as `ID` | set + persist (clone/restore a binding); hex txid, decimal start 0..255, step 1..255; `ERR range hop_table` if the table is not valid; idle only |
 | `ID new` | same as `ID` | new random identity, persisted; bound receivers must re-bind; idle only |
-| `BIND [pwr]` | `OK`, then bind packets | pwr 0..127 (default 127); until `STOP` or 30 s; idle only |
+| `BIND [pwr]` | `OK`, then bind packets | pwr 0..`pwr_max` (default `pwr_max`; the TS host sends 40); until `STOP` or 30 s; idle only. Bind packets go out on one fixed channel (hop channel 0), they do not hop; see "Bind" |
+
+## Power
+`pwr` is a raw PBUS(5,1) code on the ESP32's DAC path, **not dBm**, and there is no calibration: the output level at a given code has not been measured. The firmware rejects `pwr` above `pwr_max` (compile-time `CONFIG_D8_PWR_MAX`, default 127) with `ERR range`/`ERR pwr`. The host stack defaults LINK to **127** and clamps any requested power to the `pwr_max` it read from `INFO` (it reads `INFO` before `LINK`; with no `pwr_max` key it assumes 127).
+
+## Release and bench command sets
+Release build (`CONFIG_D8_BENCH=n`, the default; `INFO` shows `bench=0`): `LINK`, `S`, `STOP`/`U`, `FOFS`, `ARMOK`, `INFO`, `STAT`, `TLM`, `TLMX`, `PING`, `ID`, `TID`, `BIND`, `HOP 0 <pwr> [timeout_ms]` (continuous 47-channel hop) and receive-only `TCAP` (pwr −1). Every keying command in this set is the 47-channel hopping link or the bind transmission.
+
+Bench build (`CONFIG_D8_BENCH=y`, `INFO` shows `bench=1`) adds the fixed-channel and CW modes: `TONE`, `ALT`, `RETUNE`, `PKT`, `HOP <n_slots> [pwr]` (n_slots > 0) and keyed `TCAP`. `pwr` is optional there (default `pwr_max`). A release build answers them `ERR bench-only` (keyed `TCAP`: `ERR bench-only bench build required`). The bench commands are documented in `firmware/main/d8tone.c` and `docs/devkitv1/writeup/tx.md`; they are for bench experiments, not for flying.
+
+## Identity
+TX ID and hop table are per ESP: the firmware stores `{txid, start, step}` in NVS, draws a random one on first boot, and `INFO`/`ID` report it (`txid=`, `start=`, `step=`). There is no build-time TXID or hop table. Hosts use the device's `txid` from `INFO`/`ID` (the TS and Python stacks both do; telemetry replies must carry it) and never a constant; see "Bind".
 
 Channel order TAER1234 (ch1 throttle, ch2 roll, ch3 pitch, ch4 yaw, ch5–8 AUX1–4); ARM = ch7.
 
@@ -37,6 +48,8 @@ Valid identity (`ID <xxxx> <s> <t>`, `firmware/main/packet.c` `d8_ident_valid`):
 
 `11 03 01 txid0 txid1 idx h[idx] h[idx+1] h[idx+2] h[idx+3] h[idx+4] 00 00 00 00 00 00 01` + CRC, entries ≥ 47 sent as 0.
 
+BIND does **not** hop: it repeats the bind packet on a single fixed channel (hop channel 0 + `FOFS`, the first entry of this ESP's table) for at most 30 s (`BIND_TIMEOUT_MS`) or until `STOP`, at the requested power (default `pwr_max` when `pwr` is omitted; the TS host sends 40). It is a short, user-initiated pairing transmission, as the bind button of a stock FrSky transmitter is; it is not the hopping link, so the FHSS reasoning for `LINK` does not cover it. Use a low `pwr` and keep the receiver close.
+
 `D8Link.bind(power, fofs)` sends `FOFS` (default `DEFAULT_FOFS_HZ`) before `BIND`, so the receiver tunes to the offset later links use rather than whatever an earlier link left in the firmware's RAM.
 
 While binding, `STOP`/`U` ends it, `STAT` (bind=1), `PING`, `INFO` and `S` are answered as when idle, any other request gets `ERR busy binding` and the bind keeps running.
@@ -49,10 +62,10 @@ Reference TX (DIY-Multiprotocol-TX-Module, `Multiprotocol/FrSkyD_cc2500.ino`, `F
 `ver` in `INFO` is `<semver>+<hash8>`: `D8TX_FW_SEMVER` from `firmware/main/CMakeLists.txt` plus the first 8 hex digits of a SHA-256 over the firmware sources (`firmware/tools/fw_version.mjs` computes the same value), so it changes exactly when the firmware does. Firmware older than this field has no `ver`. Hosts parse `ver` (like `txid`) as text. The web app bundles a build (`make -C firmware web` → `apps/web/public/firmware/manifest.json`, `{chip, version, flash, files:[{name, offset, path, size, sha256}]}`) and offers an update when `ver` differs. It writes only bootloader (0x1000), partition table (0x8000) and app (0x10000), never erasing flash, so the NVS identity (0x9000) survives.
 
 ## Error mapping
-`args` wrong argument count or malformed hex; `range` a value out of range or non-numeric; `busy` link or bind active; `keyed` radio is keyed; `unknown` unknown command; `long` line too long.
+`args` wrong argument count or malformed hex; `range` a value out of range or non-numeric; `busy` link or bind active; `keyed` radio is keyed; `unknown` unknown command; `long` line too long; `bench-only` command exists only in a `CONFIG_D8_BENCH` build.
 
 ## Legacy bench commands
-`TONE`, `ALT`, `RETUNE`, `PKT`, `HOP`, `STICKS` still exist but are not part of the API. They keep their old bare `ERR <why>` replies and `K,...` report lines. `HOP 0 <pwr> [timeout]` is the legacy twin of `LINK`. Changed vs. the earlier bench firmware: `PING` is `OK proto=1` (was `P,d8tone,1`), `STAT` is the v1 form (was `S,keyed=...`), boot line is `EV boot` (was `I,boot`), and the `I,ready` line is gone.
+`TONE`, `ALT`, `RETUNE`, `PKT`, `HOP`, `STICKS` still exist but are not part of the API, and only in `CONFIG_D8_BENCH` builds (a release build answers `ERR bench-only`; `HOP 0` stays in release). `pwr` stays optional (default `pwr_max`). They keep their old bare `ERR <why>` replies and `K,...` report lines. `HOP 0 <pwr> [timeout]` is the legacy twin of `LINK`. Changed vs. the earlier bench firmware: `PING` is `OK proto=1` (was `P,d8tone,1`), `STAT` is the v1 form (was `S,keyed=...`), boot line is `EV boot` (was `I,boot`), and the `I,ready` line is gone.
 
 ## Telemetry listen (experiment, off by default)
 Bench-only extension for listening to Betaflight's FrSky D8 telemetry reply. The d8tx library uses it (see "Telemetry in the library"); with `TLM 0` (the boot default) `LINK` behaves exactly as above. Host: `bench/d8-tx/host/tlm_listen.py`.
@@ -62,7 +75,7 @@ Bench-only extension for listening to Betaflight's FrSky D8 telemetry reply. The
 | `TLM <every> [cap_us] [gain] [dec] [same] [stream] [ack] [mark] [retry] [skip_us] [bits]` | `OK every=.. cap_us=.. gain=.. dec=.. same=.. stream=.. ack=.. mark=.. retry=.. n=<samples> gain_max=..` | idle only (else `ERR busy`); RAM only. every 0 = off, else 4..940 slots. cap_us 500..12000 (default 10000), gain -1 = hardware AGC or 0..127 manual code (default 40, clamped to the chip's max), dec 16/32/64 (default 32), same 0 = listen on the next hop channel (default), 1 = on the trigger channel. cap_us*16/dec ≤ 6000. stream 0 (default) = blocking int16 dump; 1 = int8 payload shipped in the background while LINK keeps sending. ack 0 (default) = firmware advances tid +1 per trigger; 1 = host acks with `TID`. mark 1 = ch8 is 1500 us on trigger packets, 1600 on re-triggers, 1000 otherwise (drone-side receipt check through MSP_RC). skip_us 0..6000 / bits 4|8 (stream=1 only): the first skip_us of the capture is not shipped; bits=4 ships mean-removed samples scaled to ±7, I in the low nibble and Q in the high nibble (header `bits=4`, `n` = shipped samples). retry 0..3 (stream=1 only): when the on-chip energy check sees no reply, drop the capture (`EV tlm_drop k=.. ch=.. tid=.. try=.. nb=.. fit=.. sl=.. rt=.. gap=.. pgap=..`) and repeat the request with the same tid at the next free slot |
 | `TLMX <tail_bits> <settle_us> [all] [probe]` | `OK tail=.. settle=.. all=.. probe=..` | experiment knobs, RAM only: tail 0..32 alternating bits keyed after the CRC of trigger packets (all=1: every packet), settle 0..300 us wait between the trigger unkey and the listen retune, probe 1 = half way between triggers send one data packet with ch8 1400 us and leave the next slot silent (`EV probe k=.. ch=.. gap=.. pgap=..`) |
 | `TID <0..31>` | idle: `OK tid=<n>`; during LINK: no reply | idle: first tid of the next LINK (default 0). During LINK: replaces the tid for the next trigger in either mode (with ack=0 the firmware keeps adding +1 per trigger from the new value, so the host normally sends `TID` only with ack=1). With ack=1: the host sends tid+1 if it decoded a reply echoing tid, else the same tid (Betaflight's re-request rule). The next trigger waits for it (at most 1 s, then repeats the same tid) |
-| `TCAP <khz> [cap_us] [gain] [dec] [pwr]` | `EV tlm ...` + payload, then `OK` | one capture at khz (2404000..2478000) + FOFS, no link. pwr −1 (default) = no keying; 0..127 = key one data packet (counter 0, current sticks) on that frequency first, then capture: exercises the same unkey→capture path. LO returns to 2412 MHz afterwards |
+| `TCAP <khz> [cap_us] [gain] [dec] [pwr]` | `EV tlm ...` + payload, then `OK` | one capture at khz (2404000..2478000) + FOFS, no link. pwr −1 (default) = no keying (receive-only, available in every build); 0..`pwr_max` = key one data packet (counter 0, current sticks) on that frequency first, then capture: exercises the same unkey→capture path. Keying is bench-only: a release build answers `ERR bench-only bench build required`. LO returns to 2412 MHz afterwards |
 
 With `TLM every>0`, slot k of a `LINK` is a trigger when k ≥ every and k % every == 0 (use an every that is not a multiple of 47, e.g. 48, so triggers walk the hop table):
 - The trigger packet has byte 3 = 2 (Betaflight replies when byte3 % 4 == 2) and byte 4 = telemetry id `tid` (0..31; ack=0: +1 per trigger; ack=1: set by the host with `TID`; starts at the idle `TID` value, default 0). All other packets keep byte 3 = 0 and byte 4 = the slot counter: Betaflight reads byte 4 only on trigger packets (it echoes it in the reply and acks hub data when it equals its expected id, last + 1), so data packets are accepted unchanged. With ack=0 a trigger the drone misses puts its hub ack id out of step for up to 32 triggers. With ack=1 the host advances only after a received reply, so it repeats a missed request and, starting out of step, walks into the drone's expected id within 32 received replies. Hub bytes only appear when the receiver has FEATURE_TELEMETRY on; with it off the hub count is always 0 (`bench/d8-tx/host/d8hub.py`).

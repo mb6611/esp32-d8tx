@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './components/ui/dialog'
 import { Tip } from './components/ui/tooltip'
 import type { EspStatus, StartOptions } from './types'
+import { espPwrMax } from './linkState'
 
 function Section({ title, tip, note, children }: { title: string; tip?: string; note?: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -87,7 +88,7 @@ export default function SettingsDialog(s: SettingsDialogProps) {
         </DialogHeader>
         <Section title="Radio" note={s.armed ? 'locked while armed' : undefined}>
           <div className="grid grid-cols-3 gap-3">
-            <Field label="Power (0–127)" tip="ESP32 transmit power setting for the D8 packets."><input type="number" min={0} max={127} value={s.opts.power} onChange={num('power')} disabled={s.armed} /></Field>
+            <Field label={`Power (0–${espPwrMax(s.esp)})`} tip="ESP32 transmit power as a raw PBUS code, not dBm (uncalibrated). Capped by the firmware build's pwr_max; the link clamps to it."><input type="number" min={0} max={espPwrMax(s.esp)} value={s.opts.power} onChange={num('power')} disabled={s.armed} /></Field>
             <Field label="FOFS, Hz" tip="Frequency offset added to every channel, to match the drone receiver's tuning. Bind (in Pairing) uses it too, so links and binds must agree."><input type="number" min={-200000} max={200000} step={1000} value={s.opts.fofs_hz} onChange={num('fofs_hz')} disabled={s.armed} /></Field>
             <Field label="Timeout, ms" tip="The ESP32 stops transmitting when no stick frame arrives from this computer for this long."><input type="number" min={50} max={2000} step={50} value={s.opts.timeout_ms} onChange={num('timeout_ms')} disabled={s.armed} /></Field>
           </div>

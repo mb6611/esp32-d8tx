@@ -10,7 +10,7 @@ import Pairing from './PairingPanel'
 import SettingsDialog from './SettingsDialog'
 import { refOf, usePorts } from './usePorts'
 import { findSaved, load, save, storage, type SavedPort } from './persist'
-import { ESP_IN_USE, FC_IN_USE, linkText, lostWhy } from './linkState'
+import { ESP_IN_USE, FC_IN_USE, espPwrMax, linkText, lostWhy } from './linkState'
 
 /** Radio settings reach the worker this long after the last edit (each change restarts the link). */
 const RADIO_DEBOUNCE_MS = 600
@@ -299,7 +299,7 @@ function AppInner({ createWorker }: { createWorker: () => Worker }) {
             {linked ? `${(esp?.sender_hz ?? 0).toFixed(0)} pkt/s` : lt.text}
           </span>
         </Cell>
-        <Cell k="RF power" tip="ESP32 transmit power setting (0-127) used for the D8 packets to the drone (Settings).">{linked && esp?.power != null ? esp.power : opts.power}<span className="font-sans text-xs text-muted">/127</span></Cell>
+        <Cell k="RF power" tip="ESP32 transmit power as a raw PBUS code (not dBm; uncalibrated), used for the D8 packets to the drone (Settings). The cap is the firmware build's pwr_max.">{Math.min(linked && esp?.power != null ? esp.power : opts.power, espPwrMax(esp))}<span className="font-sans text-xs text-muted">/{espPwrMax(esp)}</span></Cell>
         <Cell k="ESP32" tip="ESP32 DevKit over USB serial. transmitting = a link is running and it is sending D8 packets; idle = connected, not sending; offline = not connected.">{dot(esp?.connected ? 'bg-ok' : 'bg-bad')}<span className="font-sans text-sm">{esp?.connected ? (esp.keyed ? 'transmitting' : 'idle') : esp?.in_use ? <span className="text-bad" title={`${ESP_IN_USE}. Retrying every 2 s.`}>in use by another app</span> : 'offline'}</span></Cell>
         <Cell k="Drone USB" tip="Optional USB connection to the drone flight controller (Betaflight MSP), used to read back attitude, motors and RC. rssi = the link quality Betaflight reports.">{dot(fcOn ? 'bg-ok' : fc?.in_use ? 'bg-bad' : 'bg-muted')}<span className="font-sans text-sm">{fcOn ? `MSP${rssi !== undefined ? ` · rssi ${rssi}` : ''}` : fc?.in_use ? <span className="text-bad" title={`${FC_IN_USE}. Retrying every 2 s.`}>in use by another app</span> : 'no readback'}</span></Cell>
         <Cell k="Failsafe" tip="Betaflight failsafe state, read over the drone USB. ACTIVE means the drone stopped receiving valid packets.">{dot(failsafe ? 'bg-warn' : 'bg-ok')}<span className={`font-sans text-sm ${failsafe ? 'font-bold text-warn' : ''}`}>{failsafe ? 'ACTIVE' : 'clear'}</span></Cell>

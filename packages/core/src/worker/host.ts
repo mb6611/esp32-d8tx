@@ -10,7 +10,7 @@ import { FcPoller, FC_DEFAULT } from '../fc.ts'
 import { D8Error, D8Link, type DecodeFn } from '../link.ts'
 import { BetaflightMSP, MspError } from '../msp.ts'
 import { PortInUseError, type SerialPort } from '../port.ts'
-import { DEFAULT_FOFS_HZ } from '../protocol.ts'
+import { DEFAULT_FOFS_HZ, DEFAULT_LINK_POWER } from '../protocol.ts'
 import { idleRadio } from '../telemetry.ts'
 import type { BindPhase, ErrorKind, FromWorker, LinkPhase, PortRef, RadioConfig, Role, ToWorker } from './types.ts'
 
@@ -31,7 +31,7 @@ export const RETRY_MS = [250, 500, 1000, 2000, 3000]
  * exclusively). Steady, so the host takes the port over within this long after the other side closes it.
  */
 export const IN_USE_RETRY_MS = 2000
-export const DEFAULT_RADIO: Required<RadioConfig> = { power: 127, fofs_hz: DEFAULT_FOFS_HZ, timeout_ms: 300, allow_arm: true }
+export const DEFAULT_RADIO: Required<RadioConfig> = { power: DEFAULT_LINK_POWER, fofs_hz: DEFAULT_FOFS_HZ, timeout_ms: 300, allow_arm: true }
 
 export interface HostDeps {
   post(msg: FromWorker): void
@@ -702,6 +702,7 @@ export class Host {
     try {
       try {
         await l.id() // fresh txid, and the ESP is answering
+        await l.info().catch(() => undefined) // pwr_max, so BIND power is clamped
         this.bindTxid = this.txid()
         await l.bind(power, fofs)
       } catch (e) {

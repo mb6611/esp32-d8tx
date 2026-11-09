@@ -3,6 +3,7 @@ LO, MID, HI = 1000, 1500, 2000
 ARM_CH = 6  # index of ch7
 ARM_LIMIT = 1300
 SLOT_S = 0.008994
+DEFAULT_LINK_POWER = 127  # raw PBUS code (not dBm, uncalibrated); clamped to the firmware's INFO pwr_max
 DEFAULT_FOFS_HZ = 0  # LO offset for TX and RX; a receiver bound to this ESP tunes to our carrier (-75000 was for the cloned E8 binding)
 TXID = (66, 178)  # bound receiver id (frsky_spi_tx_id), echoed in telemetry replies
 # TLM <every> <cap_us> <gain> <dec> <same> <stream> <ack> <mark> <retry> <skip_us> <bits>: trigger every 12 slots (not a

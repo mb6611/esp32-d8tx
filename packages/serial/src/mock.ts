@@ -47,6 +47,8 @@ export interface MockPortOptions {
   captures?: MockCapture[]
   /** answer ERR to the TLM recipe (older firmware) */
   tlmErr?: boolean
+  /** INFO pwr_max (default 127); null omits the key like old firmware. */
+  pwrMax?: number | null
   /** ms between telemetry triggers (12 slots) */
   triggerMs?: number
   /** Like the firmware: a capture goes out over this many ms (header first, trailing bytes last), and a STAT that
@@ -236,7 +238,7 @@ export class MockPort implements SerialPort {
       case 'PING':
         return this.emit('OK proto=1')
       case 'INFO':
-        return this.emit(`OK proto=1 fw=d8tx-v1 slot_us=8994 channels=47 pwr_max=127 fofs_max_hz=200000 timeout_max_ms=1000 txid=${this.txid}`)
+        return this.emit(`OK proto=1 fw=d8tx-v1 slot_us=8994 channels=47 ${this.opts.pwrMax === null ? '' : `pwr_max=${this.opts.pwrMax ?? 127} `}fofs_max_hz=200000 timeout_max_ms=1000 txid=${this.txid} bench=0`)
       case 'STAT':
         return this.emit(`OK keyed=${+this.linked} link=${+this.linked} fofs=${this.fofs} armok=${+this.armok} slots=${this.slots} bind=${+this.binding}`)
       case 'FOFS': {

@@ -2,7 +2,7 @@
 import type { Clock } from './clock.ts'
 import type { SerialPort } from './port.ts'
 import {
-  ARM_CH, ARM_LIMIT, BIND_TIMEOUT_MS, DEFAULT_FOFS_HZ, TXID, LO, MID, SLOT_S, TLM_RECIPE, ProtocolError, checkLine, fmtSticks, nextTid,
+  ARM_CH, ARM_LIMIT, BIND_TIMEOUT_MS, DEFAULT_FOFS_HZ, DEFAULT_LINK_POWER, TXID, LO, MID, SLOT_S, TLM_RECIPE, ProtocolError, checkLine, fmtSticks, nextTid,
   parseTxid, payloadOk, unpack4, type KV, type TlmMeta,
 } from './protocol.ts'
 import { Reader, type ReaderEvent } from './reader.ts'
@@ -78,6 +78,7 @@ export class D8Link {
   private shiftHint: number | null = null
   private protoOk = false
   private infoData: KV | null = null
+  private pwrMaxV = 127
   private txidV: [number, number] | null = null // this ESP's identity, from INFO/ID; replies must carry it
   private bindingV = false
   private bindTimer: unknown = null
@@ -299,10 +300,18 @@ export class D8Link {
     return new Promise((res) => this.clock.setTimeout(res, ms))
   }
 
+  /** The firmware's compile-time power cap (INFO pwr_max); 127 until INFO has been read or if it is absent. */
+  get pwrMax(): number {
+    return this.pwrMaxV
+  }
+
   async info(): Promise<KV> {
     const r = await this.request('INFO')
     this.infoData = r
     this.protoOk = r.proto === 1
+    // Unknown/missing keys are fine (old firmware): pwr_max falls back to 127.
+    const pm = Number(r.pwr_max)
+    this.pwrMaxV = r.pwr_max !== undefined && Number.isFinite(pm) ? Math.max(0, Math.min(127, Math.trunc(pm))) : 127
     this.noteTxid(r)
     return r
   }
@@ -345,12 +354,13 @@ export class D8Link {
   /**
    * Starts transmitting bind packets (idle only). Ends on stopBind(), the firmware's 30 s timeout (EV bind_end) or a host
    * fallback timer. Sets FOFS first (default DEFAULT_FOFS_HZ): the receiver tunes to the carrier it binds on, so bind at
-   * the offset later links use, not whatever an earlier link left in the firmware.
+   * the offset later links use, not whatever an earlier link left in the firmware. power is clamped to pwr_max when INFO
+   * has been read (info() first).
    */
   async bind(power?: number, fofsHz: number = DEFAULT_FOFS_HZ): Promise<void> {
     if (this.linked) throw new D8Error('busy', 'link active')
     await this.setFofs(fofsHz)
-    await this.request(power === undefined ? 'BIND' : `BIND ${Math.trunc(power)}`)
+    await this.request(power === undefined ? 'BIND' : `BIND ${Math.min(Math.trunc(power), this.pwrMaxV)}`)
     this.bindingV = true
     this.clearBindTimer()
     this.bindTimer = this.clock.setTimeout(() => {
@@ -408,8 +418,9 @@ export class D8Link {
 
   // --- link
   async start(o: StartOptions = {}): Promise<void> {
-    const { power = 127, timeoutMs = 300, allowArm = false, fofsHz = null, telemetry = true } = o
+    const { power = DEFAULT_LINK_POWER, timeoutMs = 300, allowArm = false, fofsHz = null, telemetry = true } = o
     if (this.linked) throw new D8Error('busy', 'already linked')
+    // INFO tells us the firmware's pwr_max (and proto); missing on old firmware, then 127.
     if (allowArm && !this.protoOk) {
       await this.info()
       if (!this.protoOk) throw new D8Error('protocol', `firmware does not report proto=1 (${JSON.stringify(this.infoData)})`)
@@ -427,6 +438,8 @@ export class D8Link {
         if (e instanceof D8Error) await this.sleep(50)
       }
     }
+    // Learn pwr_max (after FOFS, which also ends a link left by an earlier session) so LINK is clamped to it.
+    if (this.infoData === null) await this.info()
     await this.setupTelemetry(telemetry)
     if (allowArm) await this.request('ARMOK')
     this.allowArm = allowArm
@@ -434,7 +447,7 @@ export class D8Link {
     this.lostWhy = null
     Object.assign(this.st, { slots: 0, late_max_us: 0, last_event: null, sender_hz: 0, sender_max_gap_ms: 0, sent: 0, skipped: 0 })
     try {
-      await this.request(`LINK ${Math.trunc(power)} ${Math.trunc(timeoutMs)}`)
+      await this.request(`LINK ${Math.min(Math.trunc(power), this.pwrMax)} ${Math.trunc(timeoutMs)}`)
     } catch (e) {
       this.allowArm = false
       if (allowArm) await this.request('STOP').catch(() => undefined)

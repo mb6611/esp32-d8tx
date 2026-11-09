@@ -5,7 +5,7 @@ import time
 
 ARM_THROTTLE_HOLD_S = 0.5
 
-from .protocol import (BIND_TIMEOUT_S, TXID, parse_txid, ARM_CH, ARM_LIMIT, DEFAULT_FOFS_HZ, TLM_RECIPE, check_line, LO, MID, SLOT_S, ProtocolError,
+from .protocol import (BIND_TIMEOUT_S, TXID, parse_txid, ARM_CH, ARM_LIMIT, DEFAULT_FOFS_HZ, DEFAULT_LINK_POWER, TLM_RECIPE, check_line, LO, MID, SLOT_S, ProtocolError,
                        fmt_sticks, parse_line)
 from .telemetry import Tracker, decode_capture, load_iq, next_tid, parse_tlm_header, payload_ok
 
@@ -52,6 +52,7 @@ class D8Link:
         self._tlm_sent = False  # the firmware may still hold a TLM recipe (RAM) from an earlier start
         self._tid = 0  # id for the next trigger; kept across links so the drone's expected id stays locked
         self._shift_hint = None
+        self._info = None  # last INFO reply; unknown/missing keys are fine
         self._txid = None  # this ESP's identity (from INFO/ID); telemetry replies must carry it
         self._binding = False
         self._bind_timer = None
@@ -205,8 +206,15 @@ class D8Link:
 
     def info(self):
         r = self._request("INFO")
+        self._info = r
         self._note_txid(r)
         return r
+
+    @property
+    def pwr_max(self):
+        """The firmware's compile-time power cap (INFO pwr_max); 127 until INFO is read or if the key is absent (old firmware)."""
+        v = (self._info or {}).get("pwr_max")
+        return max(0, min(127, int(v))) if isinstance(v, (int, float)) else 127
 
     def _note_txid(self, r):
         t = parse_txid(r.get("txid"))
@@ -247,7 +255,9 @@ class D8Link:
         if self._linked:
             raise D8Error("busy", "link active")
         self.set_fofs(DEFAULT_FOFS_HZ if fofs_hz is None else fofs_hz)
-        self._request("BIND" if power is None else f"BIND {int(power)}")
+        if power is not None and self._info is None:
+            self.info()  # pwr_max (absent on old firmware: 127)
+        self._request("BIND" if power is None else f"BIND {min(int(power), self.pwr_max)}")
         self._binding = True
         self._cancel_bind_timer()
         t = threading.Timer(BIND_TIMEOUT_S + 1.5, self._bind_fallback)
@@ -292,7 +302,7 @@ class D8Link:
             self._cbs.append(cb)
 
     # --- link
-    def start(self, power=127, timeout_ms=300, allow_arm=False, fofs_hz=None, telemetry=True):
+    def start(self, power=DEFAULT_LINK_POWER, timeout_ms=300, allow_arm=False, fofs_hz=None, telemetry=True):
         if self._linked:
             raise D8Error("busy", "already linked")
         # Opening the port resets the ESP32 (DTR/RTS); a start right after open can race its boot,
@@ -304,6 +314,8 @@ class D8Link:
             except TimeoutError:
                 if attempt == 2:
                     raise
+        if self._info is None:
+            self.info()  # pwr_max (absent on old firmware: 127)
         self._setup_telemetry(telemetry)
         if allow_arm:
             self._request("ARMOK")
@@ -313,7 +325,7 @@ class D8Link:
             self._st.update(slots=0, late_max_us=0, last_event=None, sender_hz=0.0,
                             sender_max_gap_ms=0.0, sent=0, skipped=0)
         try:
-            self._request(f"LINK {int(power)} {int(timeout_ms)}")
+            self._request(f"LINK {min(int(power), self.pwr_max)} {int(timeout_ms)}")
         except Exception:
             with self._state:
                 self._allow_arm = False

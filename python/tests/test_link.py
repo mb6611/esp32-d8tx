@@ -145,6 +145,32 @@ def test_bind_sets_fofs_first(port):
     assert port.lines[-2:] == ["FOFS %d" % DEFAULT_FOFS_HZ, "BIND"] and DEFAULT_FOFS_HZ == 0
     l.stop_bind()
     l.bind(30, fofs_hz=-20000)
-    assert port.lines[-2:] == ["FOFS -20000", "BIND 30"]
+    assert port.lines[-3:] == ["FOFS -20000", "INFO", "BIND 30"]  # INFO learns pwr_max before a powered BIND
     l.stop_bind()
+    l.close()
+
+
+def test_default_power_and_pwr_max_clamp(port):
+    l = D8Link("x", serial_obj=port)
+    l.start()
+    assert "LINK 127 300" in port.lines
+    l.stop()
+    l.close()
+
+
+def test_power_clamped_to_pwr_max(port):
+    port.pwr_max = 20
+    l = D8Link("x", serial_obj=port)
+    l.start(power=100)
+    assert l.pwr_max == 20 and "LINK 20 300" in port.lines
+    l.stop()
+    l.close()
+
+
+def test_info_without_pwr_max_or_with_unknown_keys(port):
+    l = D8Link("x", serial_obj=port)
+    l._info = {"proto": 1, "future_key": "zz"}
+    assert l.pwr_max == 127
+    l._info = {"proto": 1, "pwr_max": 30, "bench": 1, "new": "x"}
+    assert l.pwr_max == 30
     l.close()

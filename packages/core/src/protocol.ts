@@ -7,6 +7,8 @@ export const ARM_LIMIT = 1300
 export const SLOT_S = 0.008994
 // 0 once the receiver is bound to this ESP over the air (it tunes its own offset to our carrier). -75000 was only for the cloned E8 binding.
 export const DEFAULT_FOFS_HZ = 0
+/** Default LINK power: a raw PBUS code (not dBm, uncalibrated), clamped to the firmware's INFO pwr_max. */
+export const DEFAULT_LINK_POWER = 127
 export const TXID: readonly [number, number] = [66, 178]
 /** Hex txid text ("42B2") -> [id0, id1], or null when malformed. */
 export function parseTxid(v: unknown): [number, number] | null {

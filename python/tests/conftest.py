@@ -48,7 +48,7 @@ class FakePort:
             self._emit("EV link_end why=err slots=1 late_max_us=0 retune_max_us=0")
             self._emit("ERR busy linked")
         elif c == "INFO":
-            self._emit(f"OK proto=1 fw=test slot_us=8994 channels=47 pwr_max=127 fofs_max_hz=200000 timeout_max_ms=1000 txid={self.txid}")
+            self._emit(f"OK proto=1 fw=test slot_us=8994 channels=47 pwr_max={getattr(self, 'pwr_max', 127)} fofs_max_hz=200000 timeout_max_ms=1000 txid={self.txid} bench=0")
         elif c == "ID":
             if len(w) == 1:
                 self._emit(f"OK txid={self.txid} start=2 step=55")

@@ -145,13 +145,27 @@ describe('D8Link on MockPort', () => {
     }
   })
 
+  test('default power is 127 and LINK is clamped to INFO pwr_max', async () => {
+    const a = await opened()
+    await settle(a.clock, a.link.start())
+    expect(a.port.lines).toContain('LINK 127 300')
+    const b = await opened({ pwrMax: 20 })
+    await settle(b.clock, b.link.start({ power: 100 }))
+    expect(b.link.pwrMax).toBe(20)
+    expect(b.port.lines).toContain('LINK 20 300')
+    const c = await opened({ pwrMax: null }) // old firmware: no pwr_max, no bench key
+    await settle(c.clock, c.link.start({ power: 100 }))
+    expect(c.link.pwrMax).toBe(127)
+    expect(c.port.lines).toContain('LINK 100 300')
+  })
+
   test('LINK failure sends STOP and resets', async () => {
     const { clock, port, link } = await opened()
     await settle(clock, link.start())
     await clock.advance(50)
     await settle(clock, link.stop())
     // LINK now fails: out-of-range power
-    await expect(settle(clock, link.start({ power: 500, allowArm: true }))).rejects.toBeInstanceOf(D8Error)
+    await expect(settle(clock, link.start({ power: -1, allowArm: true }))).rejects.toBeInstanceOf(D8Error)
     expect(port.lines.at(-1)).toBe('STOP')
     const st = link.status()
     expect(st.sender_hz).toBe(0)
@@ -245,7 +259,7 @@ describe('D8Link on MockPort', () => {
             power: step.power, timeoutMs: step.timeout_ms, allowArm: step.allow_arm, fofsHz: step.fofs_hz, telemetry: step.telemetry,
           }))
         } else await settle(clock, link.stop())
-        expect(port.lines.filter((l) => !l.startsWith('S ') && !l.startsWith('STAT') && l !== 'INFO' /* proto gate before ARMOK */), `${seq.name}/${step.op}`).toEqual(step.lines)
+        expect(port.lines.filter((l) => !l.startsWith('S ') && !l.startsWith('STAT') && l !== 'INFO' /* position differs: TS gates ARMOK before FOFS */), `${seq.name}/${step.op}`).toEqual(step.lines.filter((l: string) => l !== 'INFO'))
       }
     }
   })

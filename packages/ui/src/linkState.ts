@@ -4,6 +4,12 @@ import type { EspStatus } from './types'
 export const ESP_IN_USE = 'DevKit in use by another app or tab'
 export const FC_IN_USE = 'Drone USB in use by another app or tab'
 
+/** The firmware build's power cap (INFO pwr_max); 127 until INFO is known or on firmware that does not report it. */
+export function espPwrMax(esp?: EspStatus): number {
+  const v = Number(esp?.info?.pwr_max)
+  return esp?.info?.pwr_max !== undefined && Number.isFinite(v) ? Math.max(0, Math.min(127, Math.trunc(v))) : 127
+}
+
 const WHY: Record<string, string> = {
   port_closed: 'DevKit port closed',
   timeout: 'DevKit stopped answering',

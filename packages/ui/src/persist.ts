@@ -1,6 +1,6 @@
 // Settings and last-used ports survive a reload (localStorage). Mock mode (?mock) never reads or writes them, so a
 // simulated session cannot overwrite the real setup.
-import { DEFAULT_FOFS_HZ, type PortRef, type Role } from '@d8tx/core'
+import { DEFAULT_FOFS_HZ, DEFAULT_LINK_POWER, type PortRef, type Role } from '@d8tx/core'
 
 export const STORE_KEY = 'd8tx.settings.v1'
 
@@ -17,7 +17,7 @@ export interface Saved {
   ports: Partial<Record<Role, SavedPort>>
 }
 
-export const DEFAULTS: Saved = { power: 127, fofs_hz: DEFAULT_FOFS_HZ, timeout_ms: 300, maxThr: 100, ports: {} }
+export const DEFAULTS: Saved = { power: DEFAULT_LINK_POWER, fofs_hz: DEFAULT_FOFS_HZ, timeout_ms: 300, maxThr: 100, ports: {} }
 
 type StorageLike = Pick<Storage, 'getItem' | 'setItem'>
 
