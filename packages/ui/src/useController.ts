@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { DEVKIT, FC } from '@d8tx/serial'
+import { DEFAULT_FOFS_HZ } from '@d8tx/core'
 import type { FromWorker, Role, ToWorker } from '@d8tx/core'
 import type { StartOptions, Telemetry, WsState } from './types'
 
@@ -97,7 +98,7 @@ export function useController(createWorker: () => Worker) {
         if (MOCK && !autostarted && t.esp?.connected && new URLSearchParams(location.search).has('autostart')) {
           autostarted = true
           startedAllow.current = true
-          w.postMessage({ type: 'start', power: 127, fofs_hz: -75000, timeout_ms: 300, allow_arm: true } satisfies ToWorker)
+          w.postMessage({ type: 'start', power: 127, fofs_hz: DEFAULT_FOFS_HZ, timeout_ms: 300, allow_arm: true } satisfies ToWorker)
         }
       } else if (m.type === 'error') {
         setError(m.message)
@@ -317,6 +318,16 @@ export function useController(createWorker: () => Worker) {
     send({ type: 'stop' })
   }, [send, disarm])
 
+  const startBind = useCallback((fofsHz: number) => {
+    setError(null)
+    send({ type: 'bind', fofs_hz: fofsHz })
+  }, [send])
+  const stopBind = useCallback(() => send({ type: 'bind_stop' }), [send])
+  const newId = useCallback(() => {
+    setError(null)
+    send({ type: 'new_id' })
+  }, [send])
+
   // requestPort must run on the UI thread from a click; the worker opens the granted port by VID/PID
   const connect = useCallback(
     async (role: Role) => {
@@ -361,6 +372,9 @@ export function useController(createWorker: () => Worker) {
     canArm,
     startLink,
     stopLink,
+    startBind,
+    stopBind,
+    newId,
     maxThr, setMaxThr,
     disarm: () => {
       st.current.throttle = 0

@@ -3,6 +3,8 @@ export interface EspStatus {
   error?: string
   info?: Record<string, string | number>
   link?: boolean
+  binding?: boolean
+  txid?: string
   keyed?: boolean
   fofs?: number
   slots?: number

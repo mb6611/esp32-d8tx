@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { DEFAULT_FOFS_HZ } from '@d8tx/core'
 import Stick from './Stick'
 import DronePanel, { DroneView, useDrone } from './DronePanel'
 import { useController } from './useController'
@@ -127,9 +128,55 @@ const REASONS: Record<string, string> = {
   RUNAWAYTAKEOFF: 'runaway-takeoff protection (props off or drone stuck)',
 }
 
+const BIND_AUTO_STOP_S = 30
+
+/** Mounted only while binding, so the countdown restarts on every bind. */
+function BindCountdown() {
+  const [used, setUsed] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setUsed((v) => v + 1), 1000)
+    return () => clearInterval(id)
+  }, [])
+  return <>Binding… auto-stops in {Math.max(0, BIND_AUTO_STOP_S - used)} s</>
+}
+
+function BindSection({ binding, txid, connected, linked, onBind, onStop, onNewId }: {
+  binding: boolean; txid?: string; connected: boolean; linked: boolean
+  onBind: () => void; onStop: () => void; onNewId: () => void
+}) {
+  const idle = connected && !linked && !binding
+  return (
+    <div className="mt-3 border-t border-line pt-2 text-xs">
+      <div className="mb-1 flex items-center justify-between">
+        <span className="font-semibold tracking-wide text-muted uppercase"><Tip tip="Bind teaches a receiver this ESP32's transmitter ID and hop table over the air, like a normal radio. The receiver tunes its frequency offset to our carrier during bind.">Bind</Tip></span>
+        <span className="font-mono text-muted"><Tip tip="This ESP32's own transmitter ID (4 hex digits), stored in its flash.">txid={txid ?? '?'}</Tip></span>
+      </div>
+      <ol className="m-0 mb-2 list-decimal pl-4 text-muted">
+        <li>Props off; no link running.</li>
+        <li>Put the drone in bind mode: <Tip tip="Hold the bind button while powering up, or in Betaflight's CLI (Configurator CLI tab, or a serial terminal at 115200: send #, then bind_rx).">button or CLI <code className="font-mono">bind_rx</code></Tip>.</li>
+        <li>Click Bind. <Tip tip="The receiver sweeps its frequency offset to find our carrier and saves the result itself, usually within 2–5 s. Bind uses the FOFS from Settings (default 0); links must use the same FOFS.">Binds in ~2–5 s</Tip>, then Stop (or wait for auto-stop).</li>
+        <li>If you used the CLI, type <code className="font-mono">exit</code> <Tip tip="exit reboots the FC. No save needed: the receiver already wrote the binding and it is active before the reboot. Check with get frsky_spi: frsky_spi_tx_id is this txid as two decimal bytes (6ff3 → 111,243).">(no save)</Tip>.</li>
+      </ol>
+      <div className="flex items-center gap-2">
+        {binding
+          ? <button className="btn !py-0.5" onClick={onStop}>Stop</button>
+          : <button className="btn !py-0.5" onClick={onBind} disabled={!idle}>Bind</button>}
+        {binding && <span className="text-warn"><BindCountdown /></span>}
+        <button
+          className="btn !py-0.5 ml-auto text-muted"
+          disabled={!idle}
+          onClick={() => {
+            if (window.confirm('Generate a new identity? Every drone bound to this ESP32 must be bound again.')) onNewId()
+          }}
+        ><Tip tip="Generates a new random transmitter ID and hop table. Drones bound to the old identity stop responding until they bind again.">New identity</Tip></button>
+      </div>
+    </div>
+  )
+}
+
 function AppInner({ createWorker }: { createWorker: () => Worker }) {
   const c = useController(createWorker)
-  const [opts, setOpts] = useState<StartOptions>({ power: 127, fofs_hz: -75000, timeout_ms: 300, allow_arm: true })
+  const [opts, setOpts] = useState<StartOptions>({ power: 127, fofs_hz: DEFAULT_FOFS_HZ, timeout_ms: 300, allow_arm: true })
   const [settings, setSettings] = useState(false)
   const [tab, setTabState] = useState<Tab>(tabFromHash)
   const setTab = (t: Tab) => {
@@ -252,6 +299,7 @@ function AppInner({ createWorker }: { createWorker: () => Worker }) {
           {!esp?.connected && <button className="btn !py-0.5 text-muted" onClick={c.connectMock}>Mock</button>}
         </>)}
         {c.mock && <span className="text-warn">Simulated link and drone, no real port is opened.</span>}
+        {esp?.connected && esp.txid && <span className="font-mono text-xs text-muted">txid={esp.txid}</span>}
         {esp?.connected && esp.info && <span className="font-mono text-xs text-muted">{String(esp.info.fw ?? '')} proto={String(esp.info.proto ?? '?')}</span>}
       </div>
       {c.error && <p className="mb-2 border border-bad px-3 py-1.5 font-sans text-sm text-bad">{c.errorKind === 'port_in_use' ? `Port in use: close other tabs or programs using it. (${c.error})` : c.errorKind === 'protocol' ? `Protocol mismatch, arming refused: ${c.error}` : c.error}</p>}
@@ -276,6 +324,8 @@ function AppInner({ createWorker }: { createWorker: () => Worker }) {
                 <label>Timeout, ms<input type="number" min={50} max={2000} step={50} value={opts.timeout_ms} onChange={num('timeout_ms')} disabled={linked} /></label>
                 <label>Max throttle, %<input type="number" min={0} max={100} value={c.maxThr} onChange={(e) => c.setMaxThr(Number(e.target.value))} /></label>
               </div>
+              <BindSection binding={!!esp?.binding} txid={esp?.txid} connected={!!esp?.connected} linked={linked}
+                onBind={() => c.startBind(opts.fofs_hz)} onStop={c.stopBind} onNewId={c.newId} />
             </div>
           )}
 
