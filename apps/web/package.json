@@ -6,7 +6,7 @@
   "scripts": {
     "predev": "make -C ../../demod wasm && node scripts/check-firmware.mjs",
     "dev": "vite",
-    "build": "make -C ../../demod wasm && node scripts/check-firmware.mjs && tsc --noEmit && vite build",
+    "build": "make -C ../../demod wasm && node scripts/check-firmware.mjs && tsc --noEmit && vite build && node scripts/copy-writeup.mjs",
     "typecheck": "tsc --noEmit",
     "test": "echo 'no tests'",
     "preview": "vite preview"

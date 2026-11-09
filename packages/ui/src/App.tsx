@@ -285,6 +285,7 @@ function AppInner({ createWorker }: { createWorker: () => Worker }) {
               <Gear size={15} strokeWidth={1.75} />
             </button>
           </Tip>
+          <a href="./writeup/" target="_blank" rel="noreferrer" className="text-link">How it works</a>
           {tabs.map(([t, n]) => (
             <button key={t} onClick={() => setTab(t)} className={tab === t ? 'border-b-2 border-fg font-bold' : 'text-link'}>{n}</button>
           ))}
