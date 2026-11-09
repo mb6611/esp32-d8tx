@@ -3,11 +3,13 @@
 Private research repository: transmitting FrSky D8 from a classic ESP32 DevKit V1 and
 flying a D8 receiver (Betaflight on a CC2500 board) from a browser.
 
-- `d8tx/` — the product: `d8tone` firmware protocol ([PROTOCOL.md](d8tx/PROTOCOL.md)), Python
-  `D8Link` + FastAPI server (`d8tx/python`), React "Sticks" controller (`d8tx/app`). Start here:
-  [d8tx/README.md](d8tx/README.md).
-- `bench/d8-tx/` — ESP32 TX firmware (`firmware/`, app `d8tone`), host bench runner, D8 decoder
-  (`host/d8.py`, `host/hopfollow.py`), analysis, raw results. [bench/d8-tx/README.md](bench/d8-tx/README.md).
+- `firmware/` — ESP-IDF project `d8tone`: the ESP32 TX firmware the host talks to over UART
+  (protocol: [docs/PROTOCOL.md](docs/PROTOCOL.md)).
+- `python/` — `d8tx` package: `D8Link` (slot-rate sender, arm gate), `BetaflightMSP`, FastAPI
+  server. Start here: [python/README.md](python/README.md).
+- `app/` — React/Vite "Sticks" controller UI.
+- `bench/d8-tx/` — bench runner, D8 decoder (`host/d8.py`, `host/hopfollow.py`), tests, analysis,
+  raw results (the evidence behind the write-up). [bench/d8-tx/README.md](bench/d8-tx/README.md).
 - `bench/cc2500-rxdiag/`, `bench/betaflight-patch/`, `bench/blackbox/`, `bench/register-map/` —
   receiver-side diagnostics, Betaflight patches and radio register notes.
 - `docs/devkitv1/writeup/` — the write-up: [TX chapter](docs/devkitv1/writeup/tx.md) ([HTML](docs/devkitv1/writeup/index.html)).
@@ -17,9 +19,9 @@ flying a D8 receiver (Betaflight on a CC2500 board) from a browser.
 ## Offline checks (no hardware)
 ```sh
 python3 -m unittest discover -s bench/d8-tx/tests
-bash bench/d8-tx/firmware/test/run.sh
+bash firmware/test/run.sh
 make -C bench/cc2500-rxdiag/tests test
-(cd d8tx/python && .venv/bin/pytest)
+(cd python && .venv/bin/pytest)
 ```
 
 ## License

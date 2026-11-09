@@ -15,7 +15,7 @@ import json
 import os
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../../../d8tx/python"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../../../python"))
 from d8tx.telemetry import Tracker  # noqa: E402
 
 U32 = 1 << 32

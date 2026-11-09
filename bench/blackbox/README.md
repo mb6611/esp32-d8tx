@@ -101,7 +101,7 @@ uv venv -p 3.14 .venv && uv pip install -p .venv/bin/python pyserial matplotlib 
 .venv/bin/python -m pytest tests -q            # 27 passed
 ```
 
-A local venv is used because the shared `d8tx/python/.venv` (Python 3.15) has pyserial but not matplotlib.
+A local venv is used because the shared `python/.venv` (Python 3.15) has pyserial but not matplotlib.
 `bbcapture.py` and `bbcli.py` also run under that venv. `bbcapture.py` imports `bench/d8-tx/host/bf_msp.py`
 for the MSP frame helpers.
 

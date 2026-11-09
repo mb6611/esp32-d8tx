@@ -5,16 +5,16 @@ Per session: arm at throttle 1000, then roll, pitch and yaw sweeps (1500 -> 1500
 throttle bump (<= --max-throttle), then disarm. Every stick value sent is logged to a CSV (t, session, segment,
 ch1..ch8) so rcCommand in the decoded log can be checked against it.
 
-Runs with the d8tx venv (it imports d8tx.D8Link from d8tx/python). The backend (d8tx.server) must not be running.
+Runs with the d8tx venv (it imports d8tx.D8Link from python). The backend (d8tx.server) must not be running.
 Enter or Ctrl-C aborts: throttle 1000 + ARM low, then the link stops (Betaflight disarms ~1.25 s after packets stop).
 
-  d8tx/python/.venv/bin/python bench/blackbox/bbarm.py --dry-run
-  d8tx/python/.venv/bin/python bench/blackbox/bbarm.py --sessions 2 --csv OUT.csv
+  python/.venv/bin/python bench/blackbox/bbarm.py --dry-run
+  python/.venv/bin/python bench/blackbox/bbarm.py --sessions 2 --csv OUT.csv
 """
 import argparse, csv, os, sys, threading, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "..", "..", "d8tx", "python"))
+sys.path.insert(0, os.path.join(HERE, "..", "..", "python"))
 
 T, A, E, R, ARM = 0, 1, 2, 3, 6  # TAER, ch7 = arm
 SAFE = [1000, 1500, 1500, 1500, 1000, 1000, 1000, 1000]

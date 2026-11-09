@@ -1,6 +1,6 @@
 """E2E fast-telemetry check: default recipe, N s. usage: run_e2e.py NAME SECS (repo root, d8tx venv, backend stopped)"""
 import json, sys, threading, time, struct, statistics as st
-sys.path.insert(0, "d8tx/python"); sys.path.insert(0, "bench/d8-tx/host")
+sys.path.insert(0, "python"); sys.path.insert(0, "bench/d8-tx/host")
 import serial, bf_msp
 from d8tx.link import D8Link
 name, secs = sys.argv[1], float(sys.argv[2])

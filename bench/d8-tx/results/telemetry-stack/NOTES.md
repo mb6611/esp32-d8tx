@@ -34,7 +34,7 @@ stall from 12:06:44 = 60.7 min; it would have cleared ~12:17:36, ~65 s after the
 Evidence: hub-stall/model.py replays BF's buffer logic (patched odd cycle: STATUS, ARMING_DISABLE, GYRO, ACC, tail = 33 B; drone left at
 sent 20 / acked 10, expected id 27; server restart reset our id to 0) through the real d8tx Tracker and matches the log reply by reply:
 replies 1-27 = stale resend of bytes 10..19 (GYRO Y/Z only, GYRO X header cut off), 28 = ACC X/Y, 29 = ACC Z + tail, 30+ = nothing; with a
-10-min gap the same model keeps decoding. `d8tx/python/.venv/bin/python hub-stall/model.py e2e/fc_10min_b.jsonl.gz` -> "log matches the model".
+10-min gap the same model keeps decoding. `python/.venv/bin/python hub-stall/model.py e2e/fc_10min_b.jsonl.gz` -> "log matches the model".
 STATUS was never seen because the stall hit the first fresh cycle. Not directly observed: per-reply hub byte counts (the WS snapshot does not
 carry hub_count) and whether the FC rebooted between 11:06 and 12:06 (a boot 36..72 min before 12:06 would stall the same way).
 d8tx library: TID ack/resend, duplicate skip, 0x5D stuffing and chunk splitting behave as Betaflight does; no library change.

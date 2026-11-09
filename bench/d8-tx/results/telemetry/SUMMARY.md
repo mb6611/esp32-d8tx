@@ -122,5 +122,5 @@ rule resends the same hub bytes, so no hub data is lost.
 | 20261108-002423 | -75 | 1 | 139/139 (100%) | 139/139 (100%), no re-trigger needed |
 | 20261108-002322 | -75 | 0 | 136/139 (97.8%) | same |
 
-Recommendation: use FOFS -75000 (the app currently defaults to -63000 in d8tx/app/src/App.tsx, and tlm_listen examples use -50000). Keep `--retry 1` for telemetry.
+Recommendation: use FOFS -75000 (the app currently defaults to -63000 in app/src/App.tsx, and tlm_listen examples use -50000). Keep `--retry 1` for telemetry.
 The drone's frequency drifts by a few kHz between sessions (the -50 kHz first-try rate varied 81-94%), so a centred offset matters more than retries.

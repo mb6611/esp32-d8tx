@@ -2,7 +2,7 @@
 
 Patch 0001 (`patches/0001-frsky-hub-telemetry.patch`) changes only `src/main/telemetry/frsky_hub.c`: true milli-g ACC (stock
 truncates to whole g), STATUS 0x46, ARMING_DISABLE 0x47, gyro 0x40-0x42, attitude 0x43-0x45. Encoding, rates and
-byte budget: `d8tx/PROTOCOL.md` "Patched Betaflight hub fields". Patch 0002 (`0002-matekf411rx-icm20689.patch`, ICM20689 gyro support) also changes `target/MATEKF411RX/target.h` and `target.mk`. Everything else is stock.
+byte budget: `docs/PROTOCOL.md` "Patched Betaflight hub fields". Patch 0002 (`0002-matekf411rx-icm20689.patch`, ICM20689 gyro support) also changes `target/MATEKF411RX/target.h` and `target.mk`. Everything else is stock.
 
 ## Build
 `./build.sh` (runs `apply.sh`: clean clone of 4.2.11 in `work/`, git-ignored; never touches

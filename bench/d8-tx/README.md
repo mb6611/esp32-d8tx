@@ -10,7 +10,7 @@ Caveats: ESP readback (`K,pkt`) is timing, not RF proof; the proof is the indepe
 ## Offline checks (no hardware, no flashing)
 ```sh
 python3 -m unittest discover -s bench/d8-tx/tests       # host runner, vectors, rxdiag parsers
-bash bench/d8-tx/firmware/test/run.sh                   # C tests: command parser, line input, packet builder
+bash firmware/test/run.sh                   # C tests: command parser, line input, packet builder
 make -C bench/cc2500-rxdiag/tests test                  # receive-only diagnostic simulation
 (cd bench/cc2500-rxdiag/firmware/out/4bdc8581 && shasum -a 256 -c SHA256SUMS)   # artifact checksums
 ```

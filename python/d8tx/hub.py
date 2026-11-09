@@ -59,7 +59,7 @@ class HubParser:
 
 @dataclass(frozen=True)
 class PatchedField:
-    """One field of the patched Betaflight hub table (see "Patched Betaflight hub fields" in d8tx/PROTOCOL.md).
+    """One field of the patched Betaflight hub table (see "Patched Betaflight hub fields" in docs/PROTOCOL.md).
 
     key: name in hub["patched"]. index: None for a scalar, else the position in a vector field.
     size: vector length (with index). scale: value = raw * scale. kind: "int" | "float" | "bool" (bool: bit `bit` of
@@ -74,7 +74,7 @@ class PatchedField:
 
 
 # Data-driven table: add rows here when the patched firmware gains hub IDs.
-# Source of truth: "Patched Betaflight hub fields" in d8tx/PROTOCOL.md (bench/betaflight-patch).
+# Source of truth: "Patched Betaflight hub fields" in docs/PROTOCOL.md (bench/betaflight-patch).
 PATCHED_FIELDS: list[PatchedField] = [
     PatchedField(0x46, "armed", kind="bool", bit=0),
     PatchedField(0x46, "angle", kind="bool", bit=1),

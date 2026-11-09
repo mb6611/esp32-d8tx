@@ -1,5 +1,5 @@
 """60 s D8Link.start(telemetry=True) smoke run; prints telemetry() once per second (arm low, throttle low).
-Run: d8tx/python/.venv/bin/python smoke.py [seconds]  (hardware mutex /tmp/d8tx-hw.lock must be held)"""
+Run: python/.venv/bin/python smoke.py [seconds]  (hardware mutex /tmp/d8tx-hw.lock must be held)"""
 import json
 import sys
 import time

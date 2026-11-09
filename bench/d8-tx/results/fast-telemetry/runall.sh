@@ -2,7 +2,7 @@
 # usage: runall.sh "name|recipe" ...   (60 s each)
 cd "$(dirname "$0")/../../../.."
 for r in "$@"; do n=${r%%|*}; rc=${r#*|}
-  d8tx/python/.venv/bin/python bench/d8-tx/results/fast-telemetry/run_cadence.py "$n" "$rc" ${SECS:-60} > bench/d8-tx/results/fast-telemetry/$n.txt 2>&1
+  python/.venv/bin/python bench/d8-tx/results/fast-telemetry/run_cadence.py "$n" "$rc" ${SECS:-60} > bench/d8-tx/results/fast-telemetry/$n.txt 2>&1
   python3 - $n <<'PY'
 import json,sys
 try:

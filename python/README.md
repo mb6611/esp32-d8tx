@@ -14,7 +14,7 @@ browser (React) ⇄ WebSocket/REST ⇄ FastAPI (d8tx.server) ⇄ D8Link ⇄ UART
 ## Run
 
 ```sh
-cd d8tx/python
+cd python
 python3 -m venv .venv && .venv/bin/pip install -e '.[server,dev]'
 .venv/bin/pytest                                   # no hardware needed
 .venv/bin/python -m d8tx.server --esp-port /dev/cu.usbserial-0001 [--fc-port <betaflight usb>]   # serves on 127.0.0.1:8000

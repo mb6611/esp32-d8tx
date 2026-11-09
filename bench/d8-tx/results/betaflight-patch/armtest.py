@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """No-battery arming test over the D8 link: link 12 s disarmed, arm 10 s, disarm 10 s. Logs MSP truth + hub snapshot (CSV)."""
 import sys, time, json, threading, csv
-sys.path[:0] = ["d8tx/python", "bench/d8-tx/host"]
+sys.path[:0] = ["python", "bench/d8-tx/host"]
 import serial, bf_msp
 E = "bench/d8-tx/results/betaflight-patch"
 from d8tx.link import D8Link

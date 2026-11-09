@@ -10,7 +10,7 @@ disarms by itself ~1.25 s after packets stop.
 
 The backend (d8tx.server) must NOT be running: this script opens the ESP32 port directly.
 
-Usage (from d8tx/python):
+Usage (from python):
   .venv/bin/python examples/up_forward_land.py --dry-run          # print the timeline only
   .venv/bin/python examples/up_forward_land.py --hover 1450        # fly
 """

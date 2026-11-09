@@ -1,7 +1,7 @@
 """Measure one TLM recipe for N seconds: replies/s, request->decoded latency, drone data-link health (MSP).
-usage: run_cadence.py NAME "TLM ..." SECS   (run from repo root with d8tx/python/.venv; backend must be stopped)"""
+usage: run_cadence.py NAME "TLM ..." SECS   (run from repo root with python/.venv; backend must be stopped)"""
 import json, sys, threading, time, statistics as st
-sys.path.insert(0, "d8tx/python"); sys.path.insert(0, "bench/d8-tx/host")
+sys.path.insert(0, "python"); sys.path.insert(0, "bench/d8-tx/host")
 import serial, bf_msp
 import d8tx.link as L
 from d8tx.link import D8Link

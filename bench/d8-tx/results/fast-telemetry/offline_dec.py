@@ -1,6 +1,6 @@
 """Offline: how coarse can the capture be and still decode? Re-decimates saved int8 captures."""
 import glob, json, sys, numpy as np
-sys.path.insert(0, "d8tx/python")
+sys.path.insert(0, "python")
 from d8tx.telemetry import decode_capture, load_iq
 runs = sorted(glob.glob("bench/d8-tx/results/telemetry/20261108-1*-link"))[-2:] + sorted(glob.glob("bench/d8-tx/results/telemetry/20261108-0*-link"))[-2:]
 caps = []

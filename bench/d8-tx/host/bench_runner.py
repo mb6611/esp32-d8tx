@@ -7,7 +7,7 @@ Grammars are copied from the real emitters (read-only references):
       pktstatus_last,lqi,marc,flags                                    (<=96 body chars)
       flags bit4 (16) = no carrier (ncs==0; then fe_* and means are 0)
     X,seq,t_us,done|host|radio|usb|usbstall
-  ESP  bench/d8-tx/firmware/main/{cmd_parse.c,d8tone.c}: PING STAT U TONE ALT, each reply
+  ESP  firmware/main/{cmd_parse.c,d8tone.c}: PING STAT U TONE ALT, each reply
     ends with "OK" or "ERR <why>"; TONE/ALT reply is K,... then ntrans T,... lines then OK.
 The ESP firmware matches commands case-sensitively; the host treats any case of
 TONE/ALT as keying and refuses everything outside the known command set.
