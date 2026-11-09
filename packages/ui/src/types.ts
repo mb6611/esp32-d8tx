@@ -9,6 +9,11 @@ export interface EspStatus {
   late_max_us?: number
   allow_arm?: boolean
   sender_hz?: number
+  sender_max_gap_ms?: number
+  lost_reason?: string | null
+  protocol_ok?: boolean
+  guard?: 'ui-silent'
+  guard_at?: number
 }
 export interface FcStatus {
   connected?: boolean

@@ -82,9 +82,8 @@ export function useDrone(radio?: RadioStatus, fc?: FcStatus) {
   const aAcc = ageOf(tAcc), aGyro = fastGyro ? fast!.age_ms! : ageOf(tGyro), aAtt = ageOf(tAtt), aMode = ageOf(tMode)
   const st = (a: number | null) => a == null || a > STALE_MS
   const fcAtt = fc?.connected ? fc.attitude_deg ?? null : null
-  const tFc = useStamp(fcAtt)
-  const aFc = ageOf(tFc)
-  const useFc = fcAtt != null && !st(aFc)
+  // MSP is polled continuously and fc.connected drops on poll errors, so a still drone (unchanged value) is not stale
+  const useFc = fcAtt != null
   const useFast = !useFc && fastAtt != null
   const shown = useFc ? fcAtt : useFast ? fastAtt : att
   const attStale = useFc || useFast ? false : st(aAtt)

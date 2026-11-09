@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { MockBackend } from './mock'
+import { DEVKIT, FC } from '@d8tx/serial'
+import type { FromWorker, Role, ToWorker } from '@d8tx/core'
 import type { StartOptions, Telemetry, WsState } from './types'
 
 export const MOCK = new URLSearchParams(location.search).has('mock')
@@ -19,9 +20,11 @@ const startedAllow = { current: false }
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v))
 const us = (v: number) => Math.round(clamp(v, 1000, 2000))
 
-export function useController() {
+export function useController(createWorker: () => Worker) {
   const [tel, setTel] = useState<Telemetry | null>(null)
-  const [ws, setWs] = useState<WsState>(MOCK ? 'open' : 'connecting')
+  const [ws, setWs] = useState<WsState>('connecting')
+  const [mockOn, setMockOn] = useState(MOCK)
+  const [errorKind, setErrorKind] = useState<string | null>(null)
   const [sticks, setSticks] = useState<Sticks>({ throttle: 0, yaw: 0, pitch: 0, roll: 0 })
   const [channels, setChannels] = useState<number[]>([1000, 1500, 1500, 1500, 1000, 1000, 1000, 1000])
   const [armed, setArmed] = useState(false)
@@ -40,6 +43,8 @@ export function useController() {
   const mouseL = useRef<{ x: number; y: number } | null>(null)
   const mouseR = useRef<{ x: number; y: number } | null>(null)
   const armedRef = useRef(false)
+  const lastCh = useRef<number[] | null>(null)
+  const [guardNote, setGuardNote] = useState<string | null>(null)
   const telRef = useRef<Telemetry | null>(null)
   const armTrack = useRef({ at: 0, seen: false, bad: null as number | null })
   const [disarmNote, setDisarmNote] = useState<string | null>(null)
@@ -48,8 +53,8 @@ export function useController() {
   }, [tel])
   const armStart = useRef<number | null>(null)
   const allowArm = useRef(false)
-  const sock = useRef<WebSocket | null>(null)
-  const mock = useRef<MockBackend | null>(null)
+  const worker = useRef<Worker | null>(null)
+  const send = useCallback((m: ToWorker) => worker.current?.postMessage(m), [])
   const counts = useRef({ sent: 0, tel: 0 })
 
   const canArm = !!tel?.esp?.link && (tel.esp.allow_arm ?? startedAllow.current)
@@ -65,54 +70,53 @@ export function useController() {
     setArmProgress(0)
   }, [])
 
-  // telemetry transport
+  // worker: owns ports, link, FC poller and demod; posts state at 50 Hz
   useEffect(() => {
-    if (MOCK) {
-      const m = new MockBackend()
-      mock.current = m
-      if (new URLSearchParams(location.search).has('autostart')) m.start(true, -75000)
-      let last = performance.now()
-      const id = setInterval(() => {
-        const now = performance.now()
-        setTel(m.tick((now - last) / 1000))
-        last = now
+    const w = createWorker()
+    worker.current = w
+    let autostarted = false
+    w.onmessage = (ev: MessageEvent<FromWorker>) => {
+      const m = ev.data
+      if (m.type === 'ready') setWs('open')
+      else if (m.type === 'state') {
         counts.current.tel++
-      }, 50)
-      return () => clearInterval(id)
-    }
-    let closed = false
-    let timer: ReturnType<typeof setTimeout>
-    const connect = () => {
-      setWs('connecting')
-      const proto = location.protocol === 'https:' ? 'wss' : 'ws'
-      const s = new WebSocket(`${proto}://${location.host}/api/ws`)
-      sock.current = s
-      s.onopen = () => setWs('open')
-      s.onmessage = (ev) => {
-        try {
-          const m = JSON.parse(ev.data)
-          if (m.type === 'telemetry') {
-            counts.current.tel++
-            setTel({ esp: m.esp ?? undefined, fc: m.fc ?? undefined, radio: m.radio ?? undefined })
+        const t = { esp: m.esp, fc: m.fc, radio: m.radio } as Telemetry
+        setMockOn(m.mock)
+        setTel(t)
+        if (m.esp?.guard === 'ui-silent') {
+          // worker guard fired (UI stalled, e.g. hidden tab): it already disarmed; mirror that and require re-arm
+          if (armedRef.current) {
+            armedRef.current = false
+            armStart.current = null
+            st.current.throttle = 0
+            setArmed(false)
+            setArmProgress(0)
           }
-        } catch {
-          /* ignore malformed frame */
+          setGuardNote('UI stalled, worker disarmed and centred the sticks. Arm again to continue.')
         }
+        if (MOCK && !autostarted && t.esp?.connected && new URLSearchParams(location.search).has('autostart')) {
+          autostarted = true
+          startedAllow.current = true
+          w.postMessage({ type: 'start', power: 127, fofs_hz: -75000, timeout_ms: 300, allow_arm: true } satisfies ToWorker)
+        }
+      } else if (m.type === 'error') {
+        setError(m.message)
+        setErrorKind(m.kind)
       }
-      s.onclose = () => {
-        setWs('closed')
-        sock.current = null
-        if (!closed) timer = setTimeout(connect, 1000)
-      }
-      s.onerror = () => s.close()
     }
-    connect()
+    w.onerror = (e) => {
+      setWs('closed')
+      setError(`worker: ${e.message}`)
+    }
+    if (MOCK) {
+      w.postMessage({ type: 'connect', role: 'esp', mock: true } satisfies ToWorker)
+      w.postMessage({ type: 'connect', role: 'fc', mock: true } satisfies ToWorker)
+    }
     return () => {
-      closed = true
-      clearTimeout(timer)
-      sock.current?.close()
+      w.terminate()
+      worker.current = null
     }
-  }, [])
+  }, [createWorker])
 
   // keyboard
   useEffect(() => {
@@ -130,7 +134,10 @@ export function useController() {
       }
       if (typing) return
       if (k === 'r') {
-        if (!e.repeat && allowArm.current && !armedRef.current) armStart.current = performance.now()
+        if (!e.repeat && allowArm.current && !armedRef.current) {
+          armStart.current = performance.now()
+          setGuardNote(null)
+        }
         return
       }
       if (WATCH.includes(k)) {
@@ -146,6 +153,21 @@ export function useController() {
     const blur = () => {
       keys.current.clear()
     }
+    // a hidden tab's timers are throttled: post the latest sticks right away on return so the worker guard does not misfire
+    const wake = () => {
+      if (lastCh.current) worker.current?.postMessage({ type: 'sticks', ch: lastCh.current } satisfies ToWorker)
+    }
+    const vis = () => {
+      if (document.visibilityState === 'visible') wake()
+      else if (armedRef.current) {
+        // timers will be throttled while hidden: disarm deliberately rather than let the guard do it
+        st.current.throttle = 0
+        disarm()
+        setDisarmNote('Tab hidden: disarmed')
+      }
+    }
+    window.addEventListener('focus', wake)
+    document.addEventListener('visibilitychange', vis)
     window.addEventListener('keydown', kd)
     window.addEventListener('keyup', ku)
     window.addEventListener('blur', blur)
@@ -153,6 +175,8 @@ export function useController() {
       window.removeEventListener('keydown', kd)
       window.removeEventListener('keyup', ku)
       window.removeEventListener('blur', blur)
+      window.removeEventListener('focus', wake)
+      document.removeEventListener('visibilitychange', vis)
     }
   }, [disarm])
 
@@ -256,8 +280,8 @@ export function useController() {
         armedRef.current ? 2000 : 1000,
         1000,
       ]
-      if (MOCK) mock.current?.setSticks(ch)
-      else if (sock.current?.readyState === WebSocket.OPEN) sock.current.send(JSON.stringify({ type: 'sticks', ch }))
+      lastCh.current = ch
+      worker.current?.postMessage({ type: 'sticks', ch } satisfies ToWorker)
       counts.current.sent++
 
       if (now - lastUi > 8) {
@@ -278,35 +302,44 @@ export function useController() {
     return () => clearInterval(id)
   }, [])
 
-  const post = useCallback(async (path: string, body?: unknown) => {
-    setError(null)
-    try {
-      const r = await fetch(path, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body ?? {}),
-      })
-      if (!r.ok) setError(`${path}: ${r.status} ${(await r.text()).slice(0, 120)}`)
-    } catch (e) {
-      setError(`${path}: ${String(e)}`)
-    }
-  }, [])
-
   const startLink = useCallback(
     (o: StartOptions) => {
       // starting a link always allows arming; the 1 s hold is the deliberate gate
       startedAllow.current = true
-      if (MOCK) mock.current?.start(true, o.fofs_hz)
-      else void post('/api/link/start', { ...o, allow_arm: true })
+      setError(null)
+      send({ type: 'start', power: o.power, fofs_hz: o.fofs_hz, timeout_ms: o.timeout_ms, allow_arm: true })
     },
-    [post],
+    [send],
   )
   const stopLink = useCallback(() => {
     disarm()
     startedAllow.current = false
-    if (MOCK) mock.current?.stop()
-    else void post('/api/link/stop')
-  }, [post, disarm])
+    send({ type: 'stop' })
+  }, [send, disarm])
+
+  // requestPort must run on the UI thread from a click; the worker opens the granted port by VID/PID
+  const connect = useCallback(
+    async (role: Role) => {
+      setError(null)
+      setErrorKind(null)
+      try {
+        const serial = (navigator as Navigator & { serial?: { requestPort(o: unknown): Promise<unknown> } }).serial
+        if (!serial) throw new Error('Web Serial is not available in this browser')
+        const f = role === 'esp' ? DEVKIT : FC
+        await serial.requestPort({ filters: [{ usbVendorId: f.usbVendorId, usbProductId: f.usbProductId }] })
+        send({ type: 'connect', role })
+      } catch (e) {
+        if ((e as Error).name !== 'NotFoundError') setError(String(e instanceof Error ? e.message : e))
+      }
+    },
+    [send],
+  )
+  const connectMock = useCallback(() => {
+    setError(null)
+    send({ type: 'connect', role: 'esp', mock: true })
+    send({ type: 'connect', role: 'fc', mock: true })
+  }, [send])
+  const disconnect = useCallback((role: Role) => send({ type: 'disconnect', role }), [send])
 
   return {
     tel,
@@ -315,10 +348,16 @@ export function useController() {
     channels,
     armed,
     disarmNote,
+    guardNote,
     armProgress,
     sendHz,
     telHz,
     error,
+    errorKind,
+    mock: mockOn,
+    connect,
+    connectMock,
+    disconnect,
     canArm,
     startLink,
     stopLink,
@@ -328,7 +367,10 @@ export function useController() {
       disarm()
     },
     armPress: () => {
-      if (allowArm.current && !armedRef.current) armStart.current = performance.now()
+      if (allowArm.current && !armedRef.current) {
+        armStart.current = performance.now()
+        setGuardNote(null)
+      }
     },
     armRelease: () => {
       armStart.current = null

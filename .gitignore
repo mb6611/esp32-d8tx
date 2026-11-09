@@ -37,3 +37,9 @@ Thumbs.db
 # Host package build outputs
 /host/build/
 *.egg-info/
+
+# Node / web
+node_modules/
+dist/
+*.tsbuildinfo
+firmware/test/test_vectors

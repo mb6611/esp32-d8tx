@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import Stick from './Stick'
 import DronePanel, { DroneView, useDrone } from './DronePanel'
-import { MOCK, useController } from './useController'
+import { useController } from './useController'
 import type { StartOptions } from './types'
+import { Tip, TooltipProvider } from './components/ui/tooltip'
 
 const CH = ['THR', 'AIL', 'ELE', 'RUD', 'AUX1', 'AUX2', 'ARM', 'AUX4']
 const CH_COL = ['ch1', 'ch2', 'ch3', 'ch4', 'ch5', 'ch6', 'ch7', 'ch8']
@@ -57,10 +58,12 @@ function SignalBars({ level }: { level: number }) {
   )
 }
 
-function Cell({ k, children, cls = '' }: { k: string; children: React.ReactNode; cls?: string }) {
+function Cell({ k, tip, children, cls = '' }: { k: string; tip?: string; children: React.ReactNode; cls?: string }) {
   return (
     <div className={`flex min-w-0 flex-col justify-center border-r border-line px-3 py-1 ${cls}`}>
-      <div className="font-sans text-[10px] font-semibold tracking-wider text-muted uppercase">{k}</div>
+      <div className="font-sans text-[10px] font-semibold tracking-wider text-muted uppercase">
+        {tip ? <Tip tip={tip}>{k}</Tip> : k}
+      </div>
       <div className="flex items-center gap-2 font-mono text-sm leading-tight tabular-nums">{children}</div>
     </div>
   )
@@ -124,8 +127,8 @@ const REASONS: Record<string, string> = {
   RUNAWAYTAKEOFF: 'runaway-takeoff protection (props off or drone stuck)',
 }
 
-export default function App() {
-  const c = useController()
+function AppInner({ createWorker }: { createWorker: () => Worker }) {
+  const c = useController(createWorker)
   const [opts, setOpts] = useState<StartOptions>({ power: 127, fofs_hz: -75000, timeout_ms: 300, allow_arm: true })
   const [settings, setSettings] = useState(false)
   const [tab, setTabState] = useState<Tab>(tabFromHash)
@@ -138,7 +141,7 @@ export default function App() {
   const linked = !!esp?.link
   const failsafe = !!fc?.failsafe
   const fcArmed = !!fc?.armed
-  const reachable = (c.ws === 'open' || MOCK) && !!esp?.connected
+  const reachable = c.ws === 'open' && !!esp?.connected
   const fcOn = !!fc?.connected
   const radio = c.tel?.radio
   const drone = useDrone(radio, fc)
@@ -157,10 +160,11 @@ export default function App() {
     setOpts({ ...opts, [k]: Number(e.target.value) })
 
   let banner: { text: string; cls: string }
-  if (!reachable) banner = { text: 'Not connected', cls: 'border-line text-muted' }
+  if (!reachable) banner = { text: esp?.lost_reason === 'port_closed' ? 'Link lost: DevKit port closed' : 'Not connected: pick the DevKit port', cls: esp?.lost_reason ? 'border-bad text-bad' : 'border-line text-muted' }
   else if (c.armed && fcOn && fcArmed) banner = { text: 'ARMED (confirmed by Betaflight)', cls: 'border-bad bg-bad text-paper font-bold' }
   else if (c.armed && !fcOn) banner = { text: 'ARM SENT. Drone state unknown (no readback).', cls: 'border-warn text-warn' }
   else if (c.armed) banner = { text: 'Arm sent, waiting for Betaflight to confirm', cls: 'border-warn text-warn' }
+  else if (!linked && esp?.lost_reason) banner = { text: `Link lost (${esp.lost_reason}), disarmed. Start the link again.`, cls: 'border-bad text-bad font-bold' }
   else if (!linked) banner = failsafe ? { text: 'Failsafe, start the link again', cls: 'border-warn text-warn' } : { text: 'Link off', cls: 'border-line text-muted' }
   else if (!fcOn && !noFcReady) banner = { text: 'Starting link…', cls: 'border-warn text-warn' }
   else if (fcOn && failsafe) banner = { text: 'Failsafe, waiting for Betaflight to clear it', cls: 'border-warn text-warn' }
@@ -177,6 +181,7 @@ export default function App() {
       .join(', ')
     banner = { text: plain ? `${head}: ${plain}` : head, cls: 'border-warn text-warn' }
   }
+  if (!c.armed && c.guardNote) banner = { text: c.guardNote, cls: 'border-bad text-bad font-bold' }
   if (fcOn && c.armed && !fcArmed && reasons) banner = { text: `Armed requested, not armed: ${reasons}`, cls: 'border-warn text-warn' }
 
   const redArmed = c.armed && (fcOn ? fcArmed : radio?.armed === true)
@@ -191,7 +196,7 @@ export default function App() {
   return (
     <div className="mx-auto flex h-dvh max-w-[1360px] flex-col overflow-y-auto px-6 pt-2 pb-2">
       <header className="mb-1.5 flex shrink-0 items-baseline justify-between border-b border-fg pb-1">
-        <h1 className="m-0 font-serif text-xl leading-tight font-bold">D8 TX controller</h1>
+        <h1 className="m-0 font-serif text-xl leading-tight font-bold">D8 TX controller{c.mock && <span className="ml-3 border border-warn bg-warn/20 px-2 py-0.5 align-middle font-sans text-xs font-bold tracking-wider text-warn">MOCK</span>}</h1>
         <nav className="flex gap-5 font-sans text-sm">
           {tabs.map(([t, n]) => (
             <button key={t} onClick={() => setTab(t)} className={tab === t ? 'border-b-2 border-fg font-bold' : 'text-link'}>{n}</button>
@@ -200,28 +205,29 @@ export default function App() {
       </header>
 
       {/* ground-station status strip */}
-      <div className="mb-1.5 grid shrink-0 grid-cols-[1.2fr_.8fr_1fr_1fr_.9fr_2.2fr_1.4fr] border border-fg">
-        <Cell k="Link">
+      <div className="mb-1.5 grid shrink-0 grid-cols-[1.2fr_.8fr_1fr_1fr_.9fr_.9fr_.8fr_1.4fr] border border-fg">
+        <Cell k="Link" tip="Stick frames per second sent from this computer to the ESP32 over USB (about 111 = one per 9 ms radio slot). Bars: drone RSSI from Betaflight when the drone USB is connected, else how steady the rate is.">
           <SignalBars level={sig} />
           <span>{linked ? `${(esp?.sender_hz ?? 0).toFixed(0)} pkt/s` : 'off'}</span>
         </Cell>
-        <Cell k="RF power">{opts.power}<span className="font-sans text-xs text-muted">/127</span></Cell>
-        <Cell k="ESP32">{dot(esp?.connected ? 'bg-ok' : 'bg-bad')}<span className="font-sans text-sm">{esp?.connected ? (esp.keyed ? 'transmitting' : 'idle') : 'offline'}</span></Cell>
-        <Cell k="Drone USB">{dot(fcOn ? 'bg-ok' : 'bg-muted')}<span className="font-sans text-sm">{fcOn ? `MSP${rssi !== undefined ? ` · rssi ${rssi}` : ''}` : 'no readback'}</span></Cell>
-        <Cell k="Failsafe">{dot(failsafe ? 'bg-warn' : 'bg-ok')}<span className={`font-sans text-sm ${failsafe ? 'font-bold text-warn' : ''}`}>{failsafe ? 'ACTIVE' : 'clear'}</span></Cell>
-        <Cell k="Drone (radio)">
-          <span className="flex flex-wrap items-center gap-x-3 gap-y-0 font-sans text-xs">
-            {radio?.enabled ? (<>
-              <span>{dot(radio.powered ? 'bg-ok' : 'bg-muted')} {radio.powered ? 'powered' : 'no reply'}</span>
-              <span>link {radio.link ? 'up' : 'down'}{radio.catch_rate != null && <> <span className="font-mono">{Math.round(radio.catch_rate * 100)}%</span></>}{radio.age_ms != null && <span className="font-mono text-muted"> {radio.age_ms} ms</span>}</span>
-              <span>batt <span className="font-mono">{radio.battery === 'absent' ? 'absent' : radio.vbat_v != null ? `${radio.vbat_v.toFixed(1)} V` : '–'}</span></span>
-              <span>armed <span className={`font-mono ${radio.armed ? 'font-bold text-bad' : ''}`}>{radio.armed == null ? '?' : radio.armed ? 'yes' : 'no'}</span></span>
-            </>) : <span className="text-muted">telemetry off</span>}
-          </span>
+        <Cell k="RF power" tip="ESP32 transmit power setting (0-127) used for the D8 packets to the drone.">{opts.power}<span className="font-sans text-xs text-muted">/127</span></Cell>
+        <Cell k="ESP32" tip="ESP32 DevKit over USB serial. transmitting = a link is running and it is sending D8 packets; idle = connected, not sending; offline = not connected.">{dot(esp?.connected ? 'bg-ok' : 'bg-bad')}<span className="font-sans text-sm">{esp?.connected ? (esp.keyed ? 'transmitting' : 'idle') : 'offline'}</span></Cell>
+        <Cell k="Drone USB" tip="Optional USB connection to the drone flight controller (Betaflight MSP), used to read back attitude, motors and RC. rssi = the link quality Betaflight reports.">{dot(fcOn ? 'bg-ok' : 'bg-muted')}<span className="font-sans text-sm">{fcOn ? `MSP${rssi !== undefined ? ` · rssi ${rssi}` : ''}` : 'no readback'}</span></Cell>
+        <Cell k="Failsafe" tip="Betaflight failsafe state, read over the drone USB. ACTIVE means the drone stopped receiving valid packets.">{dot(failsafe ? 'bg-warn' : 'bg-ok')}<span className={`font-sans text-sm ${failsafe ? 'font-bold text-warn' : ''}`}>{failsafe ? 'ACTIVE' : 'clear'}</span></Cell>
+        <Cell k="Telemetry" tip="Share of telemetry requests the drone answered over the last 10 s, received over the radio. lost = no reply for over 1 s.">
+          {radio?.enabled ? (<>
+            {dot(radio.link ? 'bg-ok' : radio.powered ? 'bg-warn' : 'bg-muted')}
+            <span className="font-sans text-sm">
+              {radio.link ? <span className="font-mono">{radio.catch_rate != null ? `${Math.round(radio.catch_rate * 100)}%` : '–'}</span> : <span className="font-bold text-warn">lost</span>}
+            </span>
+          </>) : <span className="font-sans text-sm text-muted">off</span>}
+        </Cell>
+        <Cell k="Battery" tip="Drone battery voltage from radio telemetry (A1). absent = no flight battery connected.">
+          <span className="font-sans text-sm">{!radio?.enabled ? '–' : radio.battery === 'absent' ? 'absent' : radio.vbat_v != null ? <span className="font-mono">{radio.vbat_v.toFixed(1)} V</span> : '–'}</span>
         </Cell>
         <div className={`flex items-center justify-between gap-3 px-3 py-1 ${redArmed ? 'bg-bad text-paper' : armSent ? 'bg-warn/20 text-warn' : ''}`}>
           <div>
-            <div className={`font-sans text-[10px] font-semibold tracking-wider uppercase ${redArmed ? 'text-paper/80' : 'text-muted'}`}>Motors</div>
+            <div className={`font-sans text-[10px] font-semibold tracking-wider uppercase ${redArmed ? 'text-paper/80' : 'text-muted'}`}><Tip tip="Arm switch (hold R to arm when arming is allowed, X to disarm). ARMED = confirmed by Betaflight (drone USB) or radio telemetry; ARM SENT = arm requested, not yet confirmed.">Motors</Tip></div>
             <div className="font-sans text-base leading-tight font-bold tracking-wide">{redArmed ? 'ARMED' : armSent ? 'ARM SENT' : 'DISARMED'}</div>
             {armSent && <div className="font-sans text-[10px] leading-tight">{fcOn ? 'waiting for Betaflight' : 'radio does not confirm armed'}</div>}
           </div>
@@ -232,10 +238,23 @@ export default function App() {
         </div>
       </div>
 
-      {c.ws !== 'open' && !MOCK && (
-        <p className="mb-2 border border-line px-3 py-1.5 font-sans text-sm text-muted">Backend not reachable, retrying every second.</p>
+      {c.ws === 'closed' && (
+        <p className="mb-2 border border-bad px-3 py-1.5 font-sans text-sm text-bad">The worker stopped. Reload the page.</p>
       )}
-      {c.error && <p className="mb-2 border border-bad px-3 py-1.5 font-sans text-sm text-bad">{c.error}</p>}
+      <div className="mb-1.5 flex shrink-0 flex-wrap items-center gap-2 font-sans text-sm">
+        {!c.mock && (<>
+          {!esp?.connected
+            ? <button className="btn !py-0.5" onClick={() => void c.connect('esp')}>Connect DevKit</button>
+            : <button className="btn !py-0.5 text-muted" onClick={() => c.disconnect('esp')} disabled={linked}>Disconnect DevKit</button>}
+          {!fc?.connected
+            ? <button className="btn !py-0.5" onClick={() => void c.connect('fc')}>Connect drone (optional)</button>
+            : <button className="btn !py-0.5 text-muted" onClick={() => c.disconnect('fc')}>Disconnect drone</button>}
+          {!esp?.connected && <button className="btn !py-0.5 text-muted" onClick={c.connectMock}>Mock</button>}
+        </>)}
+        {c.mock && <span className="text-warn">Simulated link and drone, no real port is opened.</span>}
+        {esp?.connected && esp.info && <span className="font-mono text-xs text-muted">{String(esp.info.fw ?? '')} proto={String(esp.info.proto ?? '?')}</span>}
+      </div>
+      {c.error && <p className="mb-2 border border-bad px-3 py-1.5 font-sans text-sm text-bad">{c.errorKind === 'port_in_use' ? `Port in use: close other tabs or programs using it. (${c.error})` : c.errorKind === 'protocol' ? `Protocol mismatch, arming refused: ${c.error}` : c.error}</p>}
 
       {tab !== 'stats' && (
         <main className="flex min-h-0 flex-1 flex-col">
@@ -321,7 +340,7 @@ export default function App() {
           <div className="flex flex-col gap-6">
             <section>
               <h2 className="h">Link</h2>
-              <Row k="backend" v={MOCK ? 'mock' : c.ws} cls={c.ws === 'open' ? '' : 'text-bad'} />
+              <Row k="backend" v={c.mock ? 'mock' : 'worker ' + c.ws} cls={c.ws === 'open' ? '' : 'text-bad'} />
               <Row k="ESP32" v={esp?.connected ? 'connected' : 'not connected'} />
               <Row k="link" v={linked ? 'up' : 'down'} />
               <Row k="arm command" v={c.armed ? 'ARMED (ch7 high)' : 'off'} cls={c.armed ? 'font-bold text-bad' : ''} />
@@ -365,5 +384,13 @@ export default function App() {
         </main>
       )}
     </div>
+  )
+}
+
+export default function App({ createWorker }: { createWorker: () => Worker }) {
+  return (
+    <TooltipProvider>
+      <AppInner createWorker={createWorker} />
+    </TooltipProvider>
   )
 }
