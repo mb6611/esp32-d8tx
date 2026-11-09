@@ -8,5 +8,6 @@ load: description
 - A source build has target defaults the stock image lacked (e.g. `resource LED 1 C13`); set it to NONE after replay to keep LEDs off.
 - In the CLI, the first command after the `#` prompt can be swallowed (send a dummy line first), and `exit` without `save` loses changes.
 - bf_msp.parse_analog vbat_dv was misaligned (reports 241 on 0 V, Nov 8 2026); check battery absence with CLI `status` or MSP_BATTERY_STATE.
+- Binding the drone's receiver needs no CLI and no reboot: MSP v2 `MSP2_BETAFLIGHT_BIND` (0x3000) over USB works on this 4.2.11 build (Nov 9 2026, 3/3 binds). The app's Bind button and `packages/core/scripts/bind-check.ts` use it; CLI `get frsky_spi_tx_id` verifies, but leaving the CLI reboots the FC.
 
 **Why:** cost Track 2 several reflashes on 2026-11-08.
