@@ -4,7 +4,7 @@
 
 Read on GitHub (https://github.com/z2labs/esp-sdr-bridge):
 
-- License: **GPL-3.0**; not vendored. Patches and built binaries under this directory are GPL-3.0 (Betaflight derivatives).
+- License: **GPL-3.0**; not vendored.
 - Target: **ESP32-S3** native USB Serial/JTAG, opened at 2 000 000 baud, with the
   S3-only firmware branch `zodoczi/esp-sdr@s3-iq-stream` (PIE-SIMD two-stage FIR DDC).
 - Serves SpyServer and rtl_tcp; sends `FREQ`, `FOFS`, `GAIN MANUAL`, and
