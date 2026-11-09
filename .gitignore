@@ -43,3 +43,6 @@ node_modules/
 dist/
 *.tsbuildinfo
 firmware/test/test_vectors
+
+.ru/specs
+.ru/plans
