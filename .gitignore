@@ -46,3 +46,4 @@ firmware/test/test_vectors
 
 .ru/specs
 .ru/plans
+docs/diagrams/*.png
