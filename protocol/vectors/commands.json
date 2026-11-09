@@ -1,0 +1,657 @@
+{
+ "constants": {
+  "LO": 1000,
+  "MID": 1500,
+  "HI": 2000,
+  "ARM_CH": 6,
+  "ARM_LIMIT": 1300,
+  "SLOT_S": 0.008994,
+  "DEFAULT_FOFS_HZ": -75000,
+  "TXID": [
+   66,
+   178
+  ],
+  "TLM_RECIPE": "TLM 12 9000 40 64 0 1 1 0 1 1000 4",
+  "MAX_LINE": 95
+ },
+ "sticks": [
+  {
+   "ch": [
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500
+   ],
+   "allow_arm": false,
+   "line": "S 1500 1500 1500 1500 1500 1500 1000 1500\n",
+   "channels": [
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1000,
+    1500
+   ]
+  },
+  {
+   "ch": [
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500
+   ],
+   "allow_arm": true,
+   "line": "S 1500 1500 1500 1500 1500 1500 1500 1500\n",
+   "channels": [
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500
+   ]
+  },
+  {
+   "ch": [
+    0,
+    1500,
+    3000,
+    1500,
+    1500,
+    1500,
+    2000,
+    1500
+   ],
+   "allow_arm": false,
+   "line": "S 1000 1500 2000 1500 1500 1500 1000 1500\n",
+   "channels": [
+    1000,
+    1500,
+    2000,
+    1500,
+    1500,
+    1500,
+    1000,
+    1500
+   ]
+  },
+  {
+   "ch": [
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    2000,
+    1000
+   ],
+   "allow_arm": true,
+   "line": "S 1000 1000 1000 1000 1000 1000 2000 1000\n",
+   "channels": [
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    2000,
+    1000
+   ]
+  },
+  {
+   "ch": [
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    2000,
+    1000
+   ],
+   "allow_arm": false,
+   "line": "S 1000 1000 1000 1000 1000 1000 1000 1000\n",
+   "channels": [
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  },
+  {
+   "ch": [
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    1300,
+    1000
+   ],
+   "allow_arm": true,
+   "line": "S 1000 1000 1000 1000 1000 1000 1300 1000\n",
+   "channels": [
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    1300,
+    1000
+   ]
+  },
+  {
+   "ch": [
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    1301,
+    1000
+   ],
+   "allow_arm": true,
+   "line": "S 1000 1000 1000 1000 1000 1000 1301 1000\n",
+   "channels": [
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    1301,
+    1000
+   ]
+  },
+  {
+   "ch": [
+    1000.5,
+    1001.5,
+    1002.5,
+    1500.4,
+    1500.6,
+    1999.5,
+    1250.5,
+    -0.5
+   ],
+   "allow_arm": true,
+   "line": "S 1000 1002 1002 1500 1501 2000 1250 1000\n",
+   "channels": [
+    1000,
+    1002,
+    1002,
+    1500,
+    1501,
+    2000,
+    1250,
+    1000
+   ]
+  },
+  {
+   "ch": [
+    2500.5,
+    999.5,
+    -1000,
+    1000000000.0,
+    1499.49,
+    1499.5,
+    1500.5,
+    1501.5
+   ],
+   "allow_arm": true,
+   "line": "S 2000 1000 1000 2000 1499 1500 1500 1502\n",
+   "channels": [
+    2000,
+    1000,
+    1000,
+    2000,
+    1499,
+    1500,
+    1500,
+    1502
+   ]
+  },
+  {
+   "ch": [
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500
+   ],
+   "allow_arm": false,
+   "error": "need 8 channels"
+  },
+  {
+   "ch": [
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500
+   ],
+   "allow_arm": true,
+   "error": "need 8 channels"
+  },
+  {
+   "ch": [],
+   "allow_arm": false,
+   "error": "need 8 channels"
+  },
+  {
+   "ch": [
+    1100,
+    1200,
+    1300,
+    1400,
+    1600,
+    1700,
+    1800,
+    1900
+   ],
+   "allow_arm": true,
+   "line": "S 1100 1200 1300 1400 1600 1700 1800 1900\n",
+   "channels": [
+    1100,
+    1200,
+    1300,
+    1400,
+    1600,
+    1700,
+    1800,
+    1900
+   ]
+  },
+  {
+   "ch": [
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000
+   ],
+   "allow_arm": true,
+   "line": "S 2000 2000 2000 2000 2000 2000 2000 2000\n",
+   "channels": [
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000
+   ]
+  },
+  {
+   "ch": [
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    1000
+   ],
+   "allow_arm": false,
+   "line": "S 1000 1000 1000 1000 1000 1000 1000 1000\n",
+   "channels": [
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    1000
+   ]
+  }
+ ],
+ "check_line": [
+  {
+   "line": "",
+   "ok": true
+  },
+  {
+   "line": "\n",
+   "ok": true
+  },
+  {
+   "line": "\r\n",
+   "ok": true
+  },
+  {
+   "line": "x",
+   "ok": true
+  },
+  {
+   "line": "x\n",
+   "ok": true
+  },
+  {
+   "line": "x\r\n",
+   "ok": true
+  },
+  {
+   "line": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "ok": true
+  },
+  {
+   "line": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",
+   "ok": true
+  },
+  {
+   "line": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\r\n",
+   "ok": true
+  },
+  {
+   "line": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "ok": true
+  },
+  {
+   "line": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",
+   "ok": true
+  },
+  {
+   "line": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\r\n",
+   "ok": true
+  },
+  {
+   "line": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "ok": false,
+   "error": "line longer than 95"
+  },
+  {
+   "line": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",
+   "ok": false,
+   "error": "line longer than 95"
+  },
+  {
+   "line": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\r\n",
+   "ok": false,
+   "error": "line longer than 95"
+  },
+  {
+   "line": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "ok": false,
+   "error": "line longer than 95"
+  },
+  {
+   "line": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",
+   "ok": false,
+   "error": "line longer than 95"
+  },
+  {
+   "line": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\r\n",
+   "ok": false,
+   "error": "line longer than 95"
+  }
+ ],
+ "start_sequences": [
+  {
+   "name": "defaults",
+   "tlm_err": false,
+   "steps": [
+    {
+     "op": "start",
+     "lines": [
+      "FOFS -75000",
+      "TID 0",
+      "TLM 12 9000 40 64 0 1 1 0 1 1000 4",
+      "LINK 127 300"
+     ]
+    },
+    {
+     "op": "stop",
+     "lines": [
+      "STOP"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "args",
+   "tlm_err": false,
+   "steps": [
+    {
+     "op": "start",
+     "power": 60,
+     "timeout_ms": 500,
+     "allow_arm": true,
+     "fofs_hz": -63000,
+     "lines": [
+      "FOFS -63000",
+      "TID 0",
+      "TLM 12 9000 40 64 0 1 1 0 1 1000 4",
+      "ARMOK",
+      "LINK 60 500"
+     ]
+    },
+    {
+     "op": "stop",
+     "lines": [
+      "STOP"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "telemetry_off_after_on",
+   "tlm_err": false,
+   "steps": [
+    {
+     "op": "start",
+     "lines": [
+      "FOFS -75000",
+      "TID 0",
+      "TLM 12 9000 40 64 0 1 1 0 1 1000 4",
+      "LINK 127 300"
+     ]
+    },
+    {
+     "op": "stop",
+     "lines": [
+      "STOP"
+     ]
+    },
+    {
+     "op": "start",
+     "telemetry": false,
+     "lines": [
+      "FOFS -75000",
+      "TLM 0",
+      "LINK 127 300"
+     ]
+    },
+    {
+     "op": "stop",
+     "lines": [
+      "STOP"
+     ]
+    },
+    {
+     "op": "start",
+     "telemetry": false,
+     "lines": [
+      "FOFS -75000",
+      "LINK 127 300"
+     ]
+    },
+    {
+     "op": "stop",
+     "lines": [
+      "STOP"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "firmware_without_tlm",
+   "tlm_err": true,
+   "steps": [
+    {
+     "op": "start",
+     "lines": [
+      "FOFS -75000",
+      "TID 0",
+      "TLM 12 9000 40 64 0 1 1 0 1 1000 4",
+      "LINK 127 300"
+     ]
+    },
+    {
+     "op": "stop",
+     "lines": [
+      "STOP"
+     ]
+    },
+    {
+     "op": "start",
+     "telemetry": false,
+     "lines": [
+      "FOFS -75000",
+      "LINK 127 300"
+     ]
+    },
+    {
+     "op": "stop",
+     "lines": [
+      "STOP"
+     ]
+    }
+   ]
+  }
+ ],
+ "firmware_lines": [
+  {
+   "line": "INFO",
+   "ok": true
+  },
+  {
+   "line": "STAT",
+   "ok": true
+  },
+  {
+   "line": "STOP",
+   "ok": true
+  },
+  {
+   "line": "PING",
+   "ok": true
+  },
+  {
+   "line": "ARMOK",
+   "ok": true
+  },
+  {
+   "line": "ARMOK 1",
+   "ok": false,
+   "err": "args"
+  },
+  {
+   "line": "FOFS -75000",
+   "ok": true
+  },
+  {
+   "line": "FOFS 200000",
+   "ok": true
+  },
+  {
+   "line": "FOFS 200001",
+   "ok": false,
+   "err": "range"
+  },
+  {
+   "line": "FOFS x",
+   "ok": false,
+   "err": "range"
+  },
+  {
+   "line": "LINK 127",
+   "ok": true
+  },
+  {
+   "line": "LINK 127 300",
+   "ok": true
+  },
+  {
+   "line": "LINK 0 1000",
+   "ok": true
+  },
+  {
+   "line": "LINK 128",
+   "ok": false,
+   "err": "range"
+  },
+  {
+   "line": "LINK 5 1001",
+   "ok": false,
+   "err": "range"
+  },
+  {
+   "line": "LINK",
+   "ok": false,
+   "err": "args"
+  },
+  {
+   "line": "TID 0",
+   "ok": true
+  },
+  {
+   "line": "TID 31",
+   "ok": true
+  },
+  {
+   "line": "TLM 12 9000 40 64 0 1 1 0 1 1000 4",
+   "ok": true
+  },
+  {
+   "line": "TLM 0",
+   "ok": true
+  },
+  {
+   "line": "BOGUS",
+   "ok": false,
+   "err": "unknown"
+  },
+  {
+   "line": "S 1500",
+   "ok": false,
+   "err": "args"
+  },
+  {
+   "line": "S 1 2 3 4 5 6 7 x",
+   "ok": false,
+   "err": "range"
+  }
+ ]
+}

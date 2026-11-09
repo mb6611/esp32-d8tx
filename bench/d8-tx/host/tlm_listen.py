@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Telemetry-listen experiment host (firmware TLM / TCAP, docs/PROTOCOL.md "Telemetry listen").
+"""Telemetry-listen experiment host (firmware TLM / TCAP, protocol/PROTOCOL.md "Telemetry listen").
 
 Drives the ESP32 d8tone firmware, saves every `EV tlm` capture under
 bench/d8-tx/results/telemetry/<run>/, and decodes it with bench/d8-tx/host/d8.py, looking

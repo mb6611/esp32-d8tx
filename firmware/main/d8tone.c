@@ -29,7 +29,7 @@
  *                              restored to 2412 MHz afterwards. Reply:
  *                              K,hop,slots=N,late_max_us=X,retune_max_us=Y then OK. ERR -> unkeyed.
  *   TLM every [cap_us] [gain] [dec] [same] [stream] [ack]   telemetry listen for later LINKs (default off;
- *                              docs/PROTOCOL.md): every Nth slot sends byte3=2, byte4=tid, then unkeys, retunes to the
+ *                              protocol/PROTOCOL.md): every Nth slot sends byte3=2, byte4=tid, then unkeys, retunes to the
  *                              listen channel and runs a 16 MS/s ring capture (tlm_cap.c), shipped as EV tlm + binary.
  *                              stream=0: int16 dump, blocking (LINK sends nothing for ~0.2 s). stream=1: int8 (bits=8,
  *                              sh=right shift) pushed into the UART FIFO between slots while LINK keeps its schedule; the

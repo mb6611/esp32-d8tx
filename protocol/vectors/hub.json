@@ -1,0 +1,1811 @@
+{
+ "parser": [
+  {
+   "name": "stuffing/chunk0",
+   "chunks": [
+    "5e245d3d5d3e5e032c015e28fbff5e"
+   ],
+   "frames": [
+    [
+     36,
+     24157
+    ],
+    [
+     3,
+     300
+    ],
+    [
+     40,
+     -5
+    ]
+   ]
+  },
+  {
+   "name": "stuffing/chunk1",
+   "chunks": [
+    "5e",
+    "24",
+    "5d",
+    "3d",
+    "5d",
+    "3e",
+    "5e",
+    "03",
+    "2c",
+    "01",
+    "5e",
+    "28",
+    "fb",
+    "ff",
+    "5e"
+   ],
+   "frames": [
+    [
+     36,
+     24157
+    ],
+    [
+     3,
+     300
+    ],
+    [
+     40,
+     -5
+    ]
+   ]
+  },
+  {
+   "name": "stuffing/chunk3",
+   "chunks": [
+    "5e245d",
+    "3d5d3e",
+    "5e032c",
+    "015e28",
+    "fbff5e"
+   ],
+   "frames": [
+    [
+     36,
+     24157
+    ],
+    [
+     3,
+     300
+    ],
+    [
+     40,
+     -5
+    ]
+   ]
+  },
+  {
+   "name": "stuffing/chunk10",
+   "chunks": [
+    "5e245d3d5d3e5e032c01",
+    "5e28fbff5e"
+   ],
+   "frames": [
+    [
+     36,
+     24157
+    ],
+    [
+     3,
+     300
+    ],
+    [
+     40,
+     -5
+    ]
+   ]
+  },
+  {
+   "name": "all_escapes/chunk0",
+   "chunks": [
+    "5e245d3d5d3d5e255d3e5d3e5e263e3d5e"
+   ],
+   "frames": [
+    [
+     36,
+     23901
+    ],
+    [
+     37,
+     24158
+    ],
+    [
+     38,
+     15678
+    ]
+   ]
+  },
+  {
+   "name": "all_escapes/chunk1",
+   "chunks": [
+    "5e",
+    "24",
+    "5d",
+    "3d",
+    "5d",
+    "3d",
+    "5e",
+    "25",
+    "5d",
+    "3e",
+    "5d",
+    "3e",
+    "5e",
+    "26",
+    "3e",
+    "3d",
+    "5e"
+   ],
+   "frames": [
+    [
+     36,
+     23901
+    ],
+    [
+     37,
+     24158
+    ],
+    [
+     38,
+     15678
+    ]
+   ]
+  },
+  {
+   "name": "all_escapes/chunk3",
+   "chunks": [
+    "5e245d",
+    "3d5d3d",
+    "5e255d",
+    "3e5d3e",
+    "5e263e",
+    "3d5e"
+   ],
+   "frames": [
+    [
+     36,
+     23901
+    ],
+    [
+     37,
+     24158
+    ],
+    [
+     38,
+     15678
+    ]
+   ]
+  },
+  {
+   "name": "all_escapes/chunk10",
+   "chunks": [
+    "5e245d3d5d3d5e255d3e",
+    "5d3e5e263e3d5e"
+   ],
+   "frames": [
+    [
+     36,
+     23901
+    ],
+    [
+     37,
+     24158
+    ],
+    [
+     38,
+     15678
+    ]
+   ]
+  },
+  {
+   "name": "id_5d/chunk0",
+   "chunks": [
+    "5e5d3d01005e"
+   ],
+   "frames": [
+    [
+     93,
+     317
+    ]
+   ]
+  },
+  {
+   "name": "id_5d/chunk1",
+   "chunks": [
+    "5e",
+    "5d",
+    "3d",
+    "01",
+    "00",
+    "5e"
+   ],
+   "frames": [
+    [
+     93,
+     317
+    ]
+   ]
+  },
+  {
+   "name": "id_5d/chunk3",
+   "chunks": [
+    "5e5d3d",
+    "01005e"
+   ],
+   "frames": [
+    [
+     93,
+     317
+    ]
+   ]
+  },
+  {
+   "name": "id_5d/chunk10",
+   "chunks": [
+    "5e5d3d01005e"
+   ],
+   "frames": [
+    [
+     93,
+     317
+    ]
+   ]
+  },
+  {
+   "name": "no_header_ignored/chunk0",
+   "chunks": [
+    "0102035e397b005e"
+   ],
+   "frames": [
+    [
+     57,
+     123
+    ]
+   ]
+  },
+  {
+   "name": "no_header_ignored/chunk1",
+   "chunks": [
+    "01",
+    "02",
+    "03",
+    "5e",
+    "39",
+    "7b",
+    "00",
+    "5e"
+   ],
+   "frames": [
+    [
+     57,
+     123
+    ]
+   ]
+  },
+  {
+   "name": "no_header_ignored/chunk3",
+   "chunks": [
+    "010203",
+    "5e397b",
+    "005e"
+   ],
+   "frames": [
+    [
+     57,
+     123
+    ]
+   ]
+  },
+  {
+   "name": "no_header_ignored/chunk10",
+   "chunks": [
+    "0102035e397b005e"
+   ],
+   "frames": [
+    [
+     57,
+     123
+    ]
+   ]
+  },
+  {
+   "name": "header_restarts_frame/chunk0",
+   "chunks": [
+    "5e24015e032c015e"
+   ],
+   "frames": [
+    [
+     3,
+     300
+    ]
+   ]
+  },
+  {
+   "name": "header_restarts_frame/chunk1",
+   "chunks": [
+    "5e",
+    "24",
+    "01",
+    "5e",
+    "03",
+    "2c",
+    "01",
+    "5e"
+   ],
+   "frames": [
+    [
+     3,
+     300
+    ]
+   ]
+  },
+  {
+   "name": "header_restarts_frame/chunk3",
+   "chunks": [
+    "5e2401",
+    "5e032c",
+    "015e"
+   ],
+   "frames": [
+    [
+     3,
+     300
+    ]
+   ]
+  },
+  {
+   "name": "header_restarts_frame/chunk10",
+   "chunks": [
+    "5e24015e032c015e"
+   ],
+   "frames": [
+    [
+     3,
+     300
+    ]
+   ]
+  },
+  {
+   "name": "truncated/chunk0",
+   "chunks": [
+    "5e2401"
+   ],
+   "frames": []
+  },
+  {
+   "name": "truncated/chunk1",
+   "chunks": [
+    "5e",
+    "24",
+    "01"
+   ],
+   "frames": []
+  },
+  {
+   "name": "truncated/chunk3",
+   "chunks": [
+    "5e2401"
+   ],
+   "frames": []
+  },
+  {
+   "name": "truncated/chunk10",
+   "chunks": [
+    "5e2401"
+   ],
+   "frames": []
+  },
+  {
+   "name": "negative/chunk0",
+   "chunks": [
+    "5e2800805e40ff7f5e41ffff5e"
+   ],
+   "frames": [
+    [
+     40,
+     -32768
+    ],
+    [
+     64,
+     32767
+    ],
+    [
+     65,
+     -1
+    ]
+   ]
+  },
+  {
+   "name": "negative/chunk1",
+   "chunks": [
+    "5e",
+    "28",
+    "00",
+    "80",
+    "5e",
+    "40",
+    "ff",
+    "7f",
+    "5e",
+    "41",
+    "ff",
+    "ff",
+    "5e"
+   ],
+   "frames": [
+    [
+     40,
+     -32768
+    ],
+    [
+     64,
+     32767
+    ],
+    [
+     65,
+     -1
+    ]
+   ]
+  },
+  {
+   "name": "negative/chunk3",
+   "chunks": [
+    "5e2800",
+    "805e40",
+    "ff7f5e",
+    "41ffff",
+    "5e"
+   ],
+   "frames": [
+    [
+     40,
+     -32768
+    ],
+    [
+     64,
+     32767
+    ],
+    [
+     65,
+     -1
+    ]
+   ]
+  },
+  {
+   "name": "negative/chunk10",
+   "chunks": [
+    "5e2800805e40ff7f5e41",
+    "ffff5e"
+   ],
+   "frames": [
+    [
+     40,
+     -32768
+    ],
+    [
+     64,
+     32767
+    ],
+    [
+     65,
+     -1
+    ]
+   ]
+  },
+  {
+   "name": "garbage_in_ids/chunk0",
+   "chunks": [
+    "5e0001005eff02005e3e03005e"
+   ],
+   "frames": [
+    [
+     0,
+     1
+    ],
+    [
+     255,
+     2
+    ],
+    [
+     62,
+     3
+    ]
+   ]
+  },
+  {
+   "name": "garbage_in_ids/chunk1",
+   "chunks": [
+    "5e",
+    "00",
+    "01",
+    "00",
+    "5e",
+    "ff",
+    "02",
+    "00",
+    "5e",
+    "3e",
+    "03",
+    "00",
+    "5e"
+   ],
+   "frames": [
+    [
+     0,
+     1
+    ],
+    [
+     255,
+     2
+    ],
+    [
+     62,
+     3
+    ]
+   ]
+  },
+  {
+   "name": "garbage_in_ids/chunk3",
+   "chunks": [
+    "5e0001",
+    "005eff",
+    "02005e",
+    "3e0300",
+    "5e"
+   ],
+   "frames": [
+    [
+     0,
+     1
+    ],
+    [
+     255,
+     2
+    ],
+    [
+     62,
+     3
+    ]
+   ]
+  },
+  {
+   "name": "garbage_in_ids/chunk10",
+   "chunks": [
+    "5e0001005eff02005e3e",
+    "03005e"
+   ],
+   "frames": [
+    [
+     0,
+     1
+    ],
+    [
+     255,
+     2
+    ],
+    [
+     62,
+     3
+    ]
+   ]
+  },
+  {
+   "name": "patched_set/chunk0",
+   "chunks": [
+    "5e4621005e4700205e407b005e41d3ff5e4206005e4396005e447cfc5e450f0e5e"
+   ],
+   "frames": [
+    [
+     70,
+     33
+    ],
+    [
+     71,
+     8192
+    ],
+    [
+     64,
+     123
+    ],
+    [
+     65,
+     -45
+    ],
+    [
+     66,
+     6
+    ],
+    [
+     67,
+     150
+    ],
+    [
+     68,
+     -900
+    ],
+    [
+     69,
+     3599
+    ]
+   ]
+  },
+  {
+   "name": "patched_set/chunk1",
+   "chunks": [
+    "5e",
+    "46",
+    "21",
+    "00",
+    "5e",
+    "47",
+    "00",
+    "20",
+    "5e",
+    "40",
+    "7b",
+    "00",
+    "5e",
+    "41",
+    "d3",
+    "ff",
+    "5e",
+    "42",
+    "06",
+    "00",
+    "5e",
+    "43",
+    "96",
+    "00",
+    "5e",
+    "44",
+    "7c",
+    "fc",
+    "5e",
+    "45",
+    "0f",
+    "0e",
+    "5e"
+   ],
+   "frames": [
+    [
+     70,
+     33
+    ],
+    [
+     71,
+     8192
+    ],
+    [
+     64,
+     123
+    ],
+    [
+     65,
+     -45
+    ],
+    [
+     66,
+     6
+    ],
+    [
+     67,
+     150
+    ],
+    [
+     68,
+     -900
+    ],
+    [
+     69,
+     3599
+    ]
+   ]
+  },
+  {
+   "name": "patched_set/chunk3",
+   "chunks": [
+    "5e4621",
+    "005e47",
+    "00205e",
+    "407b00",
+    "5e41d3",
+    "ff5e42",
+    "06005e",
+    "439600",
+    "5e447c",
+    "fc5e45",
+    "0f0e5e"
+   ],
+   "frames": [
+    [
+     70,
+     33
+    ],
+    [
+     71,
+     8192
+    ],
+    [
+     64,
+     123
+    ],
+    [
+     65,
+     -45
+    ],
+    [
+     66,
+     6
+    ],
+    [
+     67,
+     150
+    ],
+    [
+     68,
+     -900
+    ],
+    [
+     69,
+     3599
+    ]
+   ]
+  },
+  {
+   "name": "patched_set/chunk10",
+   "chunks": [
+    "5e4621005e4700205e40",
+    "7b005e41d3ff5e420600",
+    "5e4396005e447cfc5e45",
+    "0f0e5e"
+   ],
+   "frames": [
+    [
+     70,
+     33
+    ],
+    [
+     71,
+     8192
+    ],
+    [
+     64,
+     123
+    ],
+    [
+     65,
+     -45
+    ],
+    [
+     66,
+     6
+    ],
+    [
+     67,
+     150
+    ],
+    [
+     68,
+     -900
+    ],
+    [
+     69,
+     3599
+    ]
+   ]
+  },
+  {
+   "name": "vfas_hi_precision/chunk0",
+   "chunks": [
+    "5e397e005e3a07005e3b05005e"
+   ],
+   "frames": [
+    [
+     57,
+     126
+    ],
+    [
+     58,
+     7
+    ],
+    [
+     59,
+     5
+    ]
+   ]
+  },
+  {
+   "name": "vfas_hi_precision/chunk1",
+   "chunks": [
+    "5e",
+    "39",
+    "7e",
+    "00",
+    "5e",
+    "3a",
+    "07",
+    "00",
+    "5e",
+    "3b",
+    "05",
+    "00",
+    "5e"
+   ],
+   "frames": [
+    [
+     57,
+     126
+    ],
+    [
+     58,
+     7
+    ],
+    [
+     59,
+     5
+    ]
+   ]
+  },
+  {
+   "name": "vfas_hi_precision/chunk3",
+   "chunks": [
+    "5e397e",
+    "005e3a",
+    "07005e",
+    "3b0500",
+    "5e"
+   ],
+   "frames": [
+    [
+     57,
+     126
+    ],
+    [
+     58,
+     7
+    ],
+    [
+     59,
+     5
+    ]
+   ]
+  },
+  {
+   "name": "vfas_hi_precision/chunk10",
+   "chunks": [
+    "5e397e005e3a07005e3b",
+    "05005e"
+   ],
+   "frames": [
+    [
+     57,
+     126
+    ],
+    [
+     58,
+     7
+    ],
+    [
+     59,
+     5
+    ]
+   ]
+  },
+  {
+   "name": "dangling_escape/chunk0",
+   "chunks": [
+    "5e245d3d5d"
+   ],
+   "frames": []
+  },
+  {
+   "name": "dangling_escape/chunk1",
+   "chunks": [
+    "5e",
+    "24",
+    "5d",
+    "3d",
+    "5d"
+   ],
+   "frames": []
+  },
+  {
+   "name": "dangling_escape/chunk3",
+   "chunks": [
+    "5e245d",
+    "3d5d"
+   ],
+   "frames": []
+  },
+  {
+   "name": "dangling_escape/chunk10",
+   "chunks": [
+    "5e245d3d5d"
+   ],
+   "frames": []
+  }
+ ],
+ "state": [
+  {
+   "name": "empty",
+   "updates": [],
+   "now": 5.0,
+   "snapshot": {
+    "acc_mg": null,
+    "heading_deg": null,
+    "rpm": null,
+    "vfas_v": null,
+    "current_a": null,
+    "fuel": null,
+    "temp1": null,
+    "temp2": null,
+    "patched": {},
+    "raw": {},
+    "age_ms": null
+   },
+   "vfas_v": null
+  },
+  {
+   "name": "stock_fields",
+   "updates": [
+    [
+     3,
+     300,
+     1.0
+    ],
+    [
+     2,
+     31,
+     1.0
+    ],
+    [
+     36,
+     0,
+     1.0
+    ],
+    [
+     37,
+     -3,
+     1.0
+    ],
+    [
+     38,
+     1000,
+     1.0
+    ],
+    [
+     40,
+     25,
+     2.0
+    ],
+    [
+     4,
+     77,
+     2.0
+    ],
+    [
+     5,
+     40,
+     2.0
+    ],
+    [
+     20,
+     270,
+     2.0
+    ],
+    [
+     57,
+     123,
+     2.5
+    ]
+   ],
+   "now": 3.0,
+   "snapshot": {
+    "acc_mg": [
+     0,
+     -3,
+     1000
+    ],
+    "heading_deg": 270.0,
+    "rpm": 300,
+    "vfas_v": 12.3,
+    "current_a": 2.5,
+    "fuel": 77,
+    "temp1": 31,
+    "temp2": 40,
+    "patched": {},
+    "raw": {
+     "0x02": 31,
+     "0x03": 300,
+     "0x04": 77,
+     "0x05": 40,
+     "0x14": 270,
+     "0x24": 0,
+     "0x25": -3,
+     "0x26": 1000,
+     "0x28": 25,
+     "0x39": 123
+    },
+    "age_ms": 500
+   },
+   "vfas_v": 12.3
+  },
+  {
+   "name": "vfas_bp_ap",
+   "updates": [
+    [
+     58,
+     7,
+     0.0
+    ],
+    [
+     59,
+     5,
+     0.0
+    ]
+   ],
+   "now": 1.0,
+   "snapshot": {
+    "acc_mg": null,
+    "heading_deg": null,
+    "rpm": null,
+    "vfas_v": 15.0,
+    "current_a": null,
+    "fuel": null,
+    "temp1": null,
+    "temp2": null,
+    "patched": {},
+    "raw": {
+     "0x3A": 7,
+     "0x3B": 5
+    },
+    "age_ms": 1000
+   },
+   "vfas_v": 15.0
+  },
+  {
+   "name": "vfas_only_bp",
+   "updates": [
+    [
+     58,
+     7,
+     0.0
+    ]
+   ],
+   "now": 1.0,
+   "snapshot": {
+    "acc_mg": null,
+    "heading_deg": null,
+    "rpm": null,
+    "vfas_v": null,
+    "current_a": null,
+    "fuel": null,
+    "temp1": null,
+    "temp2": null,
+    "patched": {},
+    "raw": {
+     "0x3A": 7
+    },
+    "age_ms": 1000
+   },
+   "vfas_v": null
+  },
+  {
+   "name": "patched_all",
+   "updates": [
+    [
+     70,
+     33,
+     1.0
+    ],
+    [
+     71,
+     8192,
+     1.0
+    ],
+    [
+     64,
+     123,
+     1.0
+    ],
+    [
+     65,
+     -45,
+     1.0
+    ],
+    [
+     66,
+     6,
+     1.0
+    ],
+    [
+     67,
+     150,
+     1.0
+    ],
+    [
+     68,
+     -900,
+     1.0
+    ],
+    [
+     69,
+     3599,
+     1.0
+    ]
+   ],
+   "now": 1.25,
+   "snapshot": {
+    "acc_mg": null,
+    "heading_deg": null,
+    "rpm": null,
+    "vfas_v": null,
+    "current_a": null,
+    "fuel": null,
+    "temp1": null,
+    "temp2": null,
+    "patched": {
+     "armed": true,
+     "angle": false,
+     "horizon": false,
+     "failsafe": false,
+     "arming_disabled": false,
+     "acro": true,
+     "flight_mode": "acro",
+     "arming_disable_flags": 8192,
+     "gyro_dps": [
+      12.3,
+      -4.5,
+      0.6000000000000001
+     ],
+     "attitude_deg": [
+      15.0,
+      -90.0,
+      359.90000000000003
+     ]
+    },
+    "raw": {
+     "0x40": 123,
+     "0x41": -45,
+     "0x42": 6,
+     "0x43": 150,
+     "0x44": -900,
+     "0x45": 3599,
+     "0x46": 33,
+     "0x47": 8192
+    },
+    "age_ms": 250
+   },
+   "vfas_v": null
+  },
+  {
+   "name": "patched_flight_modes",
+   "updates": [
+    [
+     70,
+     2,
+     0.0
+    ]
+   ],
+   "now": 0.0,
+   "snapshot": {
+    "acc_mg": null,
+    "heading_deg": null,
+    "rpm": null,
+    "vfas_v": null,
+    "current_a": null,
+    "fuel": null,
+    "temp1": null,
+    "temp2": null,
+    "patched": {
+     "armed": false,
+     "angle": true,
+     "horizon": false,
+     "failsafe": false,
+     "arming_disabled": false,
+     "acro": false,
+     "flight_mode": "angle"
+    },
+    "raw": {
+     "0x46": 2
+    },
+    "age_ms": 0
+   },
+   "vfas_v": null
+  },
+  {
+   "name": "patched_horizon",
+   "updates": [
+    [
+     70,
+     4,
+     0.0
+    ]
+   ],
+   "now": 0.0,
+   "snapshot": {
+    "acc_mg": null,
+    "heading_deg": null,
+    "rpm": null,
+    "vfas_v": null,
+    "current_a": null,
+    "fuel": null,
+    "temp1": null,
+    "temp2": null,
+    "patched": {
+     "armed": false,
+     "angle": false,
+     "horizon": true,
+     "failsafe": false,
+     "arming_disabled": false,
+     "acro": false,
+     "flight_mode": "horizon"
+    },
+    "raw": {
+     "0x46": 4
+    },
+    "age_ms": 0
+   },
+   "vfas_v": null
+  },
+  {
+   "name": "patched_partial_vector",
+   "updates": [
+    [
+     67,
+     10,
+     0.0
+    ]
+   ],
+   "now": 0.0,
+   "snapshot": {
+    "acc_mg": null,
+    "heading_deg": null,
+    "rpm": null,
+    "vfas_v": null,
+    "current_a": null,
+    "fuel": null,
+    "temp1": null,
+    "temp2": null,
+    "patched": {
+     "attitude_deg": [
+      1.0,
+      null,
+      null
+     ]
+    },
+    "raw": {
+     "0x43": 10
+    },
+    "age_ms": 0
+   },
+   "vfas_v": null
+  },
+  {
+   "name": "patched_later_overrides",
+   "updates": [
+    [
+     70,
+     1,
+     0.0
+    ],
+    [
+     70,
+     0,
+     0.5
+    ]
+   ],
+   "now": 1.0,
+   "snapshot": {
+    "acc_mg": null,
+    "heading_deg": null,
+    "rpm": null,
+    "vfas_v": null,
+    "current_a": null,
+    "fuel": null,
+    "temp1": null,
+    "temp2": null,
+    "patched": {
+     "armed": false,
+     "angle": false,
+     "horizon": false,
+     "failsafe": false,
+     "arming_disabled": false,
+     "acro": false,
+     "flight_mode": "acro"
+    },
+    "raw": {
+     "0x46": 0
+    },
+    "age_ms": 500
+   },
+   "vfas_v": null
+  }
+ ],
+ "armed_from_rpm": [
+  {
+   "rpm": null,
+   "baseline": null,
+   "armed": null
+  },
+  {
+   "rpm": null,
+   "baseline": 0,
+   "armed": null
+  },
+  {
+   "rpm": null,
+   "baseline": 100,
+   "armed": null
+  },
+  {
+   "rpm": null,
+   "baseline": 200,
+   "armed": null
+  },
+  {
+   "rpm": null,
+   "baseline": 260,
+   "armed": null
+  },
+  {
+   "rpm": null,
+   "baseline": 300,
+   "armed": null
+  },
+  {
+   "rpm": null,
+   "baseline": 400,
+   "armed": null
+  },
+  {
+   "rpm": null,
+   "baseline": 500,
+   "armed": null
+  },
+  {
+   "rpm": 0,
+   "baseline": null,
+   "armed": null
+  },
+  {
+   "rpm": 0,
+   "baseline": 0,
+   "armed": null
+  },
+  {
+   "rpm": 0,
+   "baseline": 100,
+   "armed": true
+  },
+  {
+   "rpm": 0,
+   "baseline": 200,
+   "armed": true
+  },
+  {
+   "rpm": 0,
+   "baseline": 260,
+   "armed": true
+  },
+  {
+   "rpm": 0,
+   "baseline": 300,
+   "armed": true
+  },
+  {
+   "rpm": 0,
+   "baseline": 400,
+   "armed": true
+  },
+  {
+   "rpm": 0,
+   "baseline": 500,
+   "armed": true
+  },
+  {
+   "rpm": 1,
+   "baseline": null,
+   "armed": false
+  },
+  {
+   "rpm": 1,
+   "baseline": 0,
+   "armed": false
+  },
+  {
+   "rpm": 1,
+   "baseline": 100,
+   "armed": false
+  },
+  {
+   "rpm": 1,
+   "baseline": 200,
+   "armed": false
+  },
+  {
+   "rpm": 1,
+   "baseline": 260,
+   "armed": false
+  },
+  {
+   "rpm": 1,
+   "baseline": 300,
+   "armed": false
+  },
+  {
+   "rpm": 1,
+   "baseline": 400,
+   "armed": false
+  },
+  {
+   "rpm": 1,
+   "baseline": 500,
+   "armed": false
+  },
+  {
+   "rpm": 50,
+   "baseline": null,
+   "armed": false
+  },
+  {
+   "rpm": 50,
+   "baseline": 0,
+   "armed": false
+  },
+  {
+   "rpm": 50,
+   "baseline": 100,
+   "armed": false
+  },
+  {
+   "rpm": 50,
+   "baseline": 200,
+   "armed": false
+  },
+  {
+   "rpm": 50,
+   "baseline": 260,
+   "armed": false
+  },
+  {
+   "rpm": 50,
+   "baseline": 300,
+   "armed": false
+  },
+  {
+   "rpm": 50,
+   "baseline": 400,
+   "armed": false
+  },
+  {
+   "rpm": 50,
+   "baseline": 500,
+   "armed": false
+  },
+  {
+   "rpm": 199,
+   "baseline": null,
+   "armed": false
+  },
+  {
+   "rpm": 199,
+   "baseline": 0,
+   "armed": false
+  },
+  {
+   "rpm": 199,
+   "baseline": 100,
+   "armed": false
+  },
+  {
+   "rpm": 199,
+   "baseline": 200,
+   "armed": false
+  },
+  {
+   "rpm": 199,
+   "baseline": 260,
+   "armed": false
+  },
+  {
+   "rpm": 199,
+   "baseline": 300,
+   "armed": false
+  },
+  {
+   "rpm": 199,
+   "baseline": 400,
+   "armed": false
+  },
+  {
+   "rpm": 199,
+   "baseline": 500,
+   "armed": false
+  },
+  {
+   "rpm": 200,
+   "baseline": null,
+   "armed": null
+  },
+  {
+   "rpm": 200,
+   "baseline": 0,
+   "armed": true
+  },
+  {
+   "rpm": 200,
+   "baseline": 100,
+   "armed": true
+  },
+  {
+   "rpm": 200,
+   "baseline": 200,
+   "armed": null
+  },
+  {
+   "rpm": 200,
+   "baseline": 260,
+   "armed": true
+  },
+  {
+   "rpm": 200,
+   "baseline": 300,
+   "armed": true
+  },
+  {
+   "rpm": 200,
+   "baseline": 400,
+   "armed": true
+  },
+  {
+   "rpm": 200,
+   "baseline": 500,
+   "armed": true
+  },
+  {
+   "rpm": 260,
+   "baseline": null,
+   "armed": null
+  },
+  {
+   "rpm": 260,
+   "baseline": 0,
+   "armed": true
+  },
+  {
+   "rpm": 260,
+   "baseline": 100,
+   "armed": true
+  },
+  {
+   "rpm": 260,
+   "baseline": 200,
+   "armed": true
+  },
+  {
+   "rpm": 260,
+   "baseline": 260,
+   "armed": null
+  },
+  {
+   "rpm": 260,
+   "baseline": 300,
+   "armed": true
+  },
+  {
+   "rpm": 260,
+   "baseline": 400,
+   "armed": true
+  },
+  {
+   "rpm": 260,
+   "baseline": 500,
+   "armed": true
+  },
+  {
+   "rpm": 300,
+   "baseline": null,
+   "armed": null
+  },
+  {
+   "rpm": 300,
+   "baseline": 0,
+   "armed": true
+  },
+  {
+   "rpm": 300,
+   "baseline": 100,
+   "armed": true
+  },
+  {
+   "rpm": 300,
+   "baseline": 200,
+   "armed": true
+  },
+  {
+   "rpm": 300,
+   "baseline": 260,
+   "armed": true
+  },
+  {
+   "rpm": 300,
+   "baseline": 300,
+   "armed": null
+  },
+  {
+   "rpm": 300,
+   "baseline": 400,
+   "armed": true
+  },
+  {
+   "rpm": 300,
+   "baseline": 500,
+   "armed": true
+  },
+  {
+   "rpm": 400,
+   "baseline": null,
+   "armed": null
+  },
+  {
+   "rpm": 400,
+   "baseline": 0,
+   "armed": true
+  },
+  {
+   "rpm": 400,
+   "baseline": 100,
+   "armed": true
+  },
+  {
+   "rpm": 400,
+   "baseline": 200,
+   "armed": true
+  },
+  {
+   "rpm": 400,
+   "baseline": 260,
+   "armed": true
+  },
+  {
+   "rpm": 400,
+   "baseline": 300,
+   "armed": true
+  },
+  {
+   "rpm": 400,
+   "baseline": 400,
+   "armed": null
+  },
+  {
+   "rpm": 400,
+   "baseline": 500,
+   "armed": true
+  },
+  {
+   "rpm": 401,
+   "baseline": null,
+   "armed": false
+  },
+  {
+   "rpm": 401,
+   "baseline": 0,
+   "armed": false
+  },
+  {
+   "rpm": 401,
+   "baseline": 100,
+   "armed": false
+  },
+  {
+   "rpm": 401,
+   "baseline": 200,
+   "armed": false
+  },
+  {
+   "rpm": 401,
+   "baseline": 260,
+   "armed": false
+  },
+  {
+   "rpm": 401,
+   "baseline": 300,
+   "armed": false
+  },
+  {
+   "rpm": 401,
+   "baseline": 400,
+   "armed": false
+  },
+  {
+   "rpm": 401,
+   "baseline": 500,
+   "armed": false
+  },
+  {
+   "rpm": 500,
+   "baseline": null,
+   "armed": false
+  },
+  {
+   "rpm": 500,
+   "baseline": 0,
+   "armed": false
+  },
+  {
+   "rpm": 500,
+   "baseline": 100,
+   "armed": false
+  },
+  {
+   "rpm": 500,
+   "baseline": 200,
+   "armed": false
+  },
+  {
+   "rpm": 500,
+   "baseline": 260,
+   "armed": false
+  },
+  {
+   "rpm": 500,
+   "baseline": 300,
+   "armed": false
+  },
+  {
+   "rpm": 500,
+   "baseline": 400,
+   "armed": false
+  },
+  {
+   "rpm": 500,
+   "baseline": 500,
+   "armed": false
+  },
+  {
+   "rpm": -1,
+   "baseline": null,
+   "armed": false
+  },
+  {
+   "rpm": -1,
+   "baseline": 0,
+   "armed": false
+  },
+  {
+   "rpm": -1,
+   "baseline": 100,
+   "armed": false
+  },
+  {
+   "rpm": -1,
+   "baseline": 200,
+   "armed": false
+  },
+  {
+   "rpm": -1,
+   "baseline": 260,
+   "armed": false
+  },
+  {
+   "rpm": -1,
+   "baseline": 300,
+   "armed": false
+  },
+  {
+   "rpm": -1,
+   "baseline": 400,
+   "armed": false
+  },
+  {
+   "rpm": -1,
+   "baseline": 500,
+   "armed": false
+  }
+ ]
+}

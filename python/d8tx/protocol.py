@@ -1,4 +1,4 @@
-"""Protocol v1 helpers: line formatting and parsing (see docs/PROTOCOL.md)."""
+"""Protocol v1 helpers: line formatting and parsing (see protocol/PROTOCOL.md)."""
 LO, MID, HI = 1000, 1500, 2000
 ARM_CH = 6  # index of ch7
 ARM_LIMIT = 1300

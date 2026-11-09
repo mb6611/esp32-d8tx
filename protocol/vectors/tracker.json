@@ -1,0 +1,1823 @@
+[
+ {
+  "name": "idle",
+  "ops": [
+   {
+    "op": "snapshot"
+   }
+  ],
+  "snapshots": [
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": false,
+    "link": false,
+    "age_ms": null,
+    "catch_rate": null,
+    "triggers": 0,
+    "replies": 0,
+    "rssi": null,
+    "rssi_dbm": null,
+    "a1_raw": null,
+    "a2_raw": null,
+    "vbat_v": null,
+    "battery": null,
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": null,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {},
+     "age_ms": null
+    },
+    "armed": null,
+    "armed_source": null
+   }
+  ]
+ },
+ {
+  "name": "enabled_idle",
+  "ops": [
+   {
+    "op": "reset",
+    "enabled": true
+   },
+   {
+    "op": "snapshot"
+   }
+  ],
+  "snapshots": [
+   {
+    "fast": null,
+    "enabled": true,
+    "powered": false,
+    "link": false,
+    "age_ms": null,
+    "catch_rate": null,
+    "triggers": 0,
+    "replies": 0,
+    "rssi": null,
+    "rssi_dbm": null,
+    "a1_raw": null,
+    "a2_raw": null,
+    "vbat_v": null,
+    "battery": null,
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": null,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {},
+     "age_ms": null
+    },
+    "armed": null,
+    "armed_source": null
+   }
+  ]
+ },
+ {
+  "name": "a1_battery",
+  "ops": [
+   {
+    "op": "reply",
+    "raw": "1142b2000147000000000000000000000000",
+    "cfo_hz": -12345.0
+   },
+   {
+    "op": "snapshot"
+   },
+   {
+    "op": "reply",
+    "raw": "1142b2fc0147000100000000000000000000"
+   },
+   {
+    "op": "snapshot"
+   },
+   {
+    "op": "reply",
+    "raw": "1142b24b0047000200000000000000000000"
+   },
+   {
+    "op": "snapshot"
+   }
+  ],
+  "snapshots": [
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": true,
+    "link": true,
+    "age_ms": 0,
+    "catch_rate": 1.0,
+    "triggers": 1,
+    "replies": 1,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 0,
+    "a2_raw": 1,
+    "vbat_v": 0.0,
+    "battery": "absent",
+    "cfo_khz": -12.35,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": null,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {},
+     "age_ms": null
+    },
+    "armed": null,
+    "armed_source": null
+   },
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": true,
+    "link": true,
+    "age_ms": 0,
+    "catch_rate": 1.0,
+    "triggers": 2,
+    "replies": 2,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 252,
+    "a2_raw": 1,
+    "vbat_v": 12.6,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": null,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {},
+     "age_ms": null
+    },
+    "armed": null,
+    "armed_source": null
+   },
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": true,
+    "link": true,
+    "age_ms": 0,
+    "catch_rate": 1.0,
+    "triggers": 3,
+    "replies": 3,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 75,
+    "a2_raw": 0,
+    "vbat_v": 3.75,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": null,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {},
+     "age_ms": null
+    },
+    "armed": null,
+    "armed_source": null
+   }
+  ]
+ },
+ {
+  "name": "hub_armed_inference",
+  "ops": [
+   {
+    "op": "arm",
+    "high": false
+   },
+   {
+    "op": "reply",
+    "raw": "1142b24b00470a005e032c015e021f005e24"
+   },
+   {
+    "op": "snapshot"
+   },
+   {
+    "op": "advance",
+    "s": 3.0
+   },
+   {
+    "op": "reply",
+    "raw": "1142b24b004709015e021e005e032c015e00"
+   },
+   {
+    "op": "snapshot"
+   },
+   {
+    "op": "advance",
+    "s": 0.5
+   },
+   {
+    "op": "reply",
+    "raw": "1142b24b004709025e0220005e032c015e00"
+   },
+   {
+    "op": "snapshot"
+   },
+   {
+    "op": "advance",
+    "s": 0.5
+   },
+   {
+    "op": "reply",
+    "raw": "1142b24b004705035e0304015e0000000000"
+   },
+   {
+    "op": "snapshot"
+   },
+   {
+    "op": "arm",
+    "high": true
+   },
+   {
+    "op": "advance",
+    "s": 0.5
+   },
+   {
+    "op": "reply",
+    "raw": "1142b24b004705045e03f4015e0000000000"
+   },
+   {
+    "op": "snapshot"
+   },
+   {
+    "op": "advance",
+    "s": 6.0
+   },
+   {
+    "op": "snapshot"
+   }
+  ],
+  "snapshots": [
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": true,
+    "link": true,
+    "age_ms": 0,
+    "catch_rate": 1.0,
+    "triggers": 1,
+    "replies": 1,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 75,
+    "a2_raw": 0,
+    "vbat_v": 3.75,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": 300,
+     "vfas_v": null,
+     "current_a": null,
+     "fuel": null,
+     "temp1": 31,
+     "temp2": null,
+     "patched": {},
+     "raw": {
+      "0x02": 31,
+      "0x03": 300
+     },
+     "age_ms": 0
+    },
+    "armed": null,
+    "armed_source": null
+   },
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": true,
+    "link": true,
+    "age_ms": 0,
+    "catch_rate": 1.0,
+    "triggers": 2,
+    "replies": 2,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 75,
+    "a2_raw": 0,
+    "vbat_v": 3.75,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": 300,
+     "vfas_v": null,
+     "current_a": null,
+     "fuel": null,
+     "temp1": 30,
+     "temp2": null,
+     "patched": {},
+     "raw": {
+      "0x02": 30,
+      "0x03": 300
+     },
+     "age_ms": 0
+    },
+    "armed": null,
+    "armed_source": null
+   },
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": true,
+    "link": true,
+    "age_ms": 0,
+    "catch_rate": 1.0,
+    "triggers": 3,
+    "replies": 3,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 75,
+    "a2_raw": 0,
+    "vbat_v": 3.75,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": 300,
+     "vfas_v": null,
+     "current_a": null,
+     "fuel": null,
+     "temp1": 32,
+     "temp2": null,
+     "patched": {},
+     "raw": {
+      "0x02": 32,
+      "0x03": 300
+     },
+     "age_ms": 0
+    },
+    "armed": null,
+    "armed_source": null
+   },
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": true,
+    "link": true,
+    "age_ms": 0,
+    "catch_rate": 1.0,
+    "triggers": 4,
+    "replies": 4,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 75,
+    "a2_raw": 0,
+    "vbat_v": 3.75,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": 260,
+     "vfas_v": null,
+     "current_a": null,
+     "fuel": null,
+     "temp1": 32,
+     "temp2": null,
+     "patched": {},
+     "raw": {
+      "0x02": 32,
+      "0x03": 260
+     },
+     "age_ms": 0
+    },
+    "armed": true,
+    "armed_source": "rpm"
+   },
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": true,
+    "link": true,
+    "age_ms": 0,
+    "catch_rate": 1.0,
+    "triggers": 5,
+    "replies": 5,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 75,
+    "a2_raw": 0,
+    "vbat_v": 3.75,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": 500,
+     "vfas_v": null,
+     "current_a": null,
+     "fuel": null,
+     "temp1": 32,
+     "temp2": null,
+     "patched": {},
+     "raw": {
+      "0x02": 32,
+      "0x03": 500
+     },
+     "age_ms": 0
+    },
+    "armed": false,
+    "armed_source": "rpm"
+   },
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": false,
+    "link": false,
+    "age_ms": 6000,
+    "catch_rate": 1.0,
+    "triggers": 5,
+    "replies": 5,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 75,
+    "a2_raw": 0,
+    "vbat_v": 3.75,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": 500,
+     "vfas_v": null,
+     "current_a": null,
+     "fuel": null,
+     "temp1": 32,
+     "temp2": null,
+     "patched": {},
+     "raw": {
+      "0x02": 32,
+      "0x03": 500
+     },
+     "age_ms": 6000
+    },
+    "armed": null,
+    "armed_source": null
+   }
+  ]
+ },
+ {
+  "name": "rpm_baseline_learning",
+  "ops": [
+   {
+    "op": "arm",
+    "high": false
+   },
+   {
+    "op": "advance",
+    "s": 2.5
+   },
+   {
+    "op": "reply",
+    "raw": "1142b24b004705005e03f4015e0000000000"
+   },
+   {
+    "op": "reply",
+    "raw": "1142b24b004705015e03f4015e0000000000"
+   },
+   {
+    "op": "reply",
+    "raw": "1142b24b004705025e03f4015e0000000000"
+   },
+   {
+    "op": "snapshot"
+   },
+   {
+    "op": "reply",
+    "raw": "1142b24b004705035e0300005e0000000000"
+   },
+   {
+    "op": "snapshot"
+   }
+  ],
+  "snapshots": [
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": true,
+    "link": true,
+    "age_ms": 0,
+    "catch_rate": 1.0,
+    "triggers": 3,
+    "replies": 3,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 75,
+    "a2_raw": 0,
+    "vbat_v": 3.75,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": 500,
+     "vfas_v": null,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {
+      "0x03": 500
+     },
+     "age_ms": 0
+    },
+    "armed": false,
+    "armed_source": "rpm"
+   },
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": true,
+    "link": true,
+    "age_ms": 0,
+    "catch_rate": 1.0,
+    "triggers": 4,
+    "replies": 4,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 75,
+    "a2_raw": 0,
+    "vbat_v": 3.75,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": 0,
+     "vfas_v": null,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {
+      "0x03": 0
+     },
+     "age_ms": 0
+    },
+    "armed": true,
+    "armed_source": "rpm"
+   }
+  ]
+ },
+ {
+  "name": "patched_armed_wins",
+  "ops": [
+   {
+    "op": "reply",
+    "raw": "1142b24b004709005e4601005e03f4015e00"
+   },
+   {
+    "op": "snapshot"
+   },
+   {
+    "op": "advance",
+    "s": 5.5
+   },
+   {
+    "op": "snapshot"
+   },
+   {
+    "op": "reply",
+    "raw": "1142b24b004705015e032c015e0000000000"
+   },
+   {
+    "op": "snapshot"
+   }
+  ],
+  "snapshots": [
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": true,
+    "link": true,
+    "age_ms": 0,
+    "catch_rate": 1.0,
+    "triggers": 1,
+    "replies": 1,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 75,
+    "a2_raw": 0,
+    "vbat_v": 3.75,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": 500,
+     "vfas_v": null,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {
+      "armed": true,
+      "angle": false,
+      "horizon": false,
+      "failsafe": false,
+      "arming_disabled": false,
+      "acro": false,
+      "flight_mode": "acro"
+     },
+     "raw": {
+      "0x03": 500,
+      "0x46": 1
+     },
+     "age_ms": 0
+    },
+    "armed": true,
+    "armed_source": "patched"
+   },
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": false,
+    "link": false,
+    "age_ms": 5500,
+    "catch_rate": 1.0,
+    "triggers": 1,
+    "replies": 1,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 75,
+    "a2_raw": 0,
+    "vbat_v": 3.75,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": 500,
+     "vfas_v": null,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {
+      "armed": true,
+      "angle": false,
+      "horizon": false,
+      "failsafe": false,
+      "arming_disabled": false,
+      "acro": false,
+      "flight_mode": "acro"
+     },
+     "raw": {
+      "0x03": 500,
+      "0x46": 1
+     },
+     "age_ms": 5500
+    },
+    "armed": null,
+    "armed_source": null
+   },
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": true,
+    "link": true,
+    "age_ms": 0,
+    "catch_rate": 1.0,
+    "triggers": 2,
+    "replies": 2,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 75,
+    "a2_raw": 0,
+    "vbat_v": 3.75,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": 300,
+     "vfas_v": null,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {
+      "armed": true,
+      "angle": false,
+      "horizon": false,
+      "failsafe": false,
+      "arming_disabled": false,
+      "acro": false,
+      "flight_mode": "acro"
+     },
+     "raw": {
+      "0x03": 300,
+      "0x46": 1
+     },
+     "age_ms": 0
+    },
+    "armed": null,
+    "armed_source": null
+   }
+  ]
+ },
+ {
+  "name": "resend_filter",
+  "ops": [
+   {
+    "op": "reply",
+    "raw": "1142b24b004705075e397b005e0000000000"
+   },
+   {
+    "op": "snapshot"
+   },
+   {
+    "op": "reply",
+    "raw": "1142b24b004705075e3963005e0000000000"
+   },
+   {
+    "op": "snapshot"
+   },
+   {
+    "op": "reply",
+    "raw": "1142b24b004705075e3963005e0000000000"
+   },
+   {
+    "op": "snapshot"
+   },
+   {
+    "op": "reply",
+    "raw": "1142b24b004705085e3963005e0000000000"
+   },
+   {
+    "op": "snapshot"
+   }
+  ],
+  "snapshots": [
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": true,
+    "link": true,
+    "age_ms": 0,
+    "catch_rate": 1.0,
+    "triggers": 1,
+    "replies": 1,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 75,
+    "a2_raw": 0,
+    "vbat_v": 12.3,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": 12.3,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {
+      "0x39": 123
+     },
+     "age_ms": 0
+    },
+    "armed": null,
+    "armed_source": null
+   },
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": true,
+    "link": true,
+    "age_ms": 0,
+    "catch_rate": 1.0,
+    "triggers": 2,
+    "replies": 2,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 75,
+    "a2_raw": 0,
+    "vbat_v": 9.9,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": 9.9,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {
+      "0x39": 99
+     },
+     "age_ms": 0
+    },
+    "armed": null,
+    "armed_source": null
+   },
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": true,
+    "link": true,
+    "age_ms": 0,
+    "catch_rate": 1.0,
+    "triggers": 3,
+    "replies": 3,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 75,
+    "a2_raw": 0,
+    "vbat_v": 9.9,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": 9.9,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {
+      "0x39": 99
+     },
+     "age_ms": 0
+    },
+    "armed": null,
+    "armed_source": null
+   },
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": true,
+    "link": true,
+    "age_ms": 0,
+    "catch_rate": 1.0,
+    "triggers": 4,
+    "replies": 4,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 75,
+    "a2_raw": 0,
+    "vbat_v": 9.9,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": 9.9,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {
+      "0x39": 99
+     },
+     "age_ms": 0
+    },
+    "armed": null,
+    "armed_source": null
+   }
+  ]
+ },
+ {
+  "name": "vfas_overrides_a1",
+  "ops": [
+   {
+    "op": "reply",
+    "raw": "1142b264004705005e39a2005e0000000000"
+   },
+   {
+    "op": "snapshot"
+   },
+   {
+    "op": "advance",
+    "s": 3.5
+   },
+   {
+    "op": "snapshot"
+   }
+  ],
+  "snapshots": [
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": true,
+    "link": true,
+    "age_ms": 0,
+    "catch_rate": 1.0,
+    "triggers": 1,
+    "replies": 1,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 100,
+    "a2_raw": 0,
+    "vbat_v": 16.2,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": 16.2,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {
+      "0x39": 162
+     },
+     "age_ms": 0
+    },
+    "armed": null,
+    "armed_source": null
+   },
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": false,
+    "link": false,
+    "age_ms": 3500,
+    "catch_rate": 1.0,
+    "triggers": 1,
+    "replies": 1,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 100,
+    "a2_raw": 0,
+    "vbat_v": 5.0,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": 16.2,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {
+      "0x39": 162
+     },
+     "age_ms": 3500
+    },
+    "armed": null,
+    "armed_source": null
+   }
+  ]
+ },
+ {
+  "name": "catch_rate_window",
+  "ops": [
+   {
+    "op": "miss"
+   },
+   {
+    "op": "advance",
+    "s": 1
+   },
+   {
+    "op": "reply",
+    "raw": "1142b24b0047000000000000000000000000"
+   },
+   {
+    "op": "advance",
+    "s": 1
+   },
+   {
+    "op": "miss"
+   },
+   {
+    "op": "snapshot"
+   },
+   {
+    "op": "advance",
+    "s": 9.5
+   },
+   {
+    "op": "snapshot"
+   },
+   {
+    "op": "advance",
+    "s": 2
+   },
+   {
+    "op": "snapshot"
+   }
+  ],
+  "snapshots": [
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": true,
+    "link": true,
+    "age_ms": 1000,
+    "catch_rate": 0.333,
+    "triggers": 3,
+    "replies": 1,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 75,
+    "a2_raw": 0,
+    "vbat_v": 3.75,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": null,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {},
+     "age_ms": null
+    },
+    "armed": null,
+    "armed_source": null
+   },
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": false,
+    "link": false,
+    "age_ms": 10500,
+    "catch_rate": 0.0,
+    "triggers": 3,
+    "replies": 1,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 75,
+    "a2_raw": 0,
+    "vbat_v": 3.75,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": null,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {},
+     "age_ms": null
+    },
+    "armed": null,
+    "armed_source": null
+   },
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": false,
+    "link": false,
+    "age_ms": 12500,
+    "catch_rate": null,
+    "triggers": 3,
+    "replies": 1,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 75,
+    "a2_raw": 0,
+    "vbat_v": 3.75,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": null,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {},
+     "age_ms": null
+    },
+    "armed": null,
+    "armed_source": null
+   }
+  ]
+ },
+ {
+  "name": "link_and_powered_ages",
+  "ops": [
+   {
+    "op": "reply",
+    "raw": "1142b24b0047000000000000000000000000"
+   },
+   {
+    "op": "snapshot"
+   },
+   {
+    "op": "advance",
+    "s": 0.99
+   },
+   {
+    "op": "snapshot"
+   },
+   {
+    "op": "advance",
+    "s": 0.02
+   },
+   {
+    "op": "snapshot"
+   },
+   {
+    "op": "advance",
+    "s": 2.0
+   },
+   {
+    "op": "snapshot"
+   },
+   {
+    "op": "advance",
+    "s": 0.01
+   },
+   {
+    "op": "snapshot"
+   }
+  ],
+  "snapshots": [
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": true,
+    "link": true,
+    "age_ms": 0,
+    "catch_rate": 1.0,
+    "triggers": 1,
+    "replies": 1,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 75,
+    "a2_raw": 0,
+    "vbat_v": 3.75,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": null,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {},
+     "age_ms": null
+    },
+    "armed": null,
+    "armed_source": null
+   },
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": true,
+    "link": true,
+    "age_ms": 989,
+    "catch_rate": 1.0,
+    "triggers": 1,
+    "replies": 1,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 75,
+    "a2_raw": 0,
+    "vbat_v": 3.75,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": null,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {},
+     "age_ms": null
+    },
+    "armed": null,
+    "armed_source": null
+   },
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": true,
+    "link": false,
+    "age_ms": 1009,
+    "catch_rate": 1.0,
+    "triggers": 1,
+    "replies": 1,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 75,
+    "a2_raw": 0,
+    "vbat_v": 3.75,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": null,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {},
+     "age_ms": null
+    },
+    "armed": null,
+    "armed_source": null
+   },
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": false,
+    "link": false,
+    "age_ms": 3009,
+    "catch_rate": 1.0,
+    "triggers": 1,
+    "replies": 1,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 75,
+    "a2_raw": 0,
+    "vbat_v": 3.75,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": null,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {},
+     "age_ms": null
+    },
+    "armed": null,
+    "armed_source": null
+   },
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": false,
+    "link": false,
+    "age_ms": 3019,
+    "catch_rate": 1.0,
+    "triggers": 1,
+    "replies": 1,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 75,
+    "a2_raw": 0,
+    "vbat_v": 3.75,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": null,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {},
+     "age_ms": null
+    },
+    "armed": null,
+    "armed_source": null
+   }
+  ]
+ },
+ {
+  "name": "fast_mixed_with_hub",
+  "ops": [
+   {
+    "op": "snapshot"
+   },
+   {
+    "op": "advance",
+    "s": 0.25
+   },
+   {
+    "op": "reply",
+    "raw": "1100003c07468a0000000064400020000c00"
+   },
+   {
+    "op": "advance",
+    "s": 0.25
+   },
+   {
+    "op": "reply",
+    "raw": "1100003c07468a010a000064400020000c40"
+   },
+   {
+    "op": "advance",
+    "s": 0.25
+   },
+   {
+    "op": "reply",
+    "raw": "1100003c07468a0214000064400020000c80"
+   },
+   {
+    "op": "reply",
+    "raw": "1142b24b004704095e397b00000000000000"
+   },
+   {
+    "op": "advance",
+    "s": 0.25
+   },
+   {
+    "op": "reply",
+    "raw": "1100003c07468a031e000064400020000cc0"
+   },
+   {
+    "op": "advance",
+    "s": 0.25
+   },
+   {
+    "op": "reply",
+    "raw": "1100003c07468a0428000064400020000c00"
+   },
+   {
+    "op": "advance",
+    "s": 0.25
+   },
+   {
+    "op": "reply",
+    "raw": "1100003c07468a0532000064400020000c40"
+   },
+   {
+    "op": "snapshot"
+   },
+   {
+    "op": "advance",
+    "s": 2
+   },
+   {
+    "op": "snapshot"
+   },
+   {
+    "op": "advance",
+    "s": 4
+   },
+   {
+    "op": "snapshot"
+   }
+  ],
+  "snapshots": [
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": false,
+    "link": false,
+    "age_ms": null,
+    "catch_rate": null,
+    "triggers": 0,
+    "replies": 0,
+    "rssi": null,
+    "rssi_dbm": null,
+    "a1_raw": null,
+    "a2_raw": null,
+    "vbat_v": null,
+    "battery": null,
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": null,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {},
+     "age_ms": null
+    },
+    "armed": null,
+    "armed_source": null
+   },
+   {
+    "fast": {
+     "attitude_deg": [
+      5.0,
+      0.0,
+      10.0
+     ],
+     "gyro_dps": [
+      1.0,
+      2.0,
+      3.0
+     ],
+     "seq": 1,
+     "age_ms": 0,
+     "rate_hz": 4.0
+    },
+    "enabled": false,
+    "powered": true,
+    "link": true,
+    "age_ms": 0,
+    "catch_rate": 1.0,
+    "triggers": 7,
+    "replies": 7,
+    "rssi": 70,
+    "rssi_dbm": -67.6,
+    "a1_raw": 60,
+    "a2_raw": 7,
+    "vbat_v": 12.3,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": 12.3,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {
+      "0x39": 123
+     },
+     "age_ms": 750
+    },
+    "armed": null,
+    "armed_source": null
+   },
+   {
+    "fast": {
+     "attitude_deg": [
+      5.0,
+      0.0,
+      10.0
+     ],
+     "gyro_dps": [
+      1.0,
+      2.0,
+      3.0
+     ],
+     "seq": 1,
+     "age_ms": 2000,
+     "rate_hz": 1.54
+    },
+    "enabled": false,
+    "powered": true,
+    "link": false,
+    "age_ms": 2000,
+    "catch_rate": 1.0,
+    "triggers": 7,
+    "replies": 7,
+    "rssi": 70,
+    "rssi_dbm": -67.6,
+    "a1_raw": 60,
+    "a2_raw": 7,
+    "vbat_v": 12.3,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": 12.3,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {
+      "0x39": 123
+     },
+     "age_ms": 2750
+    },
+    "armed": null,
+    "armed_source": null
+   },
+   {
+    "fast": {
+     "attitude_deg": [
+      5.0,
+      0.0,
+      10.0
+     ],
+     "gyro_dps": [
+      1.0,
+      2.0,
+      3.0
+     ],
+     "seq": 1,
+     "age_ms": 6000,
+     "rate_hz": 0.0
+    },
+    "enabled": false,
+    "powered": false,
+    "link": false,
+    "age_ms": 6000,
+    "catch_rate": 1.0,
+    "triggers": 7,
+    "replies": 7,
+    "rssi": 70,
+    "rssi_dbm": -67.6,
+    "a1_raw": 60,
+    "a2_raw": 7,
+    "vbat_v": 3.0,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": 12.3,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {
+      "0x39": 123
+     },
+     "age_ms": 6750
+    },
+    "armed": null,
+    "armed_source": null
+   }
+  ]
+ },
+ {
+  "name": "fast_does_not_disturb_resend",
+  "ops": [
+   {
+    "op": "reply",
+    "raw": "1142b24b004704075e397b00000000000000"
+   },
+   {
+    "op": "snapshot"
+   },
+   {
+    "op": "reply",
+    "raw": "1100003c07468a0800000000000000000000"
+   },
+   {
+    "op": "snapshot"
+   },
+   {
+    "op": "reply",
+    "raw": "1142b24b004704075e397b00000000000000"
+   },
+   {
+    "op": "snapshot"
+   }
+  ],
+  "snapshots": [
+   {
+    "fast": null,
+    "enabled": false,
+    "powered": true,
+    "link": true,
+    "age_ms": 0,
+    "catch_rate": 1.0,
+    "triggers": 1,
+    "replies": 1,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 75,
+    "a2_raw": 0,
+    "vbat_v": 12.3,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": 12.3,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {
+      "0x39": 123
+     },
+     "age_ms": 0
+    },
+    "armed": null,
+    "armed_source": null
+   },
+   {
+    "fast": {
+     "attitude_deg": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "gyro_dps": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "seq": 0,
+     "age_ms": 0,
+     "rate_hz": 0.0
+    },
+    "enabled": false,
+    "powered": true,
+    "link": true,
+    "age_ms": 0,
+    "catch_rate": 1.0,
+    "triggers": 2,
+    "replies": 2,
+    "rssi": 70,
+    "rssi_dbm": -67.6,
+    "a1_raw": 60,
+    "a2_raw": 7,
+    "vbat_v": 12.3,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": 12.3,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {
+      "0x39": 123
+     },
+     "age_ms": 0
+    },
+    "armed": null,
+    "armed_source": null
+   },
+   {
+    "fast": {
+     "attitude_deg": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "gyro_dps": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "seq": 0,
+     "age_ms": 0,
+     "rate_hz": 0.0
+    },
+    "enabled": false,
+    "powered": true,
+    "link": true,
+    "age_ms": 0,
+    "catch_rate": 1.0,
+    "triggers": 3,
+    "replies": 3,
+    "rssi": 71,
+    "rssi_dbm": -66.7,
+    "a1_raw": 75,
+    "a2_raw": 0,
+    "vbat_v": 12.3,
+    "battery": "present",
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": 12.3,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {
+      "0x39": 123
+     },
+     "age_ms": 0
+    },
+    "armed": null,
+    "armed_source": null
+   }
+  ]
+ },
+ {
+  "name": "reset_clears",
+  "ops": [
+   {
+    "op": "reply",
+    "raw": "1142b24b004705005e397b005e0000000000"
+   },
+   {
+    "op": "reset",
+    "enabled": true
+   },
+   {
+    "op": "snapshot"
+   }
+  ],
+  "snapshots": [
+   {
+    "fast": null,
+    "enabled": true,
+    "powered": false,
+    "link": false,
+    "age_ms": null,
+    "catch_rate": null,
+    "triggers": 0,
+    "replies": 0,
+    "rssi": null,
+    "rssi_dbm": null,
+    "a1_raw": null,
+    "a2_raw": null,
+    "vbat_v": null,
+    "battery": null,
+    "cfo_khz": null,
+    "hub": {
+     "acc_mg": null,
+     "heading_deg": null,
+     "rpm": null,
+     "vfas_v": null,
+     "current_a": null,
+     "fuel": null,
+     "temp1": null,
+     "temp2": null,
+     "patched": {},
+     "raw": {},
+     "age_ms": null
+    },
+    "armed": null,
+    "armed_source": null
+   }
+  ]
+ }
+]

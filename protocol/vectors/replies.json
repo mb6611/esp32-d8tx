@@ -1,0 +1,256 @@
+[
+ {
+  "line": "OK",
+  "parsed": {
+   "kind": "ok",
+   "data": {}
+  }
+ },
+ {
+  "line": "OK\r",
+  "parsed": {
+   "kind": "ok",
+   "data": {}
+  }
+ },
+ {
+  "line": "OK proto=1 fw=abc\r",
+  "parsed": {
+   "kind": "ok",
+   "data": {
+    "proto": 1,
+    "fw": "abc"
+   }
+  }
+ },
+ {
+  "line": "  OK  ",
+  "parsed": {
+   "kind": "ok",
+   "data": {}
+  }
+ },
+ {
+  "line": "OK proto=1 fw=d8tx-v1 slot_us=8994 channels=47 pwr_max=127",
+  "parsed": {
+   "kind": "ok",
+   "data": {
+    "proto": 1,
+    "fw": "d8tx-v1",
+    "slot_us": 8994,
+    "channels": 47,
+    "pwr_max": 127
+   }
+  }
+ },
+ {
+  "line": "OK keyed=0 link=0 fofs=-75000 armok=0",
+  "parsed": {
+   "kind": "ok",
+   "data": {
+    "keyed": 0,
+    "link": 0,
+    "fofs": -75000,
+    "armok": 0
+   }
+  }
+ },
+ {
+  "line": "OK a=-5 b=x c= flag",
+  "parsed": {
+   "kind": "ok",
+   "data": {
+    "a": -5,
+    "b": "x",
+    "c": "",
+    "flag": true
+   }
+  }
+ },
+ {
+  "line": "OK tid=7",
+  "parsed": {
+   "kind": "ok",
+   "data": {
+    "tid": 7
+   }
+  }
+ },
+ {
+  "line": "OK n=0x10 m=-",
+  "parsed": {
+   "kind": "ok",
+   "data": {
+    "n": "0x10",
+    "m": "-"
+   }
+  }
+ },
+ {
+  "line": "OKAY",
+  "parsed": {
+   "kind": "other",
+   "text": "OKAY"
+  }
+ },
+ {
+  "line": "ERR",
+  "parsed": {
+   "kind": "err",
+   "code": "unknown",
+   "text": ""
+  }
+ },
+ {
+  "line": "ERR busy",
+  "parsed": {
+   "kind": "err",
+   "code": "busy",
+   "text": ""
+  }
+ },
+ {
+  "line": "ERR busy link active",
+  "parsed": {
+   "kind": "err",
+   "code": "busy",
+   "text": "link active"
+  }
+ },
+ {
+  "line": "ERR   range   fofs  out of range",
+  "parsed": {
+   "kind": "err",
+   "code": "range",
+   "text": "fofs  out of range"
+  }
+ },
+ {
+  "line": "ERR unknown cmd",
+  "parsed": {
+   "kind": "err",
+   "code": "unknown",
+   "text": "cmd"
+  }
+ },
+ {
+  "line": "EV link slots=3 late_max_us=9",
+  "parsed": {
+   "kind": "ev",
+   "name": "link",
+   "data": {
+    "slots": 3,
+    "late_max_us": 9
+   }
+  }
+ },
+ {
+  "line": "EV link_end why=stop slots=5 late_max_us=7 retune_max_us=3",
+  "parsed": {
+   "kind": "ev",
+   "name": "link_end",
+   "data": {
+    "why": "stop",
+    "slots": 5,
+    "late_max_us": 7,
+    "retune_max_us": 3
+   }
+  }
+ },
+ {
+  "line": "EV tlm k=48 ch=112 tid=0 n=4500 bytes=9000 crc=2a84fe9b",
+  "parsed": {
+   "kind": "ev",
+   "name": "tlm",
+   "data": {
+    "k": 48,
+    "ch": 112,
+    "tid": 0,
+    "n": 4500,
+    "bytes": 9000,
+    "crc": "2a84fe9b"
+   }
+  }
+ },
+ {
+  "line": "EV tlm_drop",
+  "parsed": {
+   "kind": "ev",
+   "name": "tlm_drop",
+   "data": {}
+  }
+ },
+ {
+  "line": "EV",
+  "parsed": {
+   "kind": "other",
+   "text": "EV"
+  }
+ },
+ {
+  "line": "EV ",
+  "parsed": {
+   "kind": "other",
+   "text": "EV"
+  }
+ },
+ {
+  "line": "EVlink x=1",
+  "parsed": {
+   "kind": "other",
+   "text": "EVlink x=1"
+  }
+ },
+ {
+  "line": "hello",
+  "parsed": {
+   "kind": "other",
+   "text": "hello"
+  }
+ },
+ {
+  "line": "",
+  "parsed": {
+   "kind": "other",
+   "text": ""
+  }
+ },
+ {
+  "line": "   ",
+  "parsed": {
+   "kind": "other",
+   "text": ""
+  }
+ },
+ {
+  "line": "\r",
+  "parsed": {
+   "kind": "other",
+   "text": ""
+  }
+ },
+ {
+  "line": "S 1500 1500",
+  "parsed": {
+   "kind": "other",
+   "text": "S 1500 1500"
+  }
+ },
+ {
+  "line": "oK",
+  "parsed": {
+   "kind": "other",
+   "text": "oK"
+  }
+ },
+ {
+  "line": "EV a x=1 x=2",
+  "parsed": {
+   "kind": "ev",
+   "name": "a",
+   "data": {
+    "x": 2
+   }
+  }
+ }
+]

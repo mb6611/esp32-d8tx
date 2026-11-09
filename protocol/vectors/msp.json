@@ -1,0 +1,335 @@
+{
+ "constants": {
+  "STATUS": 101,
+  "MOTOR": 104,
+  "RC": 105,
+  "ATTITUDE": 108,
+  "ANALOG": 110,
+  "ARMING_DISABLE": [
+   "NO_GYRO",
+   "FAILSAFE",
+   "RX_FAILSAFE",
+   "BAD_RX_RECOVERY",
+   "BOXFAILSAFE",
+   "RUNAWAY_TAKEOFF",
+   "CRASH_DETECTED",
+   "THROTTLE",
+   "ANGLE",
+   "BOOT_GRACE_TIME",
+   "NOPREARM",
+   "LOAD",
+   "CALIBRATING",
+   "CLI",
+   "CMS_MENU",
+   "BST",
+   "MSP",
+   "PARALYZE",
+   "GPS",
+   "RESC",
+   "RPMFILTER",
+   "REBOOT_REQUIRED",
+   "DSHOT_BBANG",
+   "ACC_CALIBRATION",
+   "MOTOR_PROTOCOL",
+   "ARM_SWITCH"
+  ],
+  "ARMED_FLAG": 1
+ },
+ "frames": [
+  {
+   "cmd": 105,
+   "payload": "",
+   "frame": "244d3c006969"
+  },
+  {
+   "cmd": 101,
+   "payload": "",
+   "frame": "244d3c006565"
+  },
+  {
+   "cmd": 108,
+   "payload": "",
+   "frame": "244d3c006c6c"
+  },
+  {
+   "cmd": 104,
+   "payload": "",
+   "frame": "244d3c006868"
+  },
+  {
+   "cmd": 110,
+   "payload": "",
+   "frame": "244d3c006e6e"
+  },
+  {
+   "cmd": 200,
+   "payload": "010203",
+   "frame": "244d3c03c8010203cb"
+  },
+  {
+   "cmd": 255,
+   "payload": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfe",
+   "frame": "244d3cffff000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff"
+  }
+ ],
+ "responses": [
+  {
+   "name": "good",
+   "raw": "244d3e1069e8034c04b00414057805dc054006a4063f",
+   "result": {
+    "cmd": 105,
+    "payload": "e8034c04b00414057805dc054006a406"
+   }
+  },
+  {
+   "name": "leading_junk",
+   "raw": "6a756e6b24244d3e1069e8034c04b00414057805dc054006a4063f",
+   "result": {
+    "cmd": 105,
+    "payload": "e8034c04b00414057805dc054006a406"
+   }
+  },
+  {
+   "name": "dollar_m_junk",
+   "raw": "24244d4d244d3e1069e8034c04b00414057805dc054006a4063f",
+   "result": {
+    "error": "timeout",
+    "message": "MSP timeout"
+   }
+  },
+  {
+   "name": "bad_checksum",
+   "raw": "244d3e1069e8034c04b00414057805dc054006a4063e",
+   "result": {
+    "error": "value",
+    "message": "bad MSP checksum"
+   }
+  },
+  {
+   "name": "error_reply",
+   "raw": "244d21006969",
+   "result": {
+    "error": "value",
+    "message": "MSP error reply cmd=105"
+   }
+  },
+  {
+   "name": "empty_payload",
+   "raw": "244d3e006565",
+   "result": {
+    "cmd": 101,
+    "payload": ""
+   }
+  },
+  {
+   "name": "truncated",
+   "raw": "244d3e1069e8034c04b00414057805dc054006",
+   "result": {
+    "error": "timeout",
+    "message": "MSP timeout"
+   }
+  },
+  {
+   "name": "nothing",
+   "raw": "",
+   "result": {
+    "error": "timeout",
+    "message": "MSP timeout"
+   }
+  },
+  {
+   "name": "two_frames_first_only",
+   "raw": "244d3e1069e8034c04b00414057805dc054006a4063f244d3e1665640000000000010000000005000000001a04000000000d",
+   "result": {
+    "cmd": 105,
+    "payload": "e8034c04b00414057805dc054006a406"
+   }
+  },
+  {
+   "name": "other_dir_char",
+   "raw": "244d3c026901006a",
+   "result": {
+    "cmd": 105,
+    "payload": "0100"
+   }
+  }
+ ],
+ "parse": {
+  "rc": [
+   {
+    "payload": "e8034c04b00414057805dc054006a406",
+    "result": [
+     1000,
+     1100,
+     1200,
+     1300,
+     1400,
+     1500,
+     1600,
+     1700
+    ]
+   },
+   {
+    "payload": "",
+    "result": []
+   },
+   {
+    "payload": "01",
+    "result": []
+   },
+   {
+    "payload": "010203",
+    "result": [
+     513
+    ]
+   },
+   {
+    "payload": "e803e903ea03eb03ec03ed03ee03ef03f003f103f203f303f403f503f603f703",
+    "result": [
+     1000,
+     1001,
+     1002,
+     1003,
+     1004,
+     1005,
+     1006,
+     1007,
+     1008,
+     1009,
+     1010,
+     1011,
+     1012,
+     1013,
+     1014,
+     1015
+    ]
+   }
+  ],
+  "attitude": [
+   {
+    "payload": "0f00ecff5a00",
+    "result": [
+     1.5,
+     -2.0,
+     90.0
+    ]
+   },
+   {
+    "payload": "f8f884034cff",
+    "result": [
+     -180.0,
+     90.0,
+     -180.0
+    ]
+   },
+   {
+    "payload": "000000006701",
+    "result": [
+     0.0,
+     0.0,
+     359.0
+    ]
+   },
+   {
+    "payload": "ff7f00800000",
+    "result": [
+     3276.7,
+     -3276.8,
+     0.0
+    ]
+   }
+  ],
+  "analog": [
+   {
+    "payload": "0000004d0000000000",
+    "result": {
+     "vbat_dv": 0,
+     "mah": 0,
+     "rssi": 77,
+     "amps_cA": 0,
+     "vbat_cv": 0
+    }
+   },
+   {
+    "payload": "7ef401ff03fbffec04",
+    "result": {
+     "vbat_dv": 126,
+     "mah": 500,
+     "rssi": 1023,
+     "amps_cA": -5,
+     "vbat_cv": 1260
+    }
+   },
+   {
+    "payload": "ffffffffff0080ffff",
+    "result": {
+     "vbat_dv": 255,
+     "mah": 65535,
+     "rssi": 65535,
+     "amps_cA": -32768,
+     "vbat_cv": 65535
+    }
+   }
+  ],
+  "status": [
+   {
+    "payload": "640000000000010000000005000000001a0400000000",
+    "result": {
+     "cycle_us": 100,
+     "mode_flags": 1,
+     "load": 5,
+     "arming_disable": [
+      "RX_FAILSAFE"
+     ],
+     "arming_disable_mask": 4,
+     "armed": true,
+     "failsafe": true
+    }
+   },
+   {
+    "payload": "7d000100030000000000010c0007000209091a0100000200",
+    "result": {
+     "cycle_us": 125,
+     "mode_flags": 0,
+     "load": 12,
+     "arming_disable": [
+      "NO_GYRO",
+      "ARM_SWITCH"
+     ],
+     "arming_disable_mask": 33554433,
+     "armed": false,
+     "failsafe": false
+    }
+   },
+   {
+    "payload": "7d00000000000100000000000000000005ffffffff",
+    "result": {
+     "cycle_us": 125,
+     "mode_flags": 1,
+     "load": 0,
+     "arming_disable": [
+      "NO_GYRO",
+      "FAILSAFE",
+      "RX_FAILSAFE",
+      "BAD_RX_RECOVERY",
+      "BOXFAILSAFE"
+     ],
+     "arming_disable_mask": 4294967295,
+     "armed": true,
+     "failsafe": true
+    }
+   }
+  ],
+  "motors": [
+   {
+    "payload": "e803dc05d00700000000000000000000",
+    "result": [
+     1000,
+     1500,
+     2000,
+     0
+    ]
+   }
+  ]
+ }
+}

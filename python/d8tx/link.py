@@ -278,7 +278,7 @@ class D8Link:
         self._shift_hint = None
 
     def telemetry(self):
-        """Thread-safe snapshot of the radio telemetry (see docs/PROTOCOL.md "Telemetry in the library")."""
+        """Thread-safe snapshot of the radio telemetry (see protocol/PROTOCOL.md "Telemetry in the library")."""
         return self._tlm.snapshot()
 
     def set_sticks(self, ch):
