@@ -1,0 +1,1 @@
+-rwxr-xr-x@ 1 1unoe  staff  432016 Nov  8 13:50 /Users/1unoe/Developer/personal/esp32-devkitv1-sdr-tx/bench/betaflight-patch/out/c3f351e4/betaflight_4.2.11_MATEKF411RX_.bin
