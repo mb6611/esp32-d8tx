@@ -5,8 +5,15 @@ export const HI = 2000
 export const ARM_CH = 6 // index of ch7
 export const ARM_LIMIT = 1300
 export const SLOT_S = 0.008994
-export const DEFAULT_FOFS_HZ = -75000
+// 0 once the receiver is bound to this ESP over the air (it tunes its own offset to our carrier). -75000 was only for the cloned E8 binding.
+export const DEFAULT_FOFS_HZ = 0
 export const TXID: readonly [number, number] = [66, 178]
+/** Hex txid text ("42B2") -> [id0, id1], or null when malformed. */
+export function parseTxid(v: unknown): [number, number] | null {
+  const m = /^([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/.exec(String(v ?? ''))
+  return m ? [parseInt(m[1], 16), parseInt(m[2], 16)] : null
+}
+export const BIND_TIMEOUT_MS = 30000
 export const TLM_RECIPE = 'TLM 12 9000 40 64 0 1 1 0 1 1000 4'
 export const MAX_LINE = 95
 
@@ -59,7 +66,7 @@ function kv(tokens: string[]): KV {
     if (i >= 0) {
       const k = t.slice(0, i)
       const v = t.slice(i + 1)
-      d[k] = /^-?\d+$/.test(v) ? Number(v) : v
+      d[k] = k !== 'txid' && /^-?\d+$/.test(v) ? Number(v) : v // txid is hex text ("0042" must not become 42)
     } else d[t] = true
   }
   return d

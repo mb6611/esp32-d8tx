@@ -15,6 +15,8 @@ class FakePort:
         self.armok = False
         self.closed = False
         self.t_sticks = []
+        self.txid = "0042"
+        self.binding = False
 
     def _emit(self, s):
         with self._lk:
@@ -46,9 +48,18 @@ class FakePort:
             self._emit("EV link_end why=err slots=1 late_max_us=0 retune_max_us=0")
             self._emit("ERR busy linked")
         elif c == "INFO":
-            self._emit("OK proto=1 fw=test slot_us=8994 channels=47 pwr_max=127 fofs_max_hz=200000 timeout_max_ms=1000")
+            self._emit(f"OK proto=1 fw=test slot_us=8994 channels=47 pwr_max=127 fofs_max_hz=200000 timeout_max_ms=1000 txid={self.txid}")
+        elif c == "ID":
+            if len(w) == 1:
+                self._emit(f"OK txid={self.txid} start=2 step=55")
+            elif w[1] == "new":
+                self.txid = "A1B2"; self._emit(f"OK txid={self.txid} start=5 step=9")
+            else:
+                self.txid = w[1]; self._emit(f"OK txid={self.txid} start={w[2]} step={w[3]}")
+        elif c == "BIND":
+            self.binding = True; self._emit("OK")
         elif c == "STAT":
-            self._emit(f"OK keyed={int(self.linked)} link={int(self.linked)} fofs=0 armok={int(self.armok)}")
+            self._emit(f"OK keyed={int(self.linked)} link={int(self.linked)} fofs=0 armok={int(self.armok)} bind={int(self.binding)}")
         elif c == "FOFS":
             self._emit("OK" if abs(int(w[1])) <= 200000 else "ERR range fofs")
         elif c == "ARMOK":
@@ -56,6 +67,9 @@ class FakePort:
         elif c == "LINK":
             self.linked = True; self._emit("OK")
         elif c in ("STOP", "U"):
+            if self.binding:
+                self._emit("EV bind_end why=stop")
+            self.binding = False
             if self.linked:
                 self._emit("EV link_end why=stop slots=5 late_max_us=7 retune_max_us=3")
             self.linked = False; self.armok = False; self._emit("OK")

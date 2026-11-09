@@ -6,7 +6,7 @@
   "ARM_CH": 6,
   "ARM_LIMIT": 1300,
   "SLOT_S": 0.008994,
-  "DEFAULT_FOFS_HZ": -75000,
+  "DEFAULT_FOFS_HZ": 0,
   "TXID": [
    66,
    178
@@ -425,7 +425,7 @@
     {
      "op": "start",
      "lines": [
-      "FOFS -75000",
+      "FOFS 0",
       "TID 0",
       "TLM 12 9000 40 64 0 1 1 0 1 1000 4",
       "LINK 127 300"
@@ -472,7 +472,7 @@
     {
      "op": "start",
      "lines": [
-      "FOFS -75000",
+      "FOFS 0",
       "TID 0",
       "TLM 12 9000 40 64 0 1 1 0 1 1000 4",
       "LINK 127 300"
@@ -488,7 +488,7 @@
      "op": "start",
      "telemetry": false,
      "lines": [
-      "FOFS -75000",
+      "FOFS 0",
       "TLM 0",
       "LINK 127 300"
      ]
@@ -503,7 +503,7 @@
      "op": "start",
      "telemetry": false,
      "lines": [
-      "FOFS -75000",
+      "FOFS 0",
       "LINK 127 300"
      ]
     },
@@ -522,7 +522,7 @@
     {
      "op": "start",
      "lines": [
-      "FOFS -75000",
+      "FOFS 0",
       "TID 0",
       "TLM 12 9000 40 64 0 1 1 0 1 1000 4",
       "LINK 127 300"
@@ -538,7 +538,7 @@
      "op": "start",
      "telemetry": false,
      "lines": [
-      "FOFS -75000",
+      "FOFS 0",
       "LINK 127 300"
      ]
     },

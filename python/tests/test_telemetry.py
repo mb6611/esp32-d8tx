@@ -267,7 +267,7 @@ def test_start_sends_recipe_before_link_and_default_fofs():
     l = D8Link("x", serial_obj=p)
     l.start(power=100)
     assert p.lines.index(TLM_RECIPE) < next(i for i, x in enumerate(p.lines) if x.startswith("LINK"))
-    assert "FOFS %d" % DEFAULT_FOFS_HZ in p.lines and DEFAULT_FOFS_HZ == -75000
+    assert "FOFS %d" % DEFAULT_FOFS_HZ in p.lines and DEFAULT_FOFS_HZ == 0
     assert l.telemetry()["enabled"] is True and l.status()["tlm_enabled"] == 1
     l.stop()
     l.start(power=100, telemetry=False, fofs_hz=-1000)

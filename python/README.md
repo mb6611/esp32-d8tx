@@ -40,8 +40,9 @@ The ESP32 also listens for the drone's D8 telemetry replies; results and numbers
 
 **Turning it on.** `D8Link.start(telemetry=True)` is the default. It sends
 the `TLM` recipe (a trigger every 48 slots, about 2.3 replies/s; `protocol.TLM_RECIPE`) and, unless you pass `fofs_hz`,
-`FOFS -75000` (`protocol.DEFAULT_FOFS_HZ`). -75 kHz centres our carrier on the drone's receiver: 97.8-100% of triggers
-answered, against 82% at -50 kHz. In Python: `D8Link.start(..., telemetry=True, fofs_hz=None)` and `D8Link.telemetry()`.
+`FOFS 0` (`protocol.DEFAULT_FOFS_HZ`). After an over-the-air bind (`D8Link.bind()`, which also sets FOFS first) the
+receiver tunes itself to our carrier, so 0 is right: 94.9% of triggers answered at 0 against 72.9% at -75 kHz. The old
+default -75000 only suited the cloned E8 binding (97.8-100% there); pass `fofs_hz=-75000` if you clone that identity. In Python: `D8Link.start(..., telemetry=True, fofs_hz=None)` and `D8Link.telemetry()`.
 The drone needs `feature TELEMETRY` on for any hub data (A1/RSSI come regardless).
 
 **Status fields.** the radio status object (same keys in the TypeScript core) has:
@@ -59,7 +60,7 @@ The drone needs `feature TELEMETRY` on for any hub data (A1/RSSI come regardless
 
 **Bench notes.**
 - Opening the ESP32 port reboots it. Wait about 3 s after connecting before Start link, or it can answer
-  409 `no reply to 'FOFS -75000'`. If the ESP32 is left streaming after a crash, reset it (EN/RTS) and wait about 4 s.
+  409 `no reply to 'FOFS 0'`. If the ESP32 is left streaming after a crash, reset it (EN/RTS) and wait about 4 s.
 - Keep the Mac awake (`caffeinate -dimsu`) for long runs; idle sleep freezes the WebSocket.
 - Stock Betaflight 4.2 sends ACC truncated to whole g (a level drone reads 0 or 1000 milli-g) and no arm state.
 

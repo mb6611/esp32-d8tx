@@ -55,6 +55,8 @@ export interface MockPortOptions {
   /** Like the firmware's 128-byte UART RX FIFO, which is not drained while a slot is keyed/listening: while linked,
    * bytes beyond this many within one slot are lost (a torn line ends the link with an error). */
   rxFifoBytes?: number
+  /** ms until a BIND ends by itself (firmware: 30 s) */
+  bindTimeoutMs?: number
 }
 
 /** Simulated ESP32 firmware. Test helpers: lines, sticks timestamps, emit(). */
@@ -73,6 +75,12 @@ export class MockPort implements SerialPort {
   tid = 0
   slots = 0
   fofs = 0
+  binding = false
+  /** persisted identity */
+  txid = '42B2'
+  hopStart = 2
+  hopStep = 55
+  private bindTimer: unknown = null
   private opts: MockPortOptions
   private q = new ByteQueue()
   private rx = ''
@@ -136,9 +144,21 @@ export class MockPort implements SerialPort {
   }
 
   private clearTimers(): void {
-    for (const t of [this.silenceTimer, this.trigTimer, this.tidTimer]) if (t !== null) this.opts.clock.clearTimeout(t)
-    this.silenceTimer = this.trigTimer = this.tidTimer = null
+    for (const t of [this.silenceTimer, this.trigTimer, this.tidTimer, this.bindTimer]) if (t !== null) this.opts.clock.clearTimeout(t)
+    this.silenceTimer = this.trigTimer = this.tidTimer = this.bindTimer = null
     this.shipping = false
+  }
+
+  private endBind(why: string): void {
+    if (!this.binding) return
+    this.binding = false
+    if (this.bindTimer !== null) this.opts.clock.clearTimeout(this.bindTimer)
+    this.bindTimer = null
+    if (!this.muted) this.emit(`EV bind_end why=${why}`)
+  }
+
+  private idReply(): string {
+    return `OK txid=${this.txid} start=${this.hopStart} step=${this.hopStep}`
   }
 
   private endLink(why: string): void {
@@ -181,16 +201,44 @@ export class MockPort implements SerialPort {
     }
     if (this.linked && c !== 'STOP' && c !== 'U' && c !== 'STAT') {
       this.endLink('err')
-      this.emit(['PING', 'INFO', 'FOFS', 'TLM', 'ARMOK', 'LINK'].includes(c) ? 'ERR busy link active' : 'ERR unknown cmd')
+      this.emit(['PING', 'INFO', 'FOFS', 'TLM', 'ARMOK', 'LINK', 'ID', 'BIND'].includes(c) ? 'ERR busy link active' : 'ERR unknown cmd')
       return
     }
+    if (this.binding && !['STOP', 'U', 'STAT', 'PING', 'INFO', 'S'].includes(c)) {
+      return this.emit(['ID', 'BIND', 'FOFS', 'LINK', 'TLM', 'ARMOK', 'TID'].includes(c) ? 'ERR busy binding' : 'ERR unknown cmd')
+    }
     switch (c) {
+      case 'ID': {
+        if (w.length === 1) return this.emit(this.idReply())
+        if (w[1] === 'new') {
+          const r = () => Math.floor(Math.random() * 256)
+          this.txid = (r() << 8 | r()).toString(16).padStart(4, '0').toUpperCase()
+          this.hopStart = 1 + Math.floor(Math.random() * 255)
+          this.hopStep = 1 + Math.floor(Math.random() * 255)
+          return this.emit(this.idReply())
+        }
+        const st = Number(w[2])
+        const sp = Number(w[3])
+        if (w.length !== 4 || !/^[0-9a-fA-F]{4}$/.test(w[1]) || !Number.isInteger(st) || !Number.isInteger(sp) || st < 0 || st > 255 || sp < 1 || sp > 255) {
+          return this.emit('ERR range id')
+        }
+        this.txid = w[1].toUpperCase()
+        this.hopStart = st
+        this.hopStep = sp
+        return this.emit(this.idReply())
+      }
+      case 'BIND': {
+        if (w[1] !== undefined && !(Number(w[1]) >= 0 && Number(w[1]) <= 127)) return this.emit('ERR range power')
+        this.binding = true
+        this.bindTimer = this.opts.clock.setTimeout(() => this.endBind('timeout'), this.opts.bindTimeoutMs ?? 30000)
+        return this.emit('OK')
+      }
       case 'PING':
         return this.emit('OK proto=1')
       case 'INFO':
-        return this.emit('OK proto=1 fw=d8tx-v1 slot_us=8994 channels=47 pwr_max=127 fofs_max_hz=200000 timeout_max_ms=1000')
+        return this.emit(`OK proto=1 fw=d8tx-v1 slot_us=8994 channels=47 pwr_max=127 fofs_max_hz=200000 timeout_max_ms=1000 txid=${this.txid}`)
       case 'STAT':
-        return this.emit(`OK keyed=${+this.linked} link=${+this.linked} fofs=${this.fofs} armok=${+this.armok} slots=${this.slots}`)
+        return this.emit(`OK keyed=${+this.linked} link=${+this.linked} fofs=${this.fofs} armok=${+this.armok} slots=${this.slots} bind=${+this.binding}`)
       case 'FOFS': {
         const v = Number(w[1])
         if (!Number.isFinite(v) || Math.abs(v) > 200000) return this.emit('ERR range fofs')
@@ -220,6 +268,7 @@ export class MockPort implements SerialPort {
       case 'STOP':
       case 'U':
         this.endLink('stop')
+        this.endBind('stop')
         this.armok = false
         return this.emit('OK')
       default:

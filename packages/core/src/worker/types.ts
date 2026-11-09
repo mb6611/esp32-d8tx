@@ -7,6 +7,11 @@ export type ToWorker =
   | { type: 'disconnect'; role: Role }
   | { type: 'start'; power: number; fofs_hz: number; timeout_ms: number; allow_arm: boolean }
   | { type: 'stop' }
+  /** Transmit bind packets (idle only); ends on bind_stop, the firmware's 30 s timeout or a loss. */
+  | { type: 'bind'; power?: number; fofs_hz?: number }
+  | { type: 'bind_stop' }
+  /** Generate and persist a new random identity (bound receivers must re-bind). */
+  | { type: 'new_id' }
   | { type: 'sticks'; ch: number[] }
 
 export type ErrorKind = 'port_in_use' | 'protocol' | 'no_port' | 'other'

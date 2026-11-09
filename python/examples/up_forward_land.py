@@ -57,7 +57,7 @@ def main():
     ap.add_argument("--fwd-s", type=float, default=0.9)
     ap.add_argument("--land-s", type=float, default=2.0)
     ap.add_argument("--max-throttle", type=int, default=1750, help="hard cap")
-    ap.add_argument("--fofs", type=int, default=-75000)
+    ap.add_argument("--fofs", type=int, default=0)
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
 

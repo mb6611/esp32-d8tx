@@ -2,8 +2,8 @@
 import type { Clock } from './clock.ts'
 import type { SerialPort } from './port.ts'
 import {
-  ARM_CH, ARM_LIMIT, DEFAULT_FOFS_HZ, LO, MID, SLOT_S, TLM_RECIPE, ProtocolError, checkLine, fmtSticks, nextTid,
-  payloadOk, unpack4, type KV, type TlmMeta,
+  ARM_CH, ARM_LIMIT, BIND_TIMEOUT_MS, DEFAULT_FOFS_HZ, TXID, LO, MID, SLOT_S, TLM_RECIPE, ProtocolError, checkLine, fmtSticks, nextTid,
+  parseTxid, payloadOk, unpack4, type KV, type TlmMeta,
 } from './protocol.ts'
 import { Reader, type ReaderEvent } from './reader.ts'
 import { Tracker, type RadioSnapshot, type Reply } from './telemetry.ts'
@@ -30,7 +30,7 @@ export class D8TimeoutError extends Error {
 }
 
 /** Decoder injected by the host (native/WASM demod). iq: int8 I,Q interleaved (Q not negated). */
-export type DecodeFn = (iq: Int8Array, fs: number, hint: number | null) => Reply | null | Promise<Reply | null>
+export type DecodeFn = (iq: Int8Array, fs: number, hint: number | null, txid?: readonly [number, number]) => Reply | null | Promise<Reply | null>
 
 export type LinkEvent = { name: string; [k: string]: unknown }
 
@@ -78,6 +78,9 @@ export class D8Link {
   private shiftHint: number | null = null
   private protoOk = false
   private infoData: KV | null = null
+  private txidV: [number, number] | null = null // this ESP's identity, from INFO/ID; replies must carry it
+  private bindingV = false
+  private bindTimer: unknown = null
   private st = { keyed: 0, slots: 0, late_max_us: 0, last_event: null as LinkEvent | null, sender_hz: 0, sender_max_gap_ms: 0, sent: 0, skipped: 0, fofs: 0 }
   private senderTimer: unknown = null
   private watchTimer: unknown = null
@@ -138,6 +141,8 @@ export class D8Link {
       if (p.name === 'link') {
         this.st.slots = Number(p.data.slots ?? 0)
         this.st.late_max_us = Number(p.data.late_max_us ?? 0)
+      } else if (p.name === 'bind_end') {
+        this.endBind()
       } else if (p.name === 'link_end') {
         this.st.slots = Number(p.data.slots ?? this.st.slots)
         this.st.late_max_us = Number(p.data.late_max_us ?? this.st.late_max_us)
@@ -180,7 +185,7 @@ export class D8Link {
       const bits = Number(meta.bits ?? 16)
       if (bits === 4 || bits === 8) {
         const iq = bits === 4 ? unpack4(payload) : new Int8Array(payload.buffer, payload.byteOffset, payload.length)
-        rep = (await this.decode(iq, Number(meta.fs ?? 500000), this.shiftHint)) ?? null
+        rep = (await this.decode(iq, Number(meta.fs ?? 500000), this.shiftHint, this.txidV ?? TXID)) ?? null
       }
     }
     if (rep) {
@@ -298,7 +303,79 @@ export class D8Link {
     const r = await this.request('INFO')
     this.infoData = r
     this.protoOk = r.proto === 1
+    this.noteTxid(r)
     return r
+  }
+
+  private noteTxid(r: KV): void {
+    const t = parseTxid(r.txid)
+    if (t) this.txidV = t
+  }
+
+  /** The ESP's transmitter id as [id0, id1] (from INFO/ID); null until the firmware reported one. */
+  get txid(): readonly [number, number] | null {
+    return this.txidV
+  }
+
+  /** Reads the identity: `ID` -> txid (hex text), start, step. Idle only. */
+  async id(): Promise<KV> {
+    const r = await this.request('ID')
+    this.noteTxid(r)
+    return r
+  }
+
+  /** Sets and persists an identity (clone/restore). txid is 4 hex digits. */
+  async setId(txid: string, start: number, step: number): Promise<KV> {
+    const r = await this.request(`ID ${txid.toUpperCase()} ${Math.trunc(start)} ${Math.trunc(step)}`)
+    this.noteTxid(r)
+    return r
+  }
+
+  /** Generates and persists a new random identity; bound receivers must re-bind. */
+  async newId(): Promise<KV> {
+    const r = await this.request('ID new')
+    this.noteTxid(r)
+    return r
+  }
+
+  get binding(): boolean {
+    return this.bindingV
+  }
+
+  /**
+   * Starts transmitting bind packets (idle only). Ends on stopBind(), the firmware's 30 s timeout (EV bind_end) or a host
+   * fallback timer. Sets FOFS first (default DEFAULT_FOFS_HZ): the receiver tunes to the carrier it binds on, so bind at
+   * the offset later links use, not whatever an earlier link left in the firmware.
+   */
+  async bind(power?: number, fofsHz: number = DEFAULT_FOFS_HZ): Promise<void> {
+    if (this.linked) throw new D8Error('busy', 'link active')
+    await this.setFofs(fofsHz)
+    await this.request(power === undefined ? 'BIND' : `BIND ${Math.trunc(power)}`)
+    this.bindingV = true
+    this.clearBindTimer()
+    this.bindTimer = this.clock.setTimeout(() => {
+      this.bindTimer = null
+      if (this.bindingV) void this.stopBind().catch(() => undefined)
+    }, BIND_TIMEOUT_MS + 1500)
+  }
+
+  async stopBind(): Promise<void> {
+    this.endBind()
+    try {
+      await this.request('STOP')
+    } catch (e) {
+      if (!(e instanceof D8Error || e instanceof D8TimeoutError)) throw e
+    }
+  }
+
+  private endBind(): void {
+    this.bindingV = false
+    this.clearBindTimer()
+  }
+
+  private clearBindTimer(): void {
+    if (this.bindTimer !== null) this.clock.clearTimeout(this.bindTimer)
+    this.bindTimer = null
   }
 
   get protocolOk(): boolean {
@@ -314,6 +391,10 @@ export class D8Link {
   private applyStat(r: KV): void {
     if (typeof r.keyed === 'number') this.st.keyed = r.keyed
     if (typeof r.fofs === 'number') this.st.fofs = r.fofs
+    if (typeof r.bind === 'number') {
+      if (r.bind === 0 && this.bindingV) this.endBind()
+      else if (r.bind === 1) this.bindingV = true
+    }
     if (this.linked) {
       if (typeof r.slots === 'number') this.st.slots = r.slots
       if (typeof r.late_max_us === 'number') this.st.late_max_us = r.late_max_us
@@ -520,20 +601,22 @@ export class D8Link {
 
   async close(): Promise<void> {
     if (this.linked) await this.stop()
+    else if (this.bindingV) await this.stopBind()
     this.closed = true
     this.cancelTimers()
+    this.clearBindTimer()
     try { await this.port.close() } catch { /* ignore */ }
     await this.pump
   }
 }
 
 /** Which key identifies the reply to a request line (null: any OK without tid/keyed/proto). */
-function replyKey(line: string): 'tid' | 'keyed' | 'proto' | null {
+function replyKey(line: string): 'tid' | 'keyed' | 'proto' | 'txid' | null {
   const c = line.split(' ', 1)[0]
-  return c === 'TID' ? 'tid' : c === 'STAT' ? 'keyed' : c === 'PING' || c === 'INFO' ? 'proto' : null
+  return c === 'TID' ? 'tid' : c === 'STAT' ? 'keyed' : c === 'PING' || c === 'INFO' ? 'proto' : c === 'ID' ? 'txid' : null
 }
 
-function replyMatches(val: KV, want: 'tid' | 'keyed' | 'proto' | null): boolean {
+function replyMatches(val: KV, want: 'tid' | 'keyed' | 'proto' | 'txid' | null): boolean {
   if (want) return want in val
-  return !('tid' in val) && !('keyed' in val) && !('proto' in val)
+  return !('tid' in val) && !('keyed' in val) && !('proto' in val) && !('txid' in val)
 }

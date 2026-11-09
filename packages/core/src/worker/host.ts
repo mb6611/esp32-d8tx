@@ -82,6 +82,8 @@ export class Host {
       error: this.espError,
       info: this.info,
       link: !!l?.isLinked,
+      binding: !!l?.binding,
+      txid: this.txid(),
       keyed: !!st?.keyed,
       fofs: st?.fofs,
       slots: st?.slots,
@@ -99,6 +101,14 @@ export class Host {
     const fc: Record<string, unknown> = { ...fs, error: fs.error ?? undefined, armed: fs.armed ?? undefined, failsafe: fs.failsafe ?? undefined, rssi: fs.rssi ?? undefined }
     const radio = (l ? l.telemetry() : idleRadio()) as unknown as Record<string, unknown>
     return { mock: this.mock, esp, fc, radio }
+  }
+
+  /** Identity as hex text (live from ID/INFO), or the INFO field before the link learned it. */
+  private txid(): string | undefined {
+    const t = this.link?.txid
+    if (t) return t.map((b) => b.toString(16).padStart(2, '0')).join('').toUpperCase()
+    const v = this.info?.txid
+    return v === undefined ? undefined : String(v)
   }
 
   private err(role: Role | undefined, e: unknown): void {
@@ -128,6 +138,26 @@ export class Host {
         return this.guard(`c${m.role}`, () => this.disconnect(m.role))
       case 'start':
         return this.guard('start', () => this.start(m))
+      case 'bind':
+        return this.guard('start', async () => {
+          try {
+            await this.link?.bind(m.power ?? 40, m.fofs_hz)
+          } catch (e) {
+            this.err('esp', e)
+          }
+        })
+      case 'bind_stop':
+        return this.guard('start', async () => {
+          await this.link?.stopBind().catch((e) => this.err('esp', e))
+        })
+      case 'new_id':
+        return this.guard('start', async () => {
+          try {
+            await this.link?.newId()
+          } catch (e) {
+            this.err('esp', e)
+          }
+        })
       case 'stop':
         return this.guard('start', async () => {
           await this.link?.stop()

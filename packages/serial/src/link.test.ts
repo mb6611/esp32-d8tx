@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, test } from 'vitest'
-import { BetaflightMSP, D8Error, D8Link, FakeClock, FcPoller, SLOT_S, TLM_RECIPE, parseReply, type LinkEvent, type Reply } from '@d8tx/core'
+import { BetaflightMSP, D8Error, D8Link, DEFAULT_FOFS_HZ, FakeClock, FcPoller, SLOT_S, TLM_RECIPE, parseReply, type LinkEvent, type Reply } from '@d8tx/core'
 import { MockDronePort, MockPort, type MockCapture } from './mock.ts'
 
 const root = fileURLToPath(new URL('../../../protocol/', import.meta.url))
@@ -40,6 +40,52 @@ describe('D8Link on MockPort', () => {
     expect((await settle(clock, link.stat())).keyed).toBe(0)
     await settle(clock, link.setFofs(-1000))
     await expect(settle(clock, link.setFofs(300000))).rejects.toMatchObject({ code: 'range' })
+  })
+
+  test('identity: INFO txid, ID / ID new / ID set, decoder uses the ESP txid', async () => {
+    const { clock, link, port } = await opened()
+    expect((await settle(clock, link.info())).txid).toBe('42B2')
+    expect(link.txid).toEqual([0x42, 0xb2])
+    expect((await settle(clock, link.id())).start).toBe(2)
+    await settle(clock, link.setId('0042', 9, 7))
+    expect(link.txid).toEqual([0x00, 0x42])
+    expect((await settle(clock, link.id())).txid).toBe('0042') // leading zeros stay text
+    await expect(settle(clock, link.setId('xyz', 1, 1))).rejects.toMatchObject({ code: 'range' })
+    await settle(clock, link.newId())
+    expect(port.txid).toMatch(/^[0-9A-F]{4}$/)
+    expect(link.txid).toEqual([parseInt(port.txid.slice(0, 2), 16), parseInt(port.txid.slice(2), 16)])
+  })
+
+  test('bind: BIND, STAT bind=1, STOP, firmware timeout, busy while linked', async () => {
+    const { clock, port, link, events } = await opened({ bindTimeoutMs: 1000 })
+    await settle(clock, link.bind())
+    expect(link.binding).toBe(true)
+    expect((await settle(clock, link.stat())).bind).toBe(1)
+    await expect(settle(clock, link.newId())).rejects.toMatchObject({ code: 'busy' })
+    await settle(clock, link.stopBind())
+    expect(link.binding).toBe(false)
+    expect(events.find((e) => e.name === 'bind_end')).toMatchObject({ why: 'stop' })
+    await settle(clock, link.bind(30))
+    expect(port.lines).toContain('BIND 30')
+    await clock.advance(1100)
+    expect(link.binding).toBe(false)
+    expect(events.filter((e) => e.name === 'bind_end').pop()).toMatchObject({ why: 'timeout' })
+    await settle(clock, link.start({ fofsHz: 0 }))
+    await expect(settle(clock, link.bind())).rejects.toMatchObject({ code: 'busy' })
+    await settle(clock, link.stop())
+  })
+
+  test('bind sets FOFS first: default, then the given offset', async () => {
+    const { clock, port, link } = await opened()
+    port.fofs = -75000 // left over from an earlier link
+    await settle(clock, link.bind())
+    expect(port.fofs).toBe(DEFAULT_FOFS_HZ)
+    expect(port.lines.slice(-2)).toEqual([`FOFS ${DEFAULT_FOFS_HZ}`, 'BIND'])
+    await settle(clock, link.stopBind())
+    await settle(clock, link.bind(30, -20000))
+    expect(port.lines.slice(-2)).toEqual(['FOFS -20000', 'BIND 30'])
+    expect(port.fofs).toBe(-20000)
+    await settle(clock, link.stopBind())
   })
 
   test('pacing, arm-edge hold, events, stop', async () => {

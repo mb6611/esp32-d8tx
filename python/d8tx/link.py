@@ -5,7 +5,7 @@ import time
 
 ARM_THROTTLE_HOLD_S = 0.5
 
-from .protocol import (ARM_CH, ARM_LIMIT, DEFAULT_FOFS_HZ, TLM_RECIPE, check_line, LO, MID, SLOT_S, ProtocolError,
+from .protocol import (BIND_TIMEOUT_S, TXID, parse_txid, ARM_CH, ARM_LIMIT, DEFAULT_FOFS_HZ, TLM_RECIPE, check_line, LO, MID, SLOT_S, ProtocolError,
                        fmt_sticks, parse_line)
 from .telemetry import Tracker, decode_capture, load_iq, next_tid, parse_tlm_header, payload_ok
 
@@ -52,6 +52,9 @@ class D8Link:
         self._tlm_sent = False  # the firmware may still hold a TLM recipe (RAM) from an earlier start
         self._tid = 0  # id for the next trigger; kept across links so the drone's expected id stays locked
         self._shift_hint = None
+        self._txid = None  # this ESP's identity (from INFO/ID); telemetry replies must carry it
+        self._binding = False
+        self._bind_timer = None
         self._capq = queue.Queue(maxsize=16)
         self._worker = threading.Thread(target=self._tlm_loop, daemon=True)
         self._worker.start()
@@ -123,7 +126,8 @@ class D8Link:
             if bits == 4:
                 payload, bits = unpack4(payload), 8
             iq = load_iq(payload, meta.get("n", 0), bits)
-            rep = decode_capture(iq, float(meta.get("fs", 500000)), hint=self._shift_hint)
+            rep = decode_capture(iq, float(meta.get("fs", 500000)), hint=self._shift_hint,
+                                 txid=self._txid or TXID)
         if rep is not None:
             self._shift_hint = rep["shift_hz"]
             self._tlm.note_reply(rep)
@@ -155,6 +159,8 @@ class D8Link:
                 if name == "link":
                     self._st["slots"] = kv.get("slots", 0)
                     self._st["late_max_us"] = kv.get("late_max_us", 0)
+                elif name == "bind_end":
+                    self._binding = False
                 elif name == "link_end":
                     self._linked = False
                     self._st["keyed"] = 0
@@ -198,7 +204,76 @@ class D8Link:
         return val
 
     def info(self):
-        return self._request("INFO")
+        r = self._request("INFO")
+        self._note_txid(r)
+        return r
+
+    def _note_txid(self, r):
+        t = parse_txid(r.get("txid"))
+        if t:
+            self._txid = t
+
+    @property
+    def txid(self):
+        """(id0, id1) from INFO/ID, or None until the firmware reported one."""
+        return self._txid
+
+    def id(self):
+        r = self._request("ID")
+        self._note_txid(r)
+        return r
+
+    def set_id(self, txid, start, step):
+        """Set + persist an identity (clone/restore). txid is 4 hex digits."""
+        r = self._request(f"ID {str(txid).upper()} {int(start)} {int(step)}")
+        self._note_txid(r)
+        return r
+
+    def new_id(self):
+        """New random identity; receivers bound to the old one must re-bind."""
+        r = self._request("ID new")
+        self._note_txid(r)
+        return r
+
+    @property
+    def binding(self):
+        return self._binding
+
+    def bind(self, power=None, fofs_hz=None):
+        """Transmit bind packets (idle only) until stop_bind(), the firmware's 30 s timeout (EV bind_end) or a fallback timer.
+
+        Sets FOFS first (DEFAULT_FOFS_HZ unless given): the receiver tunes to the carrier it binds on, so bind at the
+        offset later links use, not whatever an earlier link left in the firmware."""
+        if self._linked:
+            raise D8Error("busy", "link active")
+        self.set_fofs(DEFAULT_FOFS_HZ if fofs_hz is None else fofs_hz)
+        self._request("BIND" if power is None else f"BIND {int(power)}")
+        self._binding = True
+        self._cancel_bind_timer()
+        t = threading.Timer(BIND_TIMEOUT_S + 1.5, self._bind_fallback)
+        t.daemon = True
+        self._bind_timer = t
+        t.start()
+
+    def _bind_fallback(self):
+        if self._binding:
+            try:
+                self.stop_bind()
+            except Exception:
+                pass
+
+    def _cancel_bind_timer(self):
+        t, self._bind_timer = self._bind_timer, None
+        if t is not None and t is not threading.current_thread():
+            t.cancel()
+
+    def stop_bind(self):
+        self._binding = False
+        self._cancel_bind_timer()
+        try:
+            self._request("STOP")
+        except (D8Error, TimeoutError):
+            pass
 
     def stat(self):
         r = self._request("STAT")
@@ -366,6 +441,8 @@ class D8Link:
     def close(self):
         if self._linked:
             self.stop()
+        elif self._binding:
+            self.stop_bind()
         self._closed = True
         self._reader.join(1.0)
         try:

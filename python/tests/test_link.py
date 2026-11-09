@@ -2,6 +2,7 @@ import time
 
 import pytest
 from d8tx import D8Link, D8Error
+from d8tx.protocol import DEFAULT_FOFS_HZ
 
 
 def test_info_stat_fofs(port):
@@ -117,3 +118,33 @@ def test_unpack4_signed_nibbles():
     import numpy as np
     out = np.frombuffer(unpack4(bytes([0x7F, 0x81, 0xF1, 0x08])), np.int8).tolist()
     assert out == [-1, 7, 1, -8, 1, -1, -8, 0]
+
+
+def test_identity_and_bind(port):
+    l = D8Link("x", serial_obj=port)
+    assert l.info()["txid"] == "0042"  # hex text, leading zeros kept
+    assert l.txid == (0x00, 0x42)
+    l.set_id("beef", 3, 7)
+    assert l.txid == (0xBE, 0xEF)
+    l.new_id()
+    assert l.txid == (0xA1, 0xB2)
+    l.bind(30)
+    assert "BIND 30" in port.lines and l.binding
+    assert l.stat()["bind"] == 1
+    l.stop_bind()
+    deadline = time.monotonic() + 1
+    while port.binding and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert not l.binding and not port.binding
+    l.close()
+
+
+def test_bind_sets_fofs_first(port):
+    l = D8Link("x", serial_obj=port)
+    l.bind()
+    assert port.lines[-2:] == ["FOFS %d" % DEFAULT_FOFS_HZ, "BIND"] and DEFAULT_FOFS_HZ == 0
+    l.stop_bind()
+    l.bind(30, fofs_hz=-20000)
+    assert port.lines[-2:] == ["FOFS -20000", "BIND 30"]
+    l.stop_bind()
+    l.close()

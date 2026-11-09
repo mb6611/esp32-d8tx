@@ -19,7 +19,7 @@ export async function createDecoder(wasm: BufferSource | Response | Promise<Resp
   if (wasm instanceof Response || wasm instanceof Promise) inst = (await WebAssembly.instantiateStreaming(wasm as Response | Promise<Response>, { env })).instance
   else inst = (await WebAssembly.instantiate(wasm, { env })).instance
   const x = inst.exports as unknown as Exports
-  return (iq, fs, hint) => {
+  return (iq, fs, hint, txid = TXID) => {
     const n = iq.length >> 1
     x.d8_reset()
     const pIq = x.d8_alloc(iq.length)
@@ -28,8 +28,8 @@ export async function createDecoder(wasm: BufferSource | Response | Promise<Resp
     const pOut = x.d8_alloc(36)
     new Int8Array(x.memory.buffer, pIq, iq.length).set(iq)
     const ov = new DataView(x.memory.buffer, pOpts, 12)
-    ov.setUint8(0, TXID[0])
-    ov.setUint8(1, TXID[1])
+    ov.setUint8(0, txid[0])
+    ov.setUint8(1, txid[1])
     ov.setInt32(4, hint === null ? 0 : 1, true)
     ov.setFloat32(8, hint ?? 0, true)
     if (x.d8_decode(pIq, n, fs, pOpts, pWork, pOut) !== 1) return null

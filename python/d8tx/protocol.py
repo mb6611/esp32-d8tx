@@ -3,11 +3,21 @@ LO, MID, HI = 1000, 1500, 2000
 ARM_CH = 6  # index of ch7
 ARM_LIMIT = 1300
 SLOT_S = 0.008994
-DEFAULT_FOFS_HZ = -75000  # LO offset for TX and RX; bench: 97.8-100% of telemetry triggers answered here
+DEFAULT_FOFS_HZ = 0  # LO offset for TX and RX; a receiver bound to this ESP tunes to our carrier (-75000 was for the cloned E8 binding)
 TXID = (66, 178)  # bound receiver id (frsky_spi_tx_id), echoed in telemetry replies
 # TLM <every> <cap_us> <gain> <dec> <same> <stream> <ack> <mark> <retry> <skip_us> <bits>: trigger every 12 slots (not a
 # multiple of 47 so triggers walk the hop table; ~8.5 replies/s, UART-bound), 9 ms capture at dec 64, only 1.0..9.0 ms
 # shipped as packed int4 (2 KB), next hop channel, host TID acks, one on-chip re-trigger. Bench: results/fast-telemetry.
+BIND_TIMEOUT_S = 30.0
+
+
+def parse_txid(v):
+    """Hex txid text ('42B2') -> (0x42, 0xB2), or None when malformed."""
+    import re
+    m = re.fullmatch(r"([0-9a-fA-F]{2})([0-9a-fA-F]{2})", str(v if v is not None else ""))
+    return (int(m.group(1), 16), int(m.group(2), 16)) if m else None
+
+
 TLM_RECIPE = "TLM 12 9000 40 64 0 1 1 0 1 1000 4"
 MAX_LINE = 95  # firmware line buffer limit
 
@@ -46,7 +56,7 @@ def _kv(tokens):
     for t in tokens:
         if "=" in t:
             k, v = t.split("=", 1)
-            d[k] = int(v) if v.lstrip("-").isdigit() else v
+            d[k] = int(v) if k != "txid" and v.lstrip("-").isdigit() else v  # txid is hex text ("0042")
         else:
             d[t] = True
     return d
