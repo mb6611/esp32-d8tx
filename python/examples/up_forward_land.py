@@ -8,7 +8,7 @@ Safety: props on means it really flies. Clear the area. Press Ctrl-C (or Enter) 
 the script immediately sends throttle 1000 + ARM low, then stops the link; Betaflight also
 disarms by itself ~1.25 s after packets stop.
 
-The backend (d8tx.server) must NOT be running: this script opens the ESP32 port directly.
+The d8tx app (web or desktop) must NOT be connected: this script opens the ESP32 port directly.
 
 Usage (from python):
   .venv/bin/python examples/up_forward_land.py --dry-run          # print the timeline only

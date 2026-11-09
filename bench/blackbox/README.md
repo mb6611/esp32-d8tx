@@ -54,7 +54,7 @@ saved `diff all`.
 ### Gotchas
 
 - While armed, the drone port carries only blackbox bytes. MSP requests get no reply, and the request bytes queue
-  up and are parsed after disarm. Stop `d8tx.server` and anything else that polls MSP on
+  up and are parsed after disarm. Disconnect the d8tx app and anything else that polls MSP on
   `/dev/cu.usbmodem0x80000001` before arming. Two processes reading one cu device split the bytes between them.
 - Motor-test logging (`startInTestMode`) refuses a port shared with MSP, so only armed logging works here.
 - If blackbox has failed to open once (for example, armed before the config was saved), it stays DISABLED until
@@ -119,7 +119,7 @@ PNG output with both engines.
 
 ```
 P=/dev/cu.usbmodem0x80000001; E=bench/blackbox/results/<run>; mkdir -p $E
-pkill -f d8tx.server                                       # frees the drone port
+# disconnect the d8tx app first (frees the drone port)
 .venv/bin/python bbcli.py diff $E/diff_all_before.txt --port $P
 .venv/bin/python bbcli.py apply config/enable_serial_vcp.txt --save --log $E/apply.log --port $P
 .venv/bin/python bbcli.py diff $E/diff_all_after.txt --port $P   # expect 'serial 20 129 … 2000000'

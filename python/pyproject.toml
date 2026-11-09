@@ -7,7 +7,6 @@ dependencies = ["pyserial", "numpy"]
 
 [project.optional-dependencies]
 dev = ["pytest"]
-server = ["fastapi", "uvicorn[standard]"]
 
 [build-system]
 requires = ["setuptools>=61"]

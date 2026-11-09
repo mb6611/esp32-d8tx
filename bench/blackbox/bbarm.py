@@ -5,7 +5,7 @@ Per session: arm at throttle 1000, then roll, pitch and yaw sweeps (1500 -> 1500
 throttle bump (<= --max-throttle), then disarm. Every stick value sent is logged to a CSV (t, session, segment,
 ch1..ch8) so rcCommand in the decoded log can be checked against it.
 
-Runs with the d8tx venv (it imports d8tx.D8Link from python). The backend (d8tx.server) must not be running.
+Runs with the d8tx venv (it imports d8tx.D8Link from python). The d8tx app (web or desktop) must not be connected to the ports.
 Enter or Ctrl-C aborts: throttle 1000 + ARM low, then the link stops (Betaflight disarms ~1.25 s after packets stop).
 
   python/.venv/bin/python bench/blackbox/bbarm.py --dry-run
