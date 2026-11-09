@@ -1,7 +1,7 @@
 # D8TX web + desktop: hardware end-to-end validation (U7)
 
 Plan: `.ru/plans/d8tx-web-desktop.plan.md` U7. Spec: `.ru/specs/d8tx-web-desktop.spec.md`.
-Date: 2026-11-09. Private repo; nothing published.
+Date: 2026-11-09. Validation record; not a release.
 
 ## Setup
 - App: real Electron app (`apps/desktop`, `app://d8tx/`, web build from `apps/web/dist`), test mode `D8TX_ESP_PORT=/dev/cu.usbserial-0001`, `D8TX_FC_PORT=/dev/cu.usbmodem0x80000001`.

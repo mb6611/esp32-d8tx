@@ -1,7 +1,9 @@
 # esp32-d8tx
 
-Private research repository: transmitting FrSky D8 from a classic ESP32 DevKit V1 and
+Research and educational repository: transmitting FrSky D8 from a classic ESP32 DevKit V1 and
 flying a D8 receiver (Betaflight on a CC2500 board) from a browser.
+
+> **Educational and research use; check your local regulations.** Transmitting is regulated. This firmware turns a Wi-Fi/Bluetooth-certified module into an intentional radiator outside its grant, transmit power is estimated from receiver RSSI and not measured, and harmonics were not measured. Read the [Regulatory status](docs/devkitv1/writeup/tx.md#regulatory-status) before building or using any of the transmit code; you are responsible for compliance where you are. Nothing here is for sale: no boards, kits or pre-flashed units.
 
 - `firmware/` — ESP-IDF project `d8tone`: the ESP32 TX firmware the host talks to over UART
   (protocol: [protocol/PROTOCOL.md](protocol/PROTOCOL.md)).
@@ -41,5 +43,5 @@ python/.venv/bin/pytest python/tests
 ```
 
 ## License
-Private, all rights reserved, except `bench/betaflight-patch/` and `bench/cc2500-rxdiag/`
+MIT (see [LICENSE](LICENSE)), except `bench/betaflight-patch/` and `bench/cc2500-rxdiag/`
 (Betaflight derivatives, GPL-3.0-or-later). See [NOTICE.md](NOTICE.md).

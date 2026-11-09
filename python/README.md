@@ -2,6 +2,8 @@
 
 Reference implementation of the ESP32 D8 transmitter client, used by bench scripts and to generate the golden vectors in `../protocol/`. The app itself is now TypeScript (`../packages/*`, `../apps/web`, `../apps/desktop`); the FastAPI server (`d8tx.server`) has been removed. Private research code; see Section 8 of the [write-up](../docs/devkitv1/writeup/tx.md).
 
+> **Educational and research use; check your local regulations.** Transmitting is regulated. This firmware turns a Wi-Fi/Bluetooth-certified module into an intentional radiator outside its grant; transmit power is estimated from receiver RSSI, not measured, and harmonics were not measured. Read the [Regulatory status](../docs/devkitv1/writeup/tx.md#regulatory-status) before using any transmit code; you are responsible for compliance where you are. Default LINK power is a raw code of 127, clamped to the firmware's `pwr_max` (not dBm).
+
 - `../protocol/PROTOCOL.md`: firmware protocol v1 (`LINK`, `S`, `STOP`, `FOFS`, `ARMOK`, `INFO`, `STAT`; replies `OK`/`ERR`, events `EV`).
 - `python/d8tx`: `D8Link` (slot-rate sender, arm gate), `BetaflightMSP`, telemetry decoding.
 

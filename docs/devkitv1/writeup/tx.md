@@ -1,6 +1,6 @@
 # Making a $5 ESP32 say one FrSky D8 packet
 
-*Private TX research note · November 2026 · companion to the RX write-up, [A 2.4 GHz SDR on a $5 ESP32](README.md)*
+*TX research note · November 2026 · companion to the RX write-up, [A 2.4 GHz SDR on a $5 ESP32](README.md)*
 
 The RX write-up ended with a board that could listen: record a FrSky D8 transmitter, decode it, follow its hops. That is a long way from talking. Nothing in it showed that the same chip could produce a packet a real D8 receiver chip would accept. This note covers the first time that happened, on a bench, once: an ESP32 DevKit V1 transmitted a hand-built D8 packet and an independent CC2500 reported it with a valid hardware CRC. The first try got 7 of 10; after fixing a receiver-side bug, 140 more attempts got about 94%, the same rate the real E8 transmitter gets on that receiver. Then it hopped all 47 D8 channels at about 98%, slightly better than the E8 on the same receiver. It is not yet bound to a real flight controller, not control, and not a calibrated transmitter.
 
@@ -20,7 +20,7 @@ That independence matters. The ESP32 can read back its own registers and report 
 
 ## The transmitter
 
-The transmit path is not a documented API. It reuses what Espressif's PHY already does for calibration: a numerically controlled oscillator injects a tone, and the ROM function `rom_start_tx_tone_step(1, f, 127, …)` sets its frequency as a signed step `f` from the Wi-Fi channel centre (here channel 1, 2412 MHz). `rom_pbus_force_test(5, 1, pwr)` then turns the transmit chain on ([`key()` and `tone_set()` in `d8tone.c`](../../../firmware/main/d8tone.c)). The keying sequence is adapted from an earlier private experiment, not written from documentation.
+The transmit path is not a documented API. It reuses what Espressif's PHY already does for calibration: a numerically controlled oscillator injects a tone, and the ROM function `rom_start_tx_tone_step(1, f, 127, …)` sets its frequency as a signed step `f` from the Wi-Fi channel centre (here channel 1, 2412 MHz). `rom_pbus_force_test(5, 1, pwr)` then turns the transmit chain on ([`key()` and `tone_set()` in `d8tone.c`](../../../firmware/main/d8tone.c)). The keying sequence is adapted from an earlier experiment, not written from documentation.
 
 What the packet needs from it:
 
@@ -298,10 +298,36 @@ The radio values agree with MSP_ATTITUDE (-1.8, 1.2 deg vs -18, 12 deci-deg) and
 
 **What this does not show.** No flight with telemetry, and nothing on battery: the battery fields all read 0. The 8/4/2 Hz hub rates were not measured, only their ratio. The hub stall in the 10-minute run is explained by a model and by timing, but the reply byte counts were not logged and the fix (a guard in the patched firmware) is not built. The blackbox result is one 14 s log on the bench, with a rebuilt header, and the setup that produced it also hung the flight controller.
 
+## Regulatory status
+
+Educational and research use. This is how the project reads under US FCC rules (47 CFR Part 15); it is not legal advice, and **you are responsible for following the regulations where you are** before building or using the transmit code.
+
+- **Home-built device (§15.23).** The ESP32 module's FCC grant covers Wi-Fi and Bluetooth only, so this firmware makes it a home-built intentional radiator: one unit, personal use, not marketed or sold (no boards, kits or pre-flashed units). §15.23 asks for a good-faith engineering effort to meet Part 15 limits, not laboratory measurement.
+- **All transmit modes are held to §15.249**, the rule the FrSky-compatible EMAX E8 it replaces is certified under (FCC ID [2AL7Y-EMAXE8](https://fccid.io/2AL7Y-EMAXE8)): 2400 to 2483.5 MHz, 50 mV/m (94 dBµV/m) average and 114 dBµV/m peak at 3 m, i.e. about -1.25 dBm average and +19 dBm peak EIRP. This covers LINK (hopping), BIND (one channel, at most 30 s) and the bench modes alike.
+- **The ESP32's output is estimated, not measured**, by comparison with the E8 (below): about -25 dBm peak EIRP at full power, at least 16 dB under the limit in every run.
+- **Harmonics and spurious emissions of the ESP32 were not measured**; the design relies on the module's certified RF output filter.
+- **Tests were radiated, indoors, at bench range**, with no conducted or lab measurements.
+- **Release build.** The single-channel and tone bench modes (TONE, ALT, RETUNE, PKT, HOP with `n_slots`, TCAP keying; Sections 2 to 5) compile only with `CONFIG_D8_BENCH=y` (default `n`), so a release build exposes LINK, BIND and housekeeping commands. `CONFIG_D8_PWR_MAX` caps the power setting, a raw PBUS code, not dBm; it is not calibrated.
+
+### EIRP estimate from CC2500 RSSI
+
+The E8's certification test report (Shenzhen Tongzhou Testing, report TZ210902562-E, 2021, [on fccid.io](https://fccid.io/2AL7Y-EMAXE8/Test-Report/Test-Report-DXX-5536602), page 24) measured its D8 mode at 3 m: at most 87.15 dBµV/m average and 96.32 dBµV/m peak, which is -8.05 dBm average and about +1.1 dBm peak EIRP (internal antenna, 3 dBi max). Its harmonics were at least 8 dB under the limit.
+
+The same CC2500 receiver (the MATEK F411RX running `rxdiag`) reported the signal strength of the real E8 and of the ESP32, from CRC-valid packets in the saved logs (RSSI conversion in [`protocol/PROTOCOL.md`](../../../protocol/PROTOCOL.md)):
+
+| Source | Mode, power | Mean RSSI | Log (under `bench/d8-tx/results/`) |
+|---|---|---|---|
+| Real E8 | hopping, 2133 packets | -32.3 dBm | `hop/e8_control/e8_hop_20s.txt` |
+| ESP32 | hopping, `HOP 556 127` | -58.7 dBm (two runs, 510 and 472 packets) | `bf_link/offset_tune/runA.txt`, `runB.txt` |
+| Real E8 | fixed 2421.032 MHz | -32.8 to -36.2 dBm (three controls) | `packet/control_e8_2421032.txt`, `packet/reliability/control_e8*.txt` |
+| ESP32 | fixed 2412.000 MHz, `PKT ... 127` | about -59.5 dBm in 12 batches; -54 in three; -65.9 in the first (7 packets) | `packet/reliability/batch*_stm.txt`, `packet/freqest/batch*_stm.txt`, `packet/batch1_2412000_stm.txt` |
+
+The ESP32 at power 127, the maximum, arrives about **26 dB below** the E8 (18 to 33 dB across all runs). The CC2500 reads power while a packet is on air, so the comparison is against the E8's peak: the ESP32 is about **-25 dBm peak EIRP**, -32 to -17 dBm across runs. Even the highest run is about 16 dB under the -1.25 dBm average limit (a continuous tone's average equals its peak) and far under the peak limit. The estimate is not a measurement: distance, orientation and antennas were not controlled, the RSSI is uncalibrated, the ESP32 level moved about 5 dB between sessions, and our E8 unit may not radiate exactly what the tested sample did. The margin is larger than these uncertainties are likely to be.
+
 ## What this does not show
 
 - **Sections 1–6: not binding, control or flight** (Sections 7–9 cover those). Hopping works against the diagnostic receiver, which was given the hop table directly. No bind exchange and no stock Betaflight receiver were involved: the proof is that a CC2500 with the D8 settings and an independent CRC accepted the packets, not that a model aircraft would.
-- **Not a calibrated transmitter.** The ±1-step deviation (≈39 kHz) is 23% wider than the stock 31.7 kHz, there is no Gaussian shaping, and the power setting has no verified output level. The packet was radiated within bench range; there is no distance or attenuation information. Frequency accuracy rests on the 100 kHz-granularity scan and a coarse FREQEST. That the packet works says the receiver is tolerant, not that the ESP32 is accurate.
+- **Not a calibrated transmitter.** The ±1-step deviation (≈39 kHz) is 23% wider than the stock 31.7 kHz, there is no Gaussian shaping, and the power setting has no verified output level: output power is estimated from receiver RSSI, not measured (see [Regulatory status](#regulatory-status)). The packet was radiated within bench range; there is no distance or attenuation information. Frequency accuracy rests on the 100 kHz-granularity scan and a coarse FREQEST. That the packet works says the receiver is tolerant, not that the ESP32 is accurate.
 - **7/10 was one batch, and partly the receiver.** Section 5 repeats the measurement with the fixed receiver (about 94%); the cause of the remaining misses is open.
 - **The ESP32's readback is not RF evidence.** `late_bits=207` of 208, `max_late_ns=1266` is timing of the CPU loop. It is small compared with a bit time (~32 µs) but I did not verify it on air.
 - **Not understood:** why FREQEST at the step-0 tone swings by ±10 kHz, why 3 of 10 packets did not arrive intact, and what produced the single ncs=1 window in the first attempt.
