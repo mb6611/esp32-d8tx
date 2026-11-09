@@ -1,10 +1,20 @@
-import { useEffect, useState } from 'react'
-import { DEFAULT_FOFS_HZ } from '@d8tx/core'
+import { useEffect, useRef, useState } from 'react'
+import { Settings as Gear } from 'lucide-react'
+import type { PortRef, Role } from '@d8tx/core'
 import Stick from './Stick'
 import DronePanel, { DroneView, useDrone } from './DronePanel'
-import { useController } from './useController'
+import { MOCK, useController } from './useController'
 import type { StartOptions } from './types'
 import { Tip, TooltipProvider } from './components/ui/tooltip'
+import Pairing from './PairingPanel'
+import SettingsDialog from './SettingsDialog'
+import { refOf, usePorts } from './usePorts'
+import { findSaved, load, save, storage, type SavedPort } from './persist'
+import { ESP_IN_USE, FC_IN_USE, linkText, lostWhy } from './linkState'
+
+/** Radio settings reach the worker this long after the last edit (each change restarts the link). */
+const RADIO_DEBOUNCE_MS = 600
+const store = storage(MOCK)
 
 const CH = ['THR', 'AIL', 'ELE', 'RUD', 'AUX1', 'AUX2', 'ARM', 'AUX4']
 const CH_COL = ['ch1', 'ch2', 'ch3', 'ch4', 'ch5', 'ch6', 'ch7', 'ch8']
@@ -128,56 +138,64 @@ const REASONS: Record<string, string> = {
   RUNAWAYTAKEOFF: 'runaway-takeoff protection (props off or drone stuck)',
 }
 
-const BIND_AUTO_STOP_S = 30
-
-/** Mounted only while binding, so the countdown restarts on every bind. */
-function BindCountdown() {
-  const [used, setUsed] = useState(0)
-  useEffect(() => {
-    const id = setInterval(() => setUsed((v) => v + 1), 1000)
-    return () => clearInterval(id)
-  }, [])
-  return <>Binding… auto-stops in {Math.max(0, BIND_AUTO_STOP_S - used)} s</>
-}
-
-function BindSection({ binding, txid, connected, linked, onBind, onStop, onNewId }: {
-  binding: boolean; txid?: string; connected: boolean; linked: boolean
-  onBind: () => void; onStop: () => void; onNewId: () => void
-}) {
-  const idle = connected && !linked && !binding
-  return (
-    <div className="mt-3 border-t border-line pt-2 text-xs">
-      <div className="mb-1 flex items-center justify-between">
-        <span className="font-semibold tracking-wide text-muted uppercase"><Tip tip="Bind teaches a receiver this ESP32's transmitter ID and hop table over the air, like a normal radio. The receiver tunes its frequency offset to our carrier during bind.">Bind</Tip></span>
-        <span className="font-mono text-muted"><Tip tip="This ESP32's own transmitter ID (4 hex digits), stored in its flash.">txid={txid ?? '?'}</Tip></span>
-      </div>
-      <ol className="m-0 mb-2 list-decimal pl-4 text-muted">
-        <li>Props off; no link running.</li>
-        <li>Put the drone in bind mode: <Tip tip="Hold the bind button while powering up, or in Betaflight's CLI (Configurator CLI tab, or a serial terminal at 115200: send #, then bind_rx).">button or CLI <code className="font-mono">bind_rx</code></Tip>.</li>
-        <li>Click Bind. <Tip tip="The receiver sweeps its frequency offset to find our carrier and saves the result itself, usually within 2–5 s. Bind uses the FOFS from Settings (default 0); links must use the same FOFS.">Binds in ~2–5 s</Tip>, then Stop (or wait for auto-stop).</li>
-        <li>If you used the CLI, type <code className="font-mono">exit</code> <Tip tip="exit reboots the FC. No save needed: the receiver already wrote the binding and it is active before the reboot. Check with get frsky_spi: frsky_spi_tx_id is this txid as two decimal bytes (6ff3 → 111,243).">(no save)</Tip>.</li>
-      </ol>
-      <div className="flex items-center gap-2">
-        {binding
-          ? <button className="btn !py-0.5" onClick={onStop}>Stop</button>
-          : <button className="btn !py-0.5" onClick={onBind} disabled={!idle}>Bind</button>}
-        {binding && <span className="text-warn"><BindCountdown /></span>}
-        <button
-          className="btn !py-0.5 ml-auto text-muted"
-          disabled={!idle}
-          onClick={() => {
-            if (window.confirm('Generate a new identity? Every drone bound to this ESP32 must be bound again.')) onNewId()
-          }}
-        ><Tip tip="Generates a new random transmitter ID and hop table. Drones bound to the old identity stop responding until they bind again.">New identity</Tip></button>
-      </div>
-    </div>
-  )
-}
-
 function AppInner({ createWorker }: { createWorker: () => Worker }) {
   const c = useController(createWorker)
-  const [opts, setOpts] = useState<StartOptions>({ power: 127, fofs_hz: DEFAULT_FOFS_HZ, timeout_ms: 300, allow_arm: true })
+  const [saved, setSaved] = useState(() => load(store))
+  const [opts, setOpts] = useState<StartOptions>(() => ({ power: saved.power, fofs_hz: saved.fofs_hz, timeout_ms: saved.timeout_ms }))
   const [settings, setSettings] = useState(false)
+  const [pairOpen, setPairOpen] = useState(false)
+  const serial = usePorts()
+  const { setRadio, connect } = c
+
+  // radio settings: saved, and sent to the worker (first right away, before any connect; then debounced)
+  const radioSent = useRef(false)
+  useEffect(() => {
+    save(store, opts)
+    if (c.ws !== 'open') return
+    if (!radioSent.current) {
+      radioSent.current = true
+      setRadio(opts)
+      return
+    }
+    const t = setTimeout(() => setRadio(opts), RADIO_DEBOUNCE_MS)
+    return () => clearTimeout(t)
+  }, [opts, c.ws, setRadio])
+
+  const { portsChanged } = c
+  useEffect(() => {
+    portsChanged()
+  }, [serial.ports, portsChanged])
+
+  const remember = (role: Role, p: SavedPort) => setSaved(save(store, { ports: { [role]: p } }))
+  const onConnect = (role: Role, ref?: PortRef) => {
+    if (ref) remember(role, { ...ref, auto: true })
+    connect(role, ref)
+  }
+  const onDisconnect = (role: Role) => {
+    const sp = saved.ports[role]
+    if (sp) remember(role, { ...sp, auto: false })
+    c.disconnect(role)
+  }
+
+  // on load: reconnect the ports used last time when they are still granted (getPorts needs no user gesture); open
+  // Pairing only when no ESP32 could be reconnected
+  const autoDone = useRef(false)
+  useEffect(() => {
+    if (autoDone.current || c.ws !== 'open' || !serial.loaded) return
+    autoDone.current = true
+    if (MOCK) return
+    let esp = false
+    for (const role of ['esp', 'fc'] as Role[]) {
+      const sp = saved.ports[role]
+      const g = sp?.auto ? findSaved(serial.ports, sp) : undefined
+      if (!g) continue
+      connect(role, refOf(g))
+      if (role === 'esp') esp = true
+    }
+    // after this commit: the popover opens once the header has laid out
+    if (!esp) queueMicrotask(() => setPairOpen(true))
+  }, [c.ws, serial.loaded, serial.ports, saved.ports, connect])
+
   const [tab, setTabState] = useState<Tab>(tabFromHash)
   const setTab = (t: Tab) => {
     window.history.replaceState(null, '', t === 'sticks' ? location.pathname + location.search : '#' + t)
@@ -188,7 +206,6 @@ function AppInner({ createWorker }: { createWorker: () => Worker }) {
   const linked = !!esp?.link
   const failsafe = !!fc?.failsafe
   const fcArmed = !!fc?.armed
-  const reachable = c.ws === 'open' && !!esp?.connected
   const fcOn = !!fc?.connected
   const radio = c.tel?.radio
   const drone = useDrone(radio, fc)
@@ -203,21 +220,15 @@ function AppInner({ createWorker }: { createWorker: () => Worker }) {
   }, [linked])
   const ready = linked && (fcOn ? !failsafe : noFcReady)
   const reasons = (fc?.arming_disable ?? []).map((r) => REASONS[r.toUpperCase().replace(/_/g, '')] ?? r).join(', ')
-  const num = (k: keyof StartOptions) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setOpts({ ...opts, [k]: Number(e.target.value) })
 
-  let banner: { text: string; cls: string }
-  if (!reachable) banner = { text: esp?.lost_reason === 'port_closed' ? 'Link lost: DevKit port closed' : 'Not connected: pick the DevKit port', cls: esp?.lost_reason ? 'border-bad text-bad' : 'border-line text-muted' }
-  else if (c.armed && fcOn && fcArmed) banner = { text: 'ARMED (confirmed by Betaflight)', cls: 'border-bad bg-bad text-paper font-bold' }
-  else if (c.armed && !fcOn) banner = { text: 'ARM SENT. Drone state unknown (no readback).', cls: 'border-warn text-warn' }
-  else if (c.armed) banner = { text: 'Arm sent, waiting for Betaflight to confirm', cls: 'border-warn text-warn' }
-  else if (!linked && esp?.lost_reason) banner = { text: `Link lost (${esp.lost_reason}), disarmed. Start the link again.`, cls: 'border-bad text-bad font-bold' }
-  else if (!linked) banner = failsafe ? { text: 'Failsafe, start the link again', cls: 'border-warn text-warn' } : { text: 'Link off', cls: 'border-line text-muted' }
-  else if (!fcOn && !noFcReady) banner = { text: 'Starting link…', cls: 'border-warn text-warn' }
-  else if (fcOn && failsafe) banner = { text: 'Failsafe, waiting for Betaflight to clear it', cls: 'border-warn text-warn' }
-  else if (!fcOn) banner = { text: 'Link up. Drone state unknown (no readback). Hold R to send arm.', cls: 'border-warn text-warn' }
-  else banner = { text: 'Ready, hold R to arm', cls: 'border-ok text-ok' }
-
+  // banners only when there is something to say; link state itself is in the status strip
+  let notice: { text: string; cls: string } | null = null
+  if (esp?.wanted && esp.link_state === 'lost' && esp.in_use) {
+    notice = { text: `${ESP_IN_USE}: close it there and this app takes the DevKit over (retrying every 2 s).`, cls: 'border-bad text-bad' }
+  } else if (esp?.wanted && esp.link_state === 'lost') {
+    const why = lostWhy(esp)
+    notice = { text: `Radio link lost${why ? ` (${why})` : ''}, ${c.armed ? '' : 'disarmed, '}reconnecting… ${linkText(esp).text.replace(/^lost · /, '')}`, cls: 'border-bad text-bad' }
+  }
   if (!c.armed && c.disarmNote) {
     const n = c.disarmNote.replace(/^(Betaflight (?:disarmed|did not arm)|Cannot arm yet): ?/, '')
     const head = c.disarmNote.slice(0, c.disarmNote.length - n.length).replace(/: ?$/, '')
@@ -226,25 +237,54 @@ function AppInner({ createWorker }: { createWorker: () => Worker }) {
       .filter(Boolean)
       .map((r) => REASONS[r.toUpperCase().replace(/_/g, '')] ?? r)
       .join(', ')
-    banner = { text: plain ? `${head}: ${plain}` : head, cls: 'border-warn text-warn' }
+    notice = { text: plain ? `${head}: ${plain}` : head, cls: 'border-warn text-warn' }
   }
-  if (!c.armed && c.guardNote) banner = { text: c.guardNote, cls: 'border-bad text-bad font-bold' }
-  if (fcOn && c.armed && !fcArmed && reasons) banner = { text: `Armed requested, not armed: ${reasons}`, cls: 'border-warn text-warn' }
+  if (!c.armed && c.guardNote) notice = { text: c.guardNote, cls: 'border-bad text-bad font-bold' }
+  if (fcOn && c.armed && !fcArmed && reasons) notice = { text: `Armed requested, not armed: ${reasons}`, cls: 'border-warn text-warn' }
+  else if (c.armed && fcOn && failsafe) notice = { text: 'Failsafe: Betaflight lost the radio link', cls: 'border-bad text-bad font-bold' }
 
   const redArmed = c.armed && (fcOn ? fcArmed : radio?.armed === true)
   const armSent = c.armed && !redArmed
   const tabs: [Tab, string][] = [['sticks', 'Sticks'], ['stats', 'Stats for nerds']]
   const armEnabled = linked && ready && c.canArm
   const rssi = fc?.connected ? (fc.rssi ?? 0) : undefined
+  const lt = linkText(esp)
   const sig = !linked ? 0 : rssi !== undefined ? Math.round(rssi / 20) : (esp?.sender_hz ?? 0) > 100 ? 4 : 2
-  const bannerTone = banner.cls.includes('bg-bad') ? 'text-bad' : banner.cls.includes('text-ok') ? 'text-ok' : banner.cls.includes('text-warn') ? 'text-warn' : 'text-muted'
   const dot = (cls: string) => <i className={`inline-block h-2 w-2 rounded-full ${cls}`} />
 
   return (
     <div className="mx-auto flex h-dvh max-w-[1360px] flex-col overflow-y-auto px-6 pt-2 pb-2">
       <header className="mb-1.5 flex shrink-0 items-baseline justify-between border-b border-fg pb-1">
         <h1 className="m-0 font-serif text-xl leading-tight font-bold">D8 TX controller{c.mock && <span className="ml-3 border border-warn bg-warn/20 px-2 py-0.5 align-middle font-sans text-xs font-bold tracking-wider text-warn">MOCK</span>}</h1>
-        <nav className="flex gap-5 font-sans text-sm">
+        <nav className="flex items-baseline gap-5 font-sans text-sm">
+          <Pairing
+            open={pairOpen}
+            onOpenChange={setPairOpen}
+            mock={c.mock}
+            supported={serial.supported}
+            ports={serial.ports}
+            saved={saved.ports}
+            error={c.error}
+            onAdd={serial.add}
+            onConnect={onConnect}
+            onConnectMock={c.connectMock}
+            onDisconnect={onDisconnect}
+            onFail={c.fail}
+            esp={esp}
+            fcConnected={fcOn}
+            fcInUse={!!fc?.in_use}
+            linked={linked}
+            armed={c.armed}
+            radio={radio}
+            onBind={() => c.startBind(opts.fofs_hz)}
+            onStopBind={c.stopBind}
+            flash={{ release: c.releaseEsp, resume: c.resumeEsp, connect: (ref) => onConnect('esp', ref) }}
+          />
+          <Tip tip="Settings: radio power, FOFS, timeout, max throttle, identity" className="no-underline">
+            <button aria-label="Settings" onClick={() => setSettings(true)} className="flex items-center self-center rounded-sm border border-line p-0.5 text-muted hover:border-muted hover:text-fg">
+              <Gear size={15} strokeWidth={1.75} />
+            </button>
+          </Tip>
           {tabs.map(([t, n]) => (
             <button key={t} onClick={() => setTab(t)} className={tab === t ? 'border-b-2 border-fg font-bold' : 'text-link'}>{n}</button>
           ))}
@@ -253,13 +293,15 @@ function AppInner({ createWorker }: { createWorker: () => Worker }) {
 
       {/* ground-station status strip */}
       <div className="mb-1.5 grid shrink-0 grid-cols-[1.2fr_.8fr_1fr_1fr_.9fr_.9fr_.8fr_1.4fr] border border-fg">
-        <Cell k="Link" tip="Stick frames per second sent from this computer to the ESP32 over USB (about 111 = one per 9 ms radio slot). Bars: drone RSSI from Betaflight when the drone USB is connected, else how steady the rate is.">
+        <Cell k="Link" tip="The radio link runs whenever the ESP32 is connected and reconnects by itself. Up: stick frames per second sent from this computer to the ESP32 over USB (about 111 = one per 9 ms radio slot). Bars: drone RSSI from Betaflight when the drone USB is connected, else how steady the rate is.">
           <SignalBars level={sig} />
-          <span>{linked ? `${(esp?.sender_hz ?? 0).toFixed(0)} pkt/s` : 'off'}</span>
+          <span className={lt.tone === 'bad' ? 'font-sans text-sm font-bold text-bad' : lt.tone === 'warn' ? 'font-sans text-sm text-warn' : lt.tone === 'muted' ? 'font-sans text-sm text-muted' : ''}>
+            {linked ? `${(esp?.sender_hz ?? 0).toFixed(0)} pkt/s` : lt.text}
+          </span>
         </Cell>
-        <Cell k="RF power" tip="ESP32 transmit power setting (0-127) used for the D8 packets to the drone.">{opts.power}<span className="font-sans text-xs text-muted">/127</span></Cell>
-        <Cell k="ESP32" tip="ESP32 DevKit over USB serial. transmitting = a link is running and it is sending D8 packets; idle = connected, not sending; offline = not connected.">{dot(esp?.connected ? 'bg-ok' : 'bg-bad')}<span className="font-sans text-sm">{esp?.connected ? (esp.keyed ? 'transmitting' : 'idle') : 'offline'}</span></Cell>
-        <Cell k="Drone USB" tip="Optional USB connection to the drone flight controller (Betaflight MSP), used to read back attitude, motors and RC. rssi = the link quality Betaflight reports.">{dot(fcOn ? 'bg-ok' : 'bg-muted')}<span className="font-sans text-sm">{fcOn ? `MSP${rssi !== undefined ? ` · rssi ${rssi}` : ''}` : 'no readback'}</span></Cell>
+        <Cell k="RF power" tip="ESP32 transmit power setting (0-127) used for the D8 packets to the drone (Settings).">{linked && esp?.power != null ? esp.power : opts.power}<span className="font-sans text-xs text-muted">/127</span></Cell>
+        <Cell k="ESP32" tip="ESP32 DevKit over USB serial. transmitting = a link is running and it is sending D8 packets; idle = connected, not sending; offline = not connected.">{dot(esp?.connected ? 'bg-ok' : 'bg-bad')}<span className="font-sans text-sm">{esp?.connected ? (esp.keyed ? 'transmitting' : 'idle') : esp?.in_use ? <span className="text-bad" title={`${ESP_IN_USE}. Retrying every 2 s.`}>in use by another app</span> : 'offline'}</span></Cell>
+        <Cell k="Drone USB" tip="Optional USB connection to the drone flight controller (Betaflight MSP), used to read back attitude, motors and RC. rssi = the link quality Betaflight reports.">{dot(fcOn ? 'bg-ok' : fc?.in_use ? 'bg-bad' : 'bg-muted')}<span className="font-sans text-sm">{fcOn ? `MSP${rssi !== undefined ? ` · rssi ${rssi}` : ''}` : fc?.in_use ? <span className="text-bad" title={`${FC_IN_USE}. Retrying every 2 s.`}>in use by another app</span> : 'no readback'}</span></Cell>
         <Cell k="Failsafe" tip="Betaflight failsafe state, read over the drone USB. ACTIVE means the drone stopped receiving valid packets.">{dot(failsafe ? 'bg-warn' : 'bg-ok')}<span className={`font-sans text-sm ${failsafe ? 'font-bold text-warn' : ''}`}>{failsafe ? 'ACTIVE' : 'clear'}</span></Cell>
         <Cell k="Telemetry" tip="Share of telemetry requests the drone answered over the last 10 s, received over the radio. lost = no reply for over 1 s.">
           {radio?.enabled ? (<>
@@ -288,46 +330,16 @@ function AppInner({ createWorker }: { createWorker: () => Worker }) {
       {c.ws === 'closed' && (
         <p className="mb-2 border border-bad px-3 py-1.5 font-sans text-sm text-bad">The worker stopped. Reload the page.</p>
       )}
-      <div className="mb-1.5 flex shrink-0 flex-wrap items-center gap-2 font-sans text-sm">
-        {!c.mock && (<>
-          {!esp?.connected
-            ? <button className="btn !py-0.5" onClick={() => void c.connect('esp')}>Connect DevKit</button>
-            : <button className="btn !py-0.5 text-muted" onClick={() => c.disconnect('esp')} disabled={linked}>Disconnect DevKit</button>}
-          {!fc?.connected
-            ? <button className="btn !py-0.5" onClick={() => void c.connect('fc')}>Connect drone (optional)</button>
-            : <button className="btn !py-0.5 text-muted" onClick={() => c.disconnect('fc')}>Disconnect drone</button>}
-          {!esp?.connected && <button className="btn !py-0.5 text-muted" onClick={c.connectMock}>Mock</button>}
-        </>)}
-        {c.mock && <span className="text-warn">Simulated link and drone, no real port is opened.</span>}
-        {esp?.connected && esp.txid && <span className="font-mono text-xs text-muted">txid={esp.txid}</span>}
-        {esp?.connected && esp.info && <span className="font-mono text-xs text-muted">{String(esp.info.fw ?? '')} proto={String(esp.info.proto ?? '?')}</span>}
-      </div>
-      {c.error && <p className="mb-2 border border-bad px-3 py-1.5 font-sans text-sm text-bad">{c.errorKind === 'port_in_use' ? `Port in use: close other tabs or programs using it. (${c.error})` : c.errorKind === 'protocol' ? `Protocol mismatch, arming refused: ${c.error}` : c.error}</p>}
+      {notice && <p className={`mb-2 border px-3 py-1.5 font-sans text-sm ${notice.cls}`}>{notice.text}</p>}
+      {c.error && c.errorKind !== 'port_in_use' && <p className="mb-2 border border-bad px-3 py-1.5 font-sans text-sm text-bad">{c.errorKind === 'port_in_use' ? `Port in use: close other tabs or programs using it. (${c.error})` : c.errorKind === 'protocol' ? `Protocol mismatch, arming refused: ${c.error}` : c.error}</p>}
 
       {tab !== 'stats' && (
         <main className="flex min-h-0 flex-1 flex-col">
-          <div className={`relative mb-1.5 flex shrink-0 items-center justify-between border border-line px-3 py-0.5 font-sans text-sm ${bannerTone} ${c.armed ? 'border-bad' : ''}`}>
-            <span className="font-semibold">{banner.text}</span>
-            <span className="flex items-center gap-2">
-              <button className="btn !py-0.5" onClick={() => setSettings((v) => !v)}>Settings</button>
-              {!linked
-                ? <button className="btn !py-0.5" onClick={() => c.startLink(opts)} disabled={!reachable}>Start link</button>
-                : <button className="btn !py-0.5 text-muted" onClick={c.stopLink}>Stop link</button>}
-            </span>
-          </div>
-
-          {settings && (
-            <div className="absolute top-9 right-0 z-10 w-80 border border-fg bg-paper p-3 font-sans shadow-lg">
-              <div className="grid grid-cols-2 gap-3 text-xs text-muted">
-                <label>Power (0–127)<input type="number" min={0} max={127} value={opts.power} onChange={num('power')} disabled={linked} /></label>
-                <label>FOFS, Hz<input type="number" min={-200000} max={200000} step={1000} value={opts.fofs_hz} onChange={num('fofs_hz')} disabled={linked} /></label>
-                <label>Timeout, ms<input type="number" min={50} max={2000} step={50} value={opts.timeout_ms} onChange={num('timeout_ms')} disabled={linked} /></label>
-                <label>Max throttle, %<input type="number" min={0} max={100} value={c.maxThr} onChange={(e) => c.setMaxThr(Number(e.target.value))} /></label>
-              </div>
-              <BindSection binding={!!esp?.binding} txid={esp?.txid} connected={!!esp?.connected} linked={linked}
-                onBind={() => c.startBind(opts.fofs_hz)} onStop={c.stopBind} onNewId={c.newId} />
-            </div>
-          )}
+          <SettingsDialog
+            open={settings} onOpenChange={setSettings}
+            opts={opts} setOpts={setOpts} maxThr={c.maxThr} setMaxThr={c.setMaxThr}
+            esp={esp} armed={c.armed} onNewId={c.newId}
+          />
 
           <div className="grid min-h-0 flex-1 grid-cols-[1fr_auto_1fr] items-stretch gap-4 min-[1100px]:gap-8">
             <div className="flex min-h-0 items-stretch justify-end gap-3">

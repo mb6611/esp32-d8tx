@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "predev": "make -C ../../demod wasm",
+    "predev": "make -C ../../demod wasm && node scripts/check-firmware.mjs",
     "dev": "vite",
-    "build": "make -C ../../demod wasm && tsc --noEmit && vite build",
+    "build": "make -C ../../demod wasm && node scripts/check-firmware.mjs && tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "test": "echo 'no tests'",
     "preview": "vite preview"

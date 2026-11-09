@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { DEVKIT, FC } from '@d8tx/serial'
-import { DEFAULT_FOFS_HZ } from '@d8tx/core'
-import type { FromWorker, Role, ToWorker } from '@d8tx/core'
-import type { StartOptions, Telemetry, WsState } from './types'
+import type { FromWorker, PortRef, RadioConfig, Role, ToWorker } from '@d8tx/core'
+import type { Telemetry, WsState } from './types'
+import { load, save, storage } from './persist'
 
 export const MOCK = new URLSearchParams(location.search).has('mock')
 const SEND_HZ = 120
@@ -15,8 +14,6 @@ export interface Sticks {
   pitch: number
   roll: number // -1..1
 }
-
-const startedAllow = { current: false }
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v))
 const us = (v: number) => Math.round(clamp(v, 1000, 2000))
@@ -35,7 +32,10 @@ export function useController(createWorker: () => Worker) {
   const [error, setError] = useState<string | null>(null)
 
   const st = useRef({ throttle: 0, yaw: 0, pitch: 0, roll: 0 })
-  const [maxThr, setMaxThr] = useState(100)
+  const [maxThr, setMaxThr] = useState(() => load(storage(MOCK)).maxThr)
+  useEffect(() => {
+    save(storage(MOCK), { maxThr })
+  }, [maxThr])
   const settings = useRef({ maxThr: maxThr / 100 })
   useEffect(() => {
     settings.current = { maxThr: maxThr / 100 }
@@ -57,8 +57,22 @@ export function useController(createWorker: () => Worker) {
   const worker = useRef<Worker | null>(null)
   const send = useCallback((m: ToWorker) => worker.current?.postMessage(m), [])
   const counts = useRef({ sent: 0, tel: 0 })
+  const errorRole = useRef<Role | null>(null)
+  // pending 'esp_release' (firmware flashing): resolved by the worker's 'esp_released' reply
+  const releaseWait = useRef<((r: { ok: boolean; error?: string }) => void) | null>(null)
 
-  const canArm = !!tel?.esp?.link && (tel.esp.allow_arm ?? startedAllow.current)
+  // a reload drops the link for a second or two (the firmware stops ~300 ms after the last stick frame): ask first while armed
+  useEffect(() => {
+    const h = (e: BeforeUnloadEvent) => {
+      if (!armedRef.current) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', h)
+    return () => window.removeEventListener('beforeunload', h)
+  }, [])
+
+  const canArm = !!tel?.esp?.link && !!tel.esp.allow_arm
   useEffect(() => {
     allowArm.current = canArm
   }, [canArm])
@@ -75,7 +89,6 @@ export function useController(createWorker: () => Worker) {
   useEffect(() => {
     const w = createWorker()
     worker.current = w
-    let autostarted = false
     w.onmessage = (ev: MessageEvent<FromWorker>) => {
       const m = ev.data
       if (m.type === 'ready') setWs('open')
@@ -95,12 +108,18 @@ export function useController(createWorker: () => Worker) {
           }
           setGuardNote('UI stalled, worker disarmed and centred the sticks. Arm again to continue.')
         }
-        if (MOCK && !autostarted && t.esp?.connected && new URLSearchParams(location.search).has('autostart')) {
-          autostarted = true
-          startedAllow.current = true
-          w.postMessage({ type: 'start', power: 127, fofs_hz: DEFAULT_FOFS_HZ, timeout_ms: 300, allow_arm: true } satisfies ToWorker)
+        // the link came (back) up, or the drone USB opened (e.g. after it was in use elsewhere): an error from the
+        // attempts before it is stale
+        if ((m.esp?.link_state === 'up' && errorRole.current === 'esp') || (m.fc?.connected && errorRole.current === 'fc')) {
+          errorRole.current = null
+          setError(null)
+          setErrorKind(null)
         }
+      } else if (m.type === 'esp_released') {
+        releaseWait.current?.(m)
+        releaseWait.current = null
       } else if (m.type === 'error') {
+        errorRole.current = m.role ?? null
         setError(m.message)
         setErrorKind(m.kind)
       }
@@ -303,56 +322,68 @@ export function useController(createWorker: () => Worker) {
     return () => clearInterval(id)
   }, [])
 
-  const startLink = useCallback(
-    (o: StartOptions) => {
-      // starting a link always allows arming; the 1 s hold is the deliberate gate
-      startedAllow.current = true
-      setError(null)
-      send({ type: 'start', power: o.power, fofs_hz: o.fofs_hz, timeout_ms: o.timeout_ms, allow_arm: true })
-    },
+  // the worker keeps the link running whenever the ESP32 is connected; new radio settings restart it. Arming stays
+  // allowed on the link; the 1 s hold is the deliberate gate.
+  const setRadio = useCallback(
+    (o: Omit<RadioConfig, 'allow_arm'>) => send({ type: 'radio', power: o.power, fofs_hz: o.fofs_hz, timeout_ms: o.timeout_ms, allow_arm: true }),
     [send],
   )
-  const stopLink = useCallback(() => {
-    disarm()
-    startedAllow.current = false
-    send({ type: 'stop' })
-  }, [send, disarm])
 
+  const portsChanged = useCallback(() => send({ type: 'ports_changed' }), [send])
   const startBind = useCallback((fofsHz: number) => {
     setError(null)
+    disarm()
     send({ type: 'bind', fofs_hz: fofsHz })
-  }, [send])
+  }, [send, disarm])
   const stopBind = useCallback(() => send({ type: 'bind_stop' }), [send])
   const newId = useCallback(() => {
     setError(null)
     send({ type: 'new_id' })
   }, [send])
 
-  // requestPort must run on the UI thread from a click; the worker opens the granted port by VID/PID
+  // requestPort runs on the UI thread from a click (usePorts); the worker opens the picked port, matched by its index in
+  // getPorts() order and its USB VID/PID, or the first granted port of the role when no port is given
   const connect = useCallback(
-    async (role: Role) => {
+    (role: Role, port?: PortRef) => {
       setError(null)
       setErrorKind(null)
-      try {
-        const serial = (navigator as Navigator & { serial?: { requestPort(o: unknown): Promise<unknown> } }).serial
-        if (!serial) throw new Error('Web Serial is not available in this browser')
-        const f = role === 'esp' ? DEVKIT : FC
-        await serial.requestPort({ filters: [{ usbVendorId: f.usbVendorId, usbProductId: f.usbProductId }] })
-        send({ type: 'connect', role })
-      } catch (e) {
-        if ((e as Error).name !== 'NotFoundError') setError(String(e instanceof Error ? e.message : e))
-      }
+      send({ type: 'connect', role, port })
     },
     [send],
   )
-  const connectMock = useCallback(() => {
+  const connectMock = useCallback((roles: Role[] = ['esp', 'fc']) => {
     setError(null)
-    send({ type: 'connect', role: 'esp', mock: true })
-    send({ type: 'connect', role: 'fc', mock: true })
+    for (const role of roles) send({ type: 'connect', role, mock: true })
   }, [send])
-  const disconnect = useCallback((role: Role) => send({ type: 'disconnect', role }), [send])
+  const fail = useCallback((e: unknown) => {
+    setError(String(e instanceof Error ? e.message : e))
+    setErrorKind(null)
+  }, [])
+  const disconnect = useCallback(
+    (role: Role) => {
+      // disconnecting the ESP32 stops transmitting: drop the arm with it
+      if (role === 'esp') disarm()
+      send({ type: 'disconnect', role })
+    },
+    [send, disarm],
+  )
+
+  /** Flashing: the worker stops the link and closes the DevKit port; rejects when it refuses (armed, bind running). */
+  const releaseEsp = useCallback(async (): Promise<void> => {
+    disarm()
+    const r = await new Promise<{ ok: boolean; error?: string }>((res) => {
+      releaseWait.current?.({ ok: false, error: 'superseded' })
+      releaseWait.current = res
+      send({ type: 'esp_release' })
+    })
+    if (!r.ok) throw new Error(r.error ?? 'the worker kept the DevKit port')
+  }, [send, disarm])
+  /** Flashing done: the worker reopens the DevKit port (when wanted) and the link auto-starts. */
+  const resumeEsp = useCallback(() => send({ type: 'esp_resume' }), [send])
 
   return {
+    releaseEsp,
+    resumeEsp,
     tel,
     ws,
     sticks,
@@ -368,10 +399,12 @@ export function useController(createWorker: () => Worker) {
     mock: mockOn,
     connect,
     connectMock,
+    fail,
     disconnect,
     canArm,
-    startLink,
-    stopLink,
+    setRadio,
+    /** The granted port list changed (a device was plugged in): the worker retries a pending reconnect now. */
+    portsChanged,
     startBind,
     stopBind,
     newId,

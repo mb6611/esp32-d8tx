@@ -1,9 +1,22 @@
 export interface EspStatus {
   connected?: boolean
+  /** the UI asked for the ESP32 (the worker keeps reconnecting until a disconnect) */
+  wanted?: boolean
+  link_state?: 'off' | 'connecting' | 'linking' | 'up' | 'lost' | 'paused'
+  retry_in_ms?: number
+  retry_reason?: string
+  attempt?: number
+  /** power of the running link */
+  power?: number
   error?: string
   info?: Record<string, string | number>
   link?: boolean
   binding?: boolean
+  /** one-click bind flow progress (worker Host.bind) */
+  bind_state?: 'idle' | 'binding' | 'confirming' | 'bound' | 'failed'
+  bind_txid?: string
+  bind_reason?: string
+  bind_via?: 'telemetry' | 'fc'
   txid?: string
   keyed?: boolean
   fofs?: number
@@ -13,12 +26,18 @@ export interface EspStatus {
   sender_hz?: number
   sender_max_gap_ms?: number
   lost_reason?: string | null
+  /** the DevKit port is held by another app or tab; the worker retries every 2 s */
+  in_use?: boolean
   protocol_ok?: boolean
   guard?: 'ui-silent'
   guard_at?: number
 }
 export interface FcStatus {
   connected?: boolean
+  /** the UI asked for the drone USB (the worker retries while the port is in use) */
+  wanted?: boolean
+  /** the drone USB port is held by another app or tab; the worker retries every 2 s */
+  in_use?: boolean
   error?: string
   rc?: number[]
   armed?: boolean
@@ -83,6 +102,5 @@ export interface StartOptions {
   power: number
   fofs_hz: number
   timeout_ms: number
-  allow_arm: boolean
 }
 export type WsState = 'connecting' | 'open' | 'closed'

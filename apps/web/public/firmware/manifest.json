@@ -1,0 +1,32 @@
+{
+  "chip": "esp32",
+  "version": "1.0.0+efc1e61c",
+  "flash": {
+    "flash_mode": "dio",
+    "flash_size": "2MB",
+    "flash_freq": "40m"
+  },
+  "files": [
+    {
+      "name": "bootloader",
+      "offset": 4096,
+      "path": "bootloader.bin",
+      "size": 23808,
+      "sha256": "c60bef5bf8f1c10f91581c018bb3fbe1b531c0a2fffb15e2671df7b663503718"
+    },
+    {
+      "name": "partition-table",
+      "offset": 32768,
+      "path": "partition-table.bin",
+      "size": 3072,
+      "sha256": "7f00b6c042a89b15b0cac534f82ed988caf29278ff5700b0c511eb1b5bb7c820"
+    },
+    {
+      "name": "app",
+      "offset": 65536,
+      "path": "d8tx-app.bin",
+      "size": 659648,
+      "sha256": "17fee24264f425be16e30767fbebacd9b4d87f36de5c9690d2a6196454dfc415"
+    }
+  ]
+}
