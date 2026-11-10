@@ -3,7 +3,7 @@
 Wire format (frsky_hub.c frSkyHubWriteFrame L158-165, serializeFrSkyHub): 0x5E id lo hi, lo/hi byte-stuffed
 (0x5E -> 0x5D 0x3E, 0x5D -> 0x5D 0x3D); one 0x5E tail per 125 ms cycle.
 
-Betaflight source paths below are relative to bench/cc2500-rxdiag/firmware/work/betaflight/src/main.
+Betaflight source paths below are relative to tools/cc2500-rxdiag/firmware/work/betaflight/src/main.
 """
 from __future__ import annotations
 
@@ -74,7 +74,7 @@ class PatchedField:
 
 
 # Data-driven table: add rows here when the patched firmware gains hub IDs.
-# Source of truth: "Patched Betaflight hub fields" in protocol/PROTOCOL.md (bench/betaflight-patch).
+# Source of truth: "Patched Betaflight hub fields" in protocol/PROTOCOL.md (tools/betaflight-patch).
 PATCHED_FIELDS: list[PatchedField] = [
     PatchedField(0x46, "armed", kind="bool", bit=0),
     PatchedField(0x46, "angle", kind="bool", bit=1),

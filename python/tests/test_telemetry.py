@@ -88,7 +88,7 @@ def wait(cond, t=3.0):
     return False
 
 
-# ---- decode of real saved captures (bench/d8-tx/results/telemetry/20261108-002423-link, FOFS -75000)
+# ---- decode of real saved captures (experiments/09-telemetry/data/20261108-002423-link, FOFS -75000)
 @pytest.mark.parametrize("i", range(len(CAPS)))
 def test_decode_real_captures(i):
     m, payload = load(i)

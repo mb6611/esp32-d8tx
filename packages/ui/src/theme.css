@@ -1,4 +1,4 @@
-/* Design tokens, taken from the write-up page (docs/devkitv1/writeup/index.html).
+/* Design tokens, taken from the write-up page (docs/lab-log/index.html).
    Tailwind turns each into utilities: text-fg, border-line, bg-paper-2, font-serif, ...
    Canvas code reads the same values through src/tokens.ts, so change colours here only. */
 @theme static {

@@ -2,7 +2,7 @@
 
 The ESP32 firmware (TLM stream=1) ships an int8 I/Q capture after each trigger as `EV tlm ... bytes=N` + N raw
 bytes + "\\n". decode_capture() demodulates it with the vendored D8 decoder; Tracker keeps the state.
-Betaflight source paths are relative to bench/cc2500-rxdiag/firmware/work/betaflight/src/main (4.2.11).
+Betaflight source paths are relative to tools/cc2500-rxdiag/firmware/work/betaflight/src/main (4.2.11).
 """
 from __future__ import annotations
 

@@ -1,7 +1,7 @@
 /* d8tone: bounded tone bench app for the classic ESP32 DevKit V1 (U2).
  *
  * PHY bring-up, keying and unkeying are adapted from the read-only reference
- * auto-drone/stage2/txeng (K 0 keying: txcal_debuge_mode(0) + ROM start_tx_tone_step + PBUS(5,1)).
+ * tools/txeng (K 0 keying: txcal_debuge_mode(0) + ROM start_tx_tone_step + PBUS(5,1)).
  * Boot and idle are RF-silent: nothing keys until a keying command (LINK, BIND, HOP 0, or in a bench build TONE/ALT/
  * PKT/HOP n/keyed TCAP) arrives.
  *
@@ -161,7 +161,7 @@ static void key(int f, int pwr) {
     rom_pbus_force_test(5, 1, pwr);
 }
 
-/* libphy's stop path (as stage2 txeng unkey), then receive-only PBUS setup. Idempotent. */
+/* libphy's stop path (as txeng unkeys), then receive-only PBUS setup. Idempotent. */
 static void unkey(void) {
     ((void (*)(int, int, int, int, int, int))g_phyFuns[68 / 4])(0, 0, 0, 0, 0, 0);
     ((void (*)(void))g_phyFuns[0x124 / 4])();

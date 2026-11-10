@@ -1,4 +1,4 @@
-"""Minimal read-only MSP v1 client for Betaflight (ported from bench/d8-tx/host/bf_msp.py)."""
+"""Minimal read-only MSP v1 client for Betaflight (ported from tools/d8-tx-host/bf_msp.py)."""
 import struct
 import threading
 import time

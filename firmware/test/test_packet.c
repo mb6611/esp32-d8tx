@@ -34,7 +34,7 @@ static cmd_t parse(const char *s) {
     char buf[96]; assert(strlen(s) < sizeof buf); strcpy(buf, s); return cmd_parse(buf);
 }
 int main(void) {
-    /* U3 bench/d8-tx/host/d8_vectors.py build(0), captured-E8 id and 2250 channels. */
+    /* U3 tools/d8-tx-host/d8_vectors.py build(0), captured-E8 id and 2250 channels. */
     const char *hex = "1142b2000001cacacaca8888cacacaca8888";
     char line[96]; snprintf(line, sizeof line, "PKT %s", hex);
 #if !D8_BENCH
