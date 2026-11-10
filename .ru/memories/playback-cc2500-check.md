@@ -3,7 +3,7 @@ name: playback-cc2500-check
 description: Read before re-testing whether the classic ESP32 stage2 playback engine radiates, or keying it with the CC2500 rxdiag detector; Nov 2026 result and pitfalls.
 load: description
 ---
-As of 2026-11-05 (bench/cc2500-rxdiag/playback-check/README.md): with txeng `K 0`, PBUS 127, the CC2500 events
+As of 2026-11-05 (experiments/01-playback-engine-check/data/README.md): with txeng `K 0`, PBUS 127, the CC2500 events
 detector at 2412 sees every keyed burst. **Keyed RF detected; sample-dependent RF not established either way.**
 Pattern, DC and zero samples gave similar energy (medians within ~1 raw step, n=20, no CI/p-value, so no hard bound).
 The test was weak: pattern A's line (±1.25 MHz) was outside the detector's ±406 kHz slice (no in-slice pattern test);

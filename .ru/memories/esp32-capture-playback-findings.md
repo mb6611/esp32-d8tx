@@ -12,7 +12,7 @@ Measured facts (details, tables and evidence in the READMEs; rerun with the scri
   stage 2 behaviour, `stage2/run.py`): `0x60033d98` (DUMP_CTRL + 8) has the ESP32-S3 TX engine's
   exact mask `0x8FF8BFFF` and behaves like it: run bit 31, done bit 18 (RO), bit 19 blocks done while set
   (we called it "hold"; the whstudio123 S3 reference calls the same bit "loop", and our data fits both; see
-  `bench/register-map/research/measured.md` §6/T1 before relying on either reading), rate bit 15 (1 = 80.01 MS/s, 0 = 40.00 MS/s), N = count + 1 samples, 1…16384,
+  `experiments/02-register-map/data/research/measured.md` §6/T1 before relying on either reading), rate bit 15 (1 = 80.01 MS/s, 0 = 40.00 MS/s), N = count + 1 samples, 1…16384,
   count 0 never completes. The 64 KiB window `0x3ffe8000..0x3fff7fff` is the whole buffer.
   No loop/retrigger mode: run must be cleared before rearming. MCU-driven back-to-back gap is
   ≈0.5 µs at 40 MS/s (≈20 samples) and ≈0.57 µs at 80 MS/s (≈45 samples), an upper bound only.
