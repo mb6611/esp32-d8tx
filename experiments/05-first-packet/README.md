@@ -10,11 +10,11 @@ Before looking at the ESP32 I recorded two controls. With no transmitter on, the
 
 Then I sent 10 packets from the ESP32. All 10 commands completed (208 bits, 6.70 ms each). The receiver logged 23 records: 7 matching the test packet byte for byte with a valid CRC, 2 with the right 18 bytes but the CRC flag cleared, and 14 short fragments like the noise in the control.
 
-The 2 records with correct bytes and a cleared CRC flag pointed at my receiver firmware rather than the ESP32: the E8 control showed the same signature, a valid record next to a 2-byte stray. I couldn't confirm it in this session. In [06](../06-fixed-channel-reliability/README.md) it turned out to be the receiver: the firmware ended a packet 500 µs after the last byte, and the CRC bytes arrive about 515 µs after the payload.
-
 ![Receiver outcomes: the ESP32 batch (7 CRC-valid, 2 body-match with CRC flag 0, 14 other), the E8 control (32 CRC-valid of 77), and source-off runs with no CRC-valid records](figures/packet-outcome.png)
 
 *Figure: receiver records per run, classified by `scripts/plot_tx.py`. CRC flag = the CC2500's hardware checksum check.*
+
+The 2 records with correct bytes and a cleared CRC flag pointed at my receiver firmware rather than the ESP32: the E8 control showed the same signature, a valid record next to a 2-byte stray. I couldn't confirm it in this session. In [06](../06-fixed-channel-reliability/README.md) it turned out to be the receiver: the firmware ended a packet 500 µs after the last byte, and the CRC bytes arrive about 515 µs after the payload.
 
 ---
 

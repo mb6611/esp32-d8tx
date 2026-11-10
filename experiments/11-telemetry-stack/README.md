@@ -4,19 +4,19 @@ Until now telemetry had only run in a bench script ([09](../09-telemetry/README.
 
 A 10-minute run answered 1387 of 1395 triggers (99.4%), and no minute was below 97.2%. The stick sender held 111 Hz, one update per 8.994 ms slot, over 66,706 sends, none skipped, at most 799 µs late. The age of the newest reply was 215 ms at the median, 410 ms at the 95th percentile and 849 ms at most, which is two missed replies in a row. That age is set by the trigger spacing: 48 slots is 432 ms between triggers, so on average a reply is half that old. The patched acceleration came through as −28, −46, +1005 milli-g with the drone level.
 
-But in that run the hub fields stopped updating after 12.9 s, while the replies kept arriving. Hub frames appeared on replies 1 to 29 and on none of the 1358 after. The shorter 40 s and 60 s runs had updated the hub to the end. The cause is in Betaflight. It starts a new hub cycle only when `cmpTimeUs(now, lastCycle)` is at least 125 ms, and that difference is a signed 32-bit count of microseconds. The previous hub cycle had been at the end of an earlier run, about 11:06, and this run started at 12:06:44, 60.7 minutes later. That is more than 2^31 µs (35.8 minutes), so the difference came out negative, the cycle was always skipped, and a skipped cycle doesn't update `lastCycle`. Every request then got zero hub bytes, and that would last until the gap passed 2^32 µs (71.6 minutes), about 65 s after the run ended.
-
-To check it I wrote a model (`scripts/hub-stall/model.py`) that replays Betaflight's hub buffer logic against the telemetry IDs in the log. It reproduces the log reply by reply: 27 resends of a stale chunk carrying gyro Y and Z (my side had restarted with a fresh telemetry ID, so the drone kept resending its last unacknowledged bytes), then acceleration X and Y on reply 28, Z on reply 29, then nothing. Two things I couldn't observe directly: the hub byte count per reply wasn't logged, and I can't rule out that the flight controller rebooted between 11:06 and 12:06, which would stall it the same way. The fix is a guard in the patch that treats a negative difference as due. It went into patch 0003 later ([13](../13-fast-attitude-telemetry/README.md)), but the 36-minute idle condition was never re-tested.
-
-So telemetry runs at 99.4% over 10 minutes alongside sticks on every slot. The stall is a Betaflight bug that hits any link starting 36 to 72 minutes after the drone last sent hub data, or after it booted.
-
 ![Left: replies per trigger for each minute of the 10-minute run, 97.2 to 100%. Right: histogram of reply age, flat from 0 to about 430 ms](figures/tlm-catch-age.png)
 
 *Figure: the 10-minute backend run. Left, catch rate per minute. Right, reply age in the status messages: p50 215 ms, p95 410 ms, maximum 849 ms. Source: `data/e2e/fc_10min_b.jsonl.gz`.*
 
+But in that run the hub fields stopped updating after 12.9 s, while the replies kept arriving. Hub frames appeared on replies 1 to 29 and on none of the 1358 after. The shorter 40 s and 60 s runs had updated the hub to the end. The cause is in Betaflight. It starts a new hub cycle only when `cmpTimeUs(now, lastCycle)` is at least 125 ms, and that difference is a signed 32-bit count of microseconds. The previous hub cycle had been at the end of an earlier run, about 11:06, and this run started at 12:06:44, 60.7 minutes later. That is more than 2^31 µs (35.8 minutes), so the difference came out negative, the cycle was always skipped, and a skipped cycle doesn't update `lastCycle`. Every request then got zero hub bytes, and that would last until the gap passed 2^32 µs (71.6 minutes), about 65 s after the run ended.
+
+To check it I wrote a model (`scripts/hub-stall/model.py`) that replays Betaflight's hub buffer logic against the telemetry IDs in the log. It reproduces the log reply by reply: 27 resends of a stale chunk carrying gyro Y and Z (my side had restarted with a fresh telemetry ID, so the drone kept resending its last unacknowledged bytes), then acceleration X and Y on reply 28, Z on reply 29, then nothing. Two things I couldn't observe directly: the hub byte count per reply wasn't logged, and I can't rule out that the flight controller rebooted between 11:06 and 12:06, which would stall it the same way. The fix is a guard in the patch that treats a negative difference as due. It went into patch 0003 later ([13](../13-fast-attitude-telemetry/README.md)), but the 36-minute idle condition was never re-tested.
+
 ![Patched ACC X, Y, Z and gyro X, Y, Z received over the radio during a 60 s run, drone level on the bench](figures/tlm-hub-acc-gyro.png)
 
 *Figure: patched acceleration and gyro received over the radio by the backend, one point per hub update (137 in 60 s). Mean acceleration −28.3, −45.9, +1005.7 milli-g. Source: `data/e2e/fc_idle.jsonl.gz`.*
+
+So telemetry runs at 99.4% over 10 minutes alongside sticks on every slot. The stall is a Betaflight bug that hits any link starting 36 to 72 minutes after the drone last sent hub data, or after it booted.
 
 ---
 

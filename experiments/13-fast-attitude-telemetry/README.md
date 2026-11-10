@@ -16,6 +16,7 @@ Then I flashed build `c3f351e4` with patch 0003 and ran the link end to end for 
 
 So attitude now arrives about 5.7 times a second, about 0.1 s after it is requested, which is fast enough for the app's live 3D view. That is what the app's 3D panel uses. It was all on the bench with the drone sitting still, so it doesn't show how the block behaves in motion, and the hub-stall guard in the same patch was not tested against the 36-minute idle condition that triggers the stall.
 
+
 The numbers are in the per-run result files in `data/`.
 
 ---

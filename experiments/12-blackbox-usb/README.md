@@ -10,13 +10,13 @@ For session 1, at 13:10, I ran a watcher that polls MSP and does one USB reset w
 
 The decoded log matches what the script sent. rcCommand on roll, pitch and yaw swept to ±300 in turn, and the setpoint followed at about ±170 deg/s. The gyro stayed within ±1 deg/s, because the drone sat still on the bench. The first 0.9 s is missing: `rxSignalReceived` was 0 from 0.081 to 0.922 s, so the first roll ramp isn't there, probably a gap from the link or the USB reset. Two things looked wrong but weren't. The motors swung from about 176 to 2047 with props off, because with nothing moving the PID I-term winds up under airmode; the ESCs were unpowered. And throttle rcCommand stayed at 1000 to 1001 while I sent up to 1150 µs, because this rate profile has `thr_mid` 0 and `thr_expo` 100, which makes the throttle curve flat near the bottom.
 
-At 13:12 I tried a two-session run with a reset on every 1.5 s of silence. The stream stopped after about 1 s, the repeated resets produced nothing, and afterwards the flight controller answered neither USB nor the radio: 21 telemetry triggers, 0 replies, where it had answered at 13:00. It needed a physical unplug and replug. That the repeated resets caused the hang is likely but not proven. After the replug I reverted the blackbox setting, and `diff all` came back identical to the one from before.
-
-So the tools work end to end on a real Betaflight 4.2 log, but blackbox over the shared USB port is not usable as a routine setup on this board with a Mac. Even with a reset per arm the header start is lost, and the reset approach hung the flight controller once. The options are a UART logger such as an OpenLager, or a Linux host, which might re-enumerate after the D+ pulse. I haven't tested either, so this is still open.
-
 ![Three panels over 14 s: rcCommand roll, pitch and yaw sweeping ±300 in turn; setpoint following at about ±170 deg/s; four motor outputs between about 180 and 2047](figures/blackbox-session1.png)
 
 *Figure: session 1, the one good blackbox log. Top: rcCommand. Middle: setpoint. Bottom: motor outputs (props off, ESCs unpowered). The gyro is not shown; it stays within ±1 deg/s. Source: `figures/bb_session1_reconstructed.01.csv`.*
+
+At 13:12 I tried a two-session run with a reset on every 1.5 s of silence. The stream stopped after about 1 s, the repeated resets produced nothing, and afterwards the flight controller answered neither USB nor the radio: 21 telemetry triggers, 0 replies, where it had answered at 13:00. It needed a physical unplug and replug. That the repeated resets caused the hang is likely but not proven. After the replug I reverted the blackbox setting, and `diff all` came back identical to the one from before.
+
+So the tools work end to end on a real Betaflight 4.2 log, but blackbox over the shared USB port is not usable as a routine setup on this board with a Mac. Even with a reset per arm the header start is lost, and the reset approach hung the flight controller once. The options are a UART logger such as an OpenLager, or a Linux host, which might re-enumerate after the D+ pulse. I haven't tested either, so this is still open.
 
 ---
 

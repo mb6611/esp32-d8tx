@@ -8,6 +8,10 @@ Then I sent ten batches of ten packets on one fixed channel (2412 MHz, power 127
 
 Across both sessions the ESP32 got 132 of 140 attributable packets through (94%). The E8 got 175 of about 189 expected (93%). The 95% intervals of the two overlap, so on this bench I can't distinguish the ESP32's loss rate from the real transmitter's. In 140 packets there was not a single CRC-invalid record: a packet was either received correctly or not recorded at all.
 
+![Per-batch outcomes of the ESP32 batches, and received fraction with 95% intervals for the ESP32 and the real E8](figures/reliability-outcome.png)
+
+*Figure: each bar is ten packets; red is a packet the receiver never recorded. Right: received fraction with 95% intervals. Source: `data/reliability/`, `data/freqest/`, `scripts/plot_reliability.py`.*
+
 For the batches with a tight time anchor, the received packets sit on a straight line against send time with at most 91 µs of residual. That predicts when each missing packet should have arrived to about 0.1 ms. At those instants the receiver logged no record and no noise fragment; the nearest noise record was at least 41 ms away. So these are clean missed sync detections. Whether the receiver was blind at that moment or the start of the ESP32 packet was occasionally not decodable, this setup can't separate, because the E8 baseline loses packets at the same rate.
 
 ![Receiver-minus-host clock against send time for batches 3, 6 and 9, with the expected time of each unobserved send marked](figures/reliability-timing.png)
@@ -21,10 +25,6 @@ I also logged the CC2500's per-packet frequency estimate (FREQEST) for 50 more p
 *Figure: receiver FREQEST of CRC-valid packets, in 4 kHz bins, each series normalised to its own packet count. Dashed lines: the ±21 LSB clamp. Source: `data/freqest/batch*_stm.txt`, `data/*/control_e8_{pre,post}.txt`.*
 
 So on one channel the ESP32 performs like the real radio on this receiver. The next question was whether it could keep that up while retuning to a new channel every 9 ms ([07](../07-hopping/README.md)).
-
-![Per-batch outcomes of the ESP32 batches, and received fraction with 95% intervals for the ESP32 and the real E8](figures/reliability-outcome.png)
-
-*Figure: each bar is ten packets; red is a packet the receiver never recorded. Right: received fraction with 95% intervals. Source: `data/reliability/`, `data/freqest/`, `scripts/plot_reliability.py`.*
 
 ---
 

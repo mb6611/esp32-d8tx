@@ -8,11 +8,11 @@ I first recorded the receiver with nothing on, at 2412.000 MHz and at 2421.032 M
 
 The receiver saw nothing. Across all 12 runs the largest `ncs` in any window was 1, in a single window about 250 ms after a +16 tone had ended, so not a detection. As a positive control I recorded my real E8 transmitter on its own channel at 2421.032 MHz with the same settings: 28 of 50 windows had carrier sense. So the receiver could hear a real transmitter, and the ESP32 believed it had keyed, but no ESP32 signal was detected.
 
-At the time I couldn't tell why. There was no known signal at 2412 MHz to show the receiver could see one there, so this was a null, not evidence that the ESP32 doesn't radiate. The tone might have been too weak at power 32, it might have landed outside the receiver's ±406 kHz passband, or there might have been no RF at all. [04](../04-tone-scan/README.md) answered part of this: one step turned out to be about 39 kHz, which puts ±16 steps at about ±625 kHz, outside the passband, so nine of these keyings could not have been seen. That doesn't explain the three step-0 keyings, which were at the receiver's centre. In 04 a step-0 tone at power 127 and the more sensitive AGC 203/66 was seen, so low power or low sensitivity is the likely reason here, but I never ran the one change that would separate the two.
-
 ![Left: the 12 first-attempt keyings at power 32 with no carrier sense. Middle and right: carrier sense with nothing keyed at AGC 203/66, in 30 of 30 windows at 812 kHz and 2 of 30 at 102 kHz](../04-tone-scan/figures/null-and-trap.png)
 
 *Figure: panel A is this experiment, the largest `ncs` in any 100 ms window for each of the 12 keyings (the one bar is the stray window after the tone ended). Panels B and C are from [04](../04-tone-scan/README.md). Source: `data/retry_*_stm.txt`, drawn by `../05-first-packet/scripts/plot_tx.py`.*
+
+At the time I couldn't tell why. There was no known signal at 2412 MHz to show the receiver could see one there, so this was a null, not evidence that the ESP32 doesn't radiate. The tone might have been too weak at power 32, it might have landed outside the receiver's ±406 kHz passband, or there might have been no RF at all. [04](../04-tone-scan/README.md) answered part of this: one step turned out to be about 39 kHz, which puts ±16 steps at about ±625 kHz, outside the passband, so nine of these keyings could not have been seen. That doesn't explain the three step-0 keyings, which were at the receiver's centre. In 04 a step-0 tone at power 127 and the more sensitive AGC 203/66 was seen, so low power or low sensitivity is the likely reason here, but I never ran the one change that would separate the two.
 
 ---
 

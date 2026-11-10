@@ -12,23 +12,23 @@ Then I put stock Betaflight 4.2.11 back on the drone and restored its saved conf
 
 For live sticks the host sends at the slot rate, 111 Hz. My first sender used relative sleeps, which accumulate and let it slip behind; it now keeps absolute deadlines. I toggled roll between 1300 and 1700 µs every half second for 15 s and read roll back from Betaflight over MSP. All 29 edges arrived, with a median delay of 44.3 ms, a 95th percentile of 61.8 ms, and a maximum of 181.5 ms. That delay includes the USB serial link to the ESP32, the wait for the next slot, Betaflight's RC smoothing and the MSP readback itself, so it is an upper bound on what the radio link adds.
 
-Arming is on channel 7 (AUX3, 1700 to 2100 µs). The firmware forces channel 7 low unless the host sends `ARMOK` before a `HOP`, and clears that after every `HOP`, so a stuck host can't arm the drone by accident. The first two motor tests didn't arm, for two reasons: my host sender was also forcing channel 7 low, and Betaflight holds RX failsafe for about 2.5 s after a link appears, so an arm command sent earlier is ignored. With both fixed, each test held the sticks at rest, raised channel 7 at 3.5 s, opened the throttle at 5.0 s, and lowered channel 7 again at 7.0 or 7.5 s. Tests 3 and 4 used throttle 1150 µs for 1 s, tests 5 and 6 full throttle (2000 µs) for 0.5 s, and tests 7 and 8 full throttle for 1 s. In test 8 the quad took off.
-
-The last test was failsafe, with props off: arm at idle, then stop the host sender without the final stop command, as if the computer had crashed. The host stopped at 5.51 s. The ESP32 stopped transmitting about 0.3 s later, after 646 slots, reporting `why=timeout`. Betaflight went into RX failsafe at 6.27 s and disarmed at 6.75 s, 1.25 s after the host died. A dead ESP32 or a lost radio link would end the same way, because all Betaflight sees is that the packets stop.
-
-So the ESP32 can drive a stock Betaflight drone, through arming, throttle and failsafe. What it doesn't show: the takeoff was a scripted 1 s throttle pulse, not piloted flight; there was no range test; and the link only works because the ESP32 copies the E8's identity and frequency error. A bind of its own came later ([15](../15-ota-bind/README.md)). Everything here also went one way, from the ESP32 to the drone, and Betaflight sends telemetry back, which is the next experiment ([09](../09-telemetry/README.md)).
-
 ![The control path from a key press to the motors: UI and sender on the laptop, USB to the ESP32, firmware packet and CRC, the Wi-Fi PHY's tone generator and LO as a 2-FSK transmitter, then the drone's CC2500, Betaflight and motors](../../docs/diagrams/overview-control.svg)
 
 *Figure: the control path, one packet every 8.994 ms. Blue runs in the browser, grey is the operating system and USB, green is firmware. Source: [`docs/diagrams/overview-control.excalidraw`](../../docs/diagrams/overview-control.excalidraw).*
+
+![Commanded roll against roll read back from Betaflight over MSP, a 1300/1700 µs square wave](figures/live-roll-latency.png)
+
+*Figure: grey, roll commanded by the host sender; blue, roll read back from Betaflight over MSP. Source: `data/live_sticks/live_sender.csv`, `live_msp.csv`, drawn by `scripts/plot_latency.py`.*
+
+Arming is on channel 7 (AUX3, 1700 to 2100 µs). The firmware forces channel 7 low unless the host sends `ARMOK` before a `HOP`, and clears that after every `HOP`, so a stuck host can't arm the drone by accident. The first two motor tests didn't arm, for two reasons: my host sender was also forcing channel 7 low, and Betaflight holds RX failsafe for about 2.5 s after a link appears, so an arm command sent earlier is ignored. With both fixed, each test held the sticks at rest, raised channel 7 at 3.5 s, opened the throttle at 5.0 s, and lowered channel 7 again at 7.0 or 7.5 s. Tests 3 and 4 used throttle 1150 µs for 1 s, tests 5 and 6 full throttle (2000 µs) for 0.5 s, and tests 7 and 8 full throttle for 1 s. In test 8 the quad took off.
 
 [![First takeoff, a frame from the phone video](../../docs/lab-log/media/esp32-first-takeoff-poster.jpg)](../../docs/lab-log/media/esp32-first-takeoff.mp4)
 
 *Video: motor test 8, the first takeoff, 34 s, recompressed to 720p from my phone recording ([mp4](../../docs/lab-log/media/esp32-first-takeoff.mp4)). Sender log: `data/motor_test/motor_test8_fullthrottle_1s_sender.csv`.*
 
-![Commanded roll against roll read back from Betaflight over MSP, a 1300/1700 µs square wave](figures/live-roll-latency.png)
+The last test was failsafe, with props off: arm at idle, then stop the host sender without the final stop command, as if the computer had crashed. The host stopped at 5.51 s. The ESP32 stopped transmitting about 0.3 s later, after 646 slots, reporting `why=timeout`. Betaflight went into RX failsafe at 6.27 s and disarmed at 6.75 s, 1.25 s after the host died. A dead ESP32 or a lost radio link would end the same way, because all Betaflight sees is that the packets stop.
 
-*Figure: grey, roll commanded by the host sender; blue, roll read back from Betaflight over MSP. Source: `data/live_sticks/live_sender.csv`, `live_msp.csv`, drawn by `scripts/plot_latency.py`.*
+So the ESP32 can drive a stock Betaflight drone, through arming, throttle and failsafe. What it doesn't show: the takeoff was a scripted 1 s throttle pulse, not piloted flight; there was no range test; and the link only works because the ESP32 copies the E8's identity and frequency error. A bind of its own came later ([15](../15-ota-bind/README.md)). Everything here also went one way, from the ESP32 to the drone, and Betaflight sends telemetry back, which is the next experiment ([09](../09-telemetry/README.md)).
 
 ---
 

@@ -15,4 +15,6 @@ Also leave out ordinary software bugs in my own test tooling (e.g. a test firmwa
 **Why:** the owner rejected a first sample as "exaggerated in tone" and a second line as not how he talks (2026-11-09). Approved sample: esp32-d8tx experiments/05-first-packet/README.md (calm version).
 Experiment READMEs must be technical: state the actual measurements and numbers in the prose (counts, rates, timings, the mechanism, e.g. '500 µs window vs CRC bytes arriving ~515 µs after the payload'), with the reasoning that connects them. Vague summary lines without numbers ('Within the precision of the counts, they're the same.') were rejected (2026-11-09); say what the numbers show instead ('132 of 140 (94%) vs 175 of ~189 (93%); the 95% intervals overlap').
 
+Figures go right after the paragraph they illustrate, never stacked at the end of the story (owner, 2026-11-10).
+
 **How to apply:** narrative in "I", technical and numeric but calm and clear; data descriptions as plain labels (no person); re-run steps as imperative commands. Keep the owner's own sentences when he wrote them. Approved style sample: esp32-d8tx experiments/06-fixed-channel-reliability/README.md.

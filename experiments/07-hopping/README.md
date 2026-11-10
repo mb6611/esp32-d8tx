@@ -14,10 +14,6 @@ For the runs, the ESP32 hopped through the E8's own hop table with its transmitt
 
 The E8 got 2133 of 2204 slots through in 20 s (96.8%). The ESP32 got 543 of 556 in run A (97.7%) and 921 of 940 in run B (98.0%). In all three runs every one of the 47 channels decoded, the hop counter had no gaps, and the decoded sticks read 1500 µs. The ESP32's misses were scattered: the longest run of consecutive misses was 2 slots, and no channel lost more than two.
 
-The E8's 96.8% hides two weak channels: channel 25 (2411.5 MHz) at 29 of 47 and channel 133 (2443.9 MHz) at 22 of 47. The ESP32 decodes both fine on the same receiver (19 of 20 each in run B). That fits a quirk of the E8 on those channels, but with different times, different packet content and small counts, it isn't proof.
-
-So the ESP32 can run the full 47-channel hop sequence at least as well as the E8, as seen by a CC2500 that follows the table. It doesn't show that stock Betaflight accepts it, which is the next experiment ([08](../08-first-flight-cloned-e8/README.md)).
-
 ![Hop map of ESP32 run B: time against RF frequency, the expected hop sequence, received and missed slots, and per-channel received fraction](figures/runB_hop_map.png)
 
 *Figure: hop map of ESP32 run B, 921 of 940 slots. Line: expected hop sequence. Dots: slots received CRC-valid. Crosses: slots with no valid packet. Source: `data/esp_hop/runB_*`.*
@@ -30,9 +26,13 @@ So the ESP32 can run the full 47-channel hop sequence at least as well as the E8
 
 *Figure: hop map of the real E8, 2133 of 2204 slots over 20 s; line, dots and crosses as for run B. Channels 25 (2411.5 MHz) and 133 (2443.9 MHz) are weak, at 29 of 47 and 22 of 47. Source: `data/e8_control/`.*
 
+The E8's 96.8% hides two weak channels: channel 25 (2411.5 MHz) at 29 of 47 and channel 133 (2443.9 MHz) at 22 of 47. The ESP32 decodes both fine on the same receiver (19 of 20 each in run B). That fits a quirk of the E8 on those channels, but with different times, different packet content and small counts, it isn't proof.
+
 ![Per-channel received percentage for the E8 and ESP32 run B, channels 25 and 133 labelled](figures/hop-per-channel.png)
 
 *Figure: received percentage per channel, E8 (47 visits per channel) vs ESP32 run B (20 visits per channel). Source: `data/e8_control/summary.md`, `data/esp_hop/runB_stats.txt`.*
+
+So the ESP32 can run the full 47-channel hop sequence at least as well as the E8, as seen by a CC2500 that follows the table. It doesn't show that stock Betaflight accepts it, which is the next experiment ([08](../08-first-flight-cloned-e8/README.md)).
 
 ---
 

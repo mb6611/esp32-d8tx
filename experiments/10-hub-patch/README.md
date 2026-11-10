@@ -12,13 +12,13 @@ The field counts were 52 for acceleration and STATUS, 26 for gyro and 13 for att
 
 Last, the arm test. With arming allowed and throttle low, the script raised the arm channel for 10 s. Betaflight's armed flag, read over USB (MSP), changed 0.15 s after the switch, and STATUS bit 0 arrived over the radio 0.63 s after it. On disarm it was 0.18 s over USB and 1.01 s over the radio. A reply only comes every 432 ms, which probably accounts for most of the radio's lag. That is fine for an indicator on the screen, but too slow for anything that has to act on it.
 
-In a final session from 12:25 to 12:55 I fixed one leftover config line (an LED resource that was still assigned, now `resource LED 1 NONE`, saved and checked after a reboot) and ran a 20 s sanity link: 36 of 46 triggers answered (78%), with STATUS and acceleration (−26, −35, 1004 milli-g) decoding as before. I didn't look into why that short run was lower.
-
-This was all on the bench: no battery, so the battery fields read 0, and no flight.
-
 ![Three step traces: the arm switch sent, MSP armed and the radio STATUS armed bit, over the 10 s arm test](figures/tlm-armed-bit.png)
 
 *Figure: arm switch sent (high from 14.0 to 24.0 s), Betaflight's armed flag read over USB (14.17 to 24.20 s), and STATUS bit 0 received over the radio (14.65 to 25.03 s). Source: `data/betaflight-patch/armtest_log.csv`, `armtest_events.json`.*
+
+In a final session from 12:25 to 12:55 I fixed one leftover config line (an LED resource that was still assigned, now `resource LED 1 NONE`, saved and checked after a reboot) and ran a 20 s sanity link: 36 of 46 triggers answered (78%), with STATUS and acceleration (−26, −35, 1004 milli-g) decoding as before. I didn't look into why that short run was lower.
+
+This was all on the bench: no battery, so the battery fields read 0, and no flight.
 
 ---
 
