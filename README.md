@@ -2,9 +2,7 @@
 
 **An ESP32's Wi-Fi radio, hacked to speak FrSky D8. Plug it in, open a tab, fly.**
 
-[Technical writeup](docs/devkitv1/writeup/tx.md) · [Try it](#try-it)
-
-<!-- Add 'Live app' and 'Demo' links here once the controller is deployed. -->
+[Live app](https://d8tx.mb6611.workers.dev) · [Demo, no hardware](https://d8tx.mb6611.workers.dev/?mock=1) · [Technical writeup](https://d8tx.mb6611.workers.dev/writeup/)
 
 ![The d8tx controller: sticks, 3D drone, live telemetry](docs/media/hero.gif)
 
@@ -19,7 +17,7 @@ https://github.com/user-attachments/assets/496075c1-7d02-483a-9e4e-a3d6ad7bda64
 
 The motivation behind this was I wanted to fly my drone with my computer with Claude, but didn't have a radio module. I first tried opening up my E8 controller, and then remembered I was a software developer and did not feel in the mood to drive to the electronics store and buy a soldering iron.
 
-So I researched online and found some people had found undocumented capabilities in the ESP32 family of boards that let it act as an SDR ([esp-sdr](https://github.com/ESPARGOS/esp-sdr)). My board wasn't one they had tested, so I tried it myself and got RX working on it ([esp32-devkitv1-sdr](https://github.com/mb6611/esp32-devkitv1-sdr)). My drone (a Tinyhawk 3) listens for FrSky D8: short 2.4 GHz packets carrying the stick positions, normally sent by a radio like the E8, that hop between 47 channels in a fixed order. So after understanding the D8 protocol (you can read more in the [writeup](docs/devkitv1/writeup/tx.md)), I decided to try to actually send commands to my drone over D8.
+So I researched online and found some people had found undocumented capabilities in the ESP32 family of boards that let it act as an SDR ([esp-sdr](https://github.com/ESPARGOS/esp-sdr)). My board wasn't one they had tested, so I tried it myself and got RX working on it ([esp32-devkitv1-sdr](https://github.com/mb6611/esp32-devkitv1-sdr)). My drone (a Tinyhawk 3) listens for FrSky D8: short 2.4 GHz packets carrying the stick positions, normally sent by a radio like the E8, that hop between 47 channels in a fixed order. So after understanding the D8 protocol (you can read more in the [writeup](https://d8tx.mb6611.workers.dev/writeup/)), I decided to try to actually send commands to my drone over D8.
 
 The problem is that it's hard to get the ESP32's Wi-Fi chip to transmit an arbitrary signal (raw I/Q); it's built to speak Wi-Fi and Bluetooth. But I eventually discovered the existence of its test tones: an undocumented feature that transmits a single pure tone at a chosen offset from the radio's carrier frequency, in steps of about 39 kHz. Other ESP32 transmitter projects like [esp32-iq-tx](https://github.com/whstudio123/esp32-iq-tx) have to disable these three test tones to do non-continuous TX, but I realized I could just use the test tones themselves, if I could tune them to the frequencies I wanted. D8 doesn't need an arbitrary signal: the receiver is entirely frequency-based and uses GFSK, so it might be possible to send commands using 2-FSK (i.e. just a one-bit symbol based on which frequency was transmitted) along the 47 channels used by D8, as long as the hopping schedule was continuous.
 
@@ -75,7 +73,7 @@ The same receiver logged which channel each packet arrived on, for the E8 and fo
 |---|---|
 | ![](docs/devkitv1/writeup/img/tx-evidence/hop-e8-map.png) | ![](docs/devkitv1/writeup/img/tx-evidence/hop-esp-runB-map.png) |
 
-How the ESP32 was made to do this, with every measurement, is in the [technical writeup](docs/devkitv1/writeup/tx.md). The code's design is in [ARCHITECTURE.md](ARCHITECTURE.md).
+How the ESP32 was made to do this, with every measurement, is in the [technical writeup](https://d8tx.mb6611.workers.dev/writeup/). The code's design is in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## What I used
 
@@ -88,7 +86,7 @@ How the ESP32 was made to do this, with every measurement, is in the [technical 
 
 ## Try it
 
-Use the hosted app (link coming), or run it locally: `pnpm install && pnpm --filter web dev` and open it in Chrome or Edge (Web Serial). Add `?mock=1` to try it with a simulated ESP32 and drone. Firmware install and bind happen in the same page; step by step in [docs/getting-started.md](docs/getting-started.md).
+Open the [live app](https://d8tx.mb6611.workers.dev) in Chrome or Edge (Web Serial), or the [demo](https://d8tx.mb6611.workers.dev/?mock=1) with a simulated ESP32 and drone. To run it locally: `pnpm install && pnpm --filter web dev`. Firmware install and bind happen in the same page; step by step in [docs/getting-started.md](docs/getting-started.md).
 
 ## Status
 

@@ -9,7 +9,8 @@
     "build": "make -C ../../demod wasm && node scripts/check-firmware.mjs && tsc --noEmit && vite build && node scripts/copy-writeup.mjs",
     "typecheck": "tsc --noEmit",
     "test": "echo 'no tests'",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "pnpm run build && npx wrangler@4 deploy"
   },
   "dependencies": {
     "@d8tx/core": "workspace:*",
