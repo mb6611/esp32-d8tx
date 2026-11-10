@@ -50,3 +50,8 @@ docs/diagrams/*.png
 
 # Experiment logs are raw data: keep them tracked
 !experiments/*/data/**/*.log
+
+# Explainer video: Manim render cache, frame checks and rendered cuts
+docs/video/media/
+docs/video/frames/
+docs/video/out/
