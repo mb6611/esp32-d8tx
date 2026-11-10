@@ -2,7 +2,7 @@
 
 **An ESP32's Wi-Fi radio, hacked to speak FrSky D8. Plug it in, open a tab, fly.**
 
-[Live app](https://d8tx.mb6611.workers.dev) · [Demo, no hardware](https://d8tx.mb6611.workers.dev/?mock=1) · [Technical writeup](https://d8tx.mb6611.workers.dev/writeup/)
+[Live app](https://d8tx.mb6611.workers.dev) · [Demo, no hardware](https://d8tx.mb6611.workers.dev/?mock=1) · [Technical writeup](https://d8tx.mb6611.workers.dev/writeup/) · [Experiments](experiments/README.md) · [RX part: esp32-d8rx](https://github.com/mb6611/esp32-d8rx)
 
 ![The d8tx controller: sticks, 3D drone, live telemetry](docs/media/hero.gif)
 
@@ -73,7 +73,7 @@ The same receiver logged which channel each packet arrived on, for the E8 and fo
 |---|---|
 | ![](docs/lab-log/img/tx-evidence/hop-e8-map.png) | ![](docs/lab-log/img/tx-evidence/hop-esp-runB-map.png) |
 
-How the ESP32 was made to do this, with every measurement, is in the [technical writeup](https://d8tx.mb6611.workers.dev/writeup/). The code's design is in [ARCHITECTURE.md](ARCHITECTURE.md).
+How the ESP32 was made to do this is in the [technical writeup](https://d8tx.mb6611.workers.dev/writeup/); every measurement, in order, with its data and scripts, is in [experiments](experiments/README.md). The code's design is in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## What I used
 
