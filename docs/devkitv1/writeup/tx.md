@@ -1,8 +1,10 @@
-# Making a $5 ESP32 say one FrSky D8 packet
+# Making a $5 ESP32 speak FrSky D8
 
 *TX research note · November 2026 · companion to the RX write-up, [A 2.4 GHz SDR on a $5 ESP32](README.md)*
 
-The RX write-up ended with a board that could listen: record a FrSky D8 transmitter, decode it, follow its hops. That is a long way from talking. Nothing in it showed that the same chip could produce a packet a real D8 receiver chip would accept. This note covers the first time that happened, on a bench, once: an ESP32 DevKit V1 transmitted a hand-built D8 packet and an independent CC2500 reported it with a valid hardware CRC. The first try got 7 of 10; after fixing a receiver-side bug, 140 more attempts got about 94%, the same rate the real E8 transmitter gets on that receiver. Then it hopped all 47 D8 channels at about 98%, slightly better than the E8 on the same receiver. It is not yet bound to a real flight controller, not control, and not a calibrated transmitter.
+The RX write-up ended with a board that could listen: record a FrSky D8 transmitter, decode it, follow its hops. That is a long way from talking. Nothing in it showed that the same chip could produce a packet a real D8 receiver chip would accept. This chapter starts with the first time that happened, on a bench, once: an ESP32 DevKit V1 transmitted a hand-built D8 packet and an independent CC2500 reported it with a valid hardware CRC. The first try got 7 of 10; after fixing a receiver-side bug, 140 more attempts got about 94%, the same rate the real E8 transmitter gets on that receiver. Then it hopped all 47 D8 channels at about 98%, slightly better than the E8 on the same receiver (Sections 1 to 6).
+
+It ends with the whole protocol: the ESP32 drives a stock Betaflight drone at 111 packets a second while hopping (Section 7, including a first takeoff), receives its telemetry replies (Sections 8 and 9), binds the drone to an identity of its own over the air (Section 10), and does all of it from a browser tab or desktop app with no server (Sections 11 to 13). It is still not a calibrated transmitter: output power is estimated, not measured, and there is no range test.
 
 The short version of what worked: the ESP32's Wi-Fi PHY has a test-tone generator whose frequency can be stepped by a ROM function. Switching that tone between two steps at 31 kbaud is a crude 2-FSK modulator. A CC2500 listening on the channel decoded it. Most of the effort went into finding out where the tone actually lands, because the first attempts saw nothing.
 
@@ -168,15 +170,15 @@ That is consistent with an E8 transmitter quirk on those channels, but it is not
 
 **What this shows and does not show.** On this bench the ESP32 hops through the full 47-channel table, with a continuous counter, and a CC2500 following the table receives about 98% of slots, at least as well as the E8. It does not show binding, a stock Betaflight receiver accepting it, range, or flight, and it does not show why the E8 is weak on two channels.
 
-**Next:** bind to stock Betaflight. The bind exchange and the hop counter in byte 4 are the first things to get right.
+**Next:** bind to stock Betaflight. The bind exchange and the hop counter in byte 4 are the first things to get right. (Section 7 first skipped the bind by cloning the E8; Section 10 does the real one.)
 
 ### 7. Driving stock Betaflight, and the first takeoff
 
 Everything so far used a diagnostic receiver. This section points the ESP32 at the drone itself, running **stock Betaflight 4.2.11** (restored and checked: `diff all` is byte-identical to `bench/cc2500-rxdiag/results/diff_all_final.txt`, `results/bf_link/link_check/`).
 
-**No bind.** The drone's config already stores the E8's transmitter ID (66,178 = 0x42B2) and its hop table, so the ESP32 simply clones them. The receiver cannot tell it from the E8.
+**No bind.** The drone's config already stores the E8's transmitter ID (66,178 = 0x42B2) and its hop table, so the ESP32 simply clones them. The receiver cannot tell it from the E8. (Section 10 replaces this clone with a real over-the-air bind to an identity of the ESP32's own.)
 
-**Frequency.** Betaflight stores `frsky_spi_offset = -32` (about -51 kHz), which was tuned to the E8. The E8 runs roughly 26 ppm (about 63 kHz) low, while the ESP32 lands within about 13 kHz of nominal. So a new `FOFS` command shifts every hop by -63 kHz, and I set it by comparing FREQEST against the E8 (mean difference 13 Hz; `results/bf_link/offset_tune/`). The shift does not change the packet rate: with and without it the drone-side receiver got 96.6–97.5% of slots (four runs, `results/bf_link/ab_test/`). An earlier 85–92% session in the tune runs was a bad stretch that did not reproduce, not an effect of the offset.
+**Frequency.** Betaflight stores `frsky_spi_offset = -32` (about -51 kHz), which was tuned to the E8. The E8 runs roughly 26 ppm (about 63 kHz) low, while the ESP32 lands within about 13 kHz of nominal. So a new `FOFS` command shifts every hop by -63 kHz, and I set it by comparing FREQEST against the E8 (mean difference 13 Hz; `results/bf_link/offset_tune/`). This offset only exists because of the clone; after a real bind the receiver tunes itself to the ESP32 and FOFS 0 is best (Section 10). The shift does not change the packet rate: with and without it the drone-side receiver got 96.6–97.5% of slots (four runs, `results/bf_link/ab_test/`). An earlier 85–92% session in the tune runs was a bad stretch that did not reproduce, not an effect of the offset.
 
 **Sticks.** In the Betaflight Receiver tab the channels read **T1200 A1400 E1600 R1800** exactly, the values the host sent (owner's screenshot; the sender log is `link_check/receiver_tab_fixed_sticks.csv`). Each of the four bars sat at a different, known place, so channel order and scaling are right.
 
@@ -198,7 +200,7 @@ Everything so far used a diagnostic receiver. This section points the ESP32 at t
 
 ### 8. A usable controller: the d8tx stack
 
-Section 7 was a bench script. To fly the same way repeatedly I built a small stack in `python/` + `app/` (usage in [`python/README.md`](../../../python/README.md)). Four layers, each thin:
+Section 7 was a bench script. To fly the same way repeatedly I built a small stack in `python/` + `app/` (usage in [`python/README.md`](../../../python/README.md)). Four layers, each thin (Section 11 later replaced the Python backend and the WebSocket with a browser app that talks to both boards itself; the firmware protocol stayed):
 
 - **Firmware protocol v1** ([`PROTOCOL.md`](../../../protocol/PROTOCOL.md)). ASCII lines at 921600 baud. `LINK <pwr> [timeout_ms]` starts continuous hopping; `S c1..c8` sets the eight channels in µs (no reply while linked); `STOP` ends it; `FOFS` sets a frequency offset; `ARMOK` permits channel 7 high for the next link only; `INFO` and `STAT` report. Every request gets one `OK` or `ERR <code>`; asynchronous `EV` lines report boot, a once-per-second link heartbeat and the reason the link ended (`stop`, `timeout`, `err`).
 - **Python library** `d8tx`. `D8Link` owns the serial port and a sender thread that writes one `S` per D8 slot (8.994 ms, `SLOT_S` in `protocol.py`), so the firmware never starves. `BetaflightMSP` reads RC channels, analog and arm status over the flight controller's USB for readback.
@@ -228,7 +230,7 @@ Section 7 was a bench script. To fly the same way repeatedly I built a small sta
 
 **A scripted hop.** [`python/examples/up_forward_land.py`](../../../python/examples/up_forward_land.py) arms, climbs, tilts forward, descends and disarms from a fixed timeline, in Angle mode. It is open loop: there is no altitude sensor and the ESP32 gets no telemetry, so every number is a guess. The first attempts at hover throttle 1450 and 1550 µs did not lift off and slid forward along the ground. So the hover throttle is unknown but above 1550, and with throttle that high the forward tilt has to be small. The next step is Betaflight blackbox logging, to measure rather than guess.
 
-**Telemetry comes back.** Betaflight's D8 receiver replies. In [`cc2500_frsky_d.c`](../../../bench/cc2500-rxdiag/firmware/work/betaflight/src/main/rx/cc2500_frsky_d.c), after a packet with `packet[3] % 4 == 2` (line 237) it builds a telemetry frame (`buildTelemetryFrame`, line 239) and in `STATE_TELEMETRY` waits until 1380 µs after that packet (line 290) before switching to transmit. It has already stepped to the next hop channel (`nextChannel(1)` runs before `STATE_TELEMETRY`), so the reply comes on the **next** channel, not the trigger channel. The frame is 18 bytes (length byte 0x11, lines 135–147): bind ID, A1 (battery voltage), A2 (RSSI ADC), RSSI in dBm, a hub byte count and an echo of the packet's ID, then FrSky hub bytes. In [`telemetry/frsky_hub.c`](../../../bench/cc2500-rxdiag/firmware/work/betaflight/src/main/telemetry/frsky_hub.c) the hub cycle is 125 ms (`FRSKY_HUB_CYCLETIME_US`, line 86) and acceleration is sent once per cycle, so 8 Hz; gyro IDs are defined but nothing sends them in this version (4.2). Too slow and too coarse for control, but enough for battery and RSSI.
+**Telemetry comes back.** Betaflight's D8 receiver replies. In [`cc2500_frsky_d.c`](https://github.com/betaflight/betaflight/blob/4.2.11/src/main/rx/cc2500_frsky_d.c), after a packet with `packet[3] % 4 == 2` (line 237) it builds a telemetry frame (`buildTelemetryFrame`, line 239) and in `STATE_TELEMETRY` waits until 1380 µs after that packet (line 290) before switching to transmit. It has already stepped to the next hop channel (`nextChannel(1)` runs before `STATE_TELEMETRY`), so the reply comes on the **next** channel, not the trigger channel. The frame is 18 bytes (length byte 0x11, lines 135–147): bind ID, A1 (battery voltage), A2 (RSSI ADC), RSSI in dBm, a hub byte count and an echo of the packet's ID, then FrSky hub bytes. In [`telemetry/frsky_hub.c`](https://github.com/betaflight/betaflight/blob/4.2.11/src/main/telemetry/frsky_hub.c) the hub cycle is 125 ms (`FRSKY_HUB_CYCLETIME_US`, line 86) and acceleration is sent once per cycle, so 8 Hz; gyro IDs are defined but nothing sends them in this version (4.2). Too slow and too coarse for control, but enough for battery and RSSI.
 
 I then tried it. After a trigger packet the ESP32 unkeys, retunes to the next channel and starts an I/Q capture 0.21–0.37 ms later, records 10.3 ms and ships the samples to the Mac, which decodes them with the RX project's D8 decoder (`bench/d8-tx/host/tlm_listen.py`). On battery, arm channel low, a 20 s run caught a CRC-valid 18-byte reply with the drone's ID in **26 of 46 trigger slots**, arriving 1.34–1.51 ms after the trigger packet, with A1/A2 and the drone's RSSI byte (71–76) and the telemetry ID echoed correctly (`bench/d8-tx/results/telemetry/`). So the half-duplex turnaround on the hacked transmit path works. Open: no hub bytes arrived (count 0 in every frame, so no accelerometer yet), the catch rate is 57% with one long run of misses, and A1 is not yet converted to volts. For dense flight data the practical route is still blackbox on the flight controller, read afterwards.
 
@@ -236,9 +238,9 @@ I then tried it. After a trigger packet the ESP32 unkeys, retunes to the next ch
 
 Section 8 ended with a bench script that caught 57% of replies and no hub data. This section makes the replies part of the controller, makes Betaflight send more useful hub fields, and tries blackbox logging over USB. All of it was done with the drone on USB power and **no battery** (CLI `status`: `Voltage: 1 * 0.01V (0S battery - NOT PRESENT)`), props off.
 
-**Getting to near 100% first.** Three fixes came between Section 8 and the stack (`bench/d8-tx/results/telemetry/SUMMARY.md`). The old firmware stopped transmitting for about 0.22 s while it sent each 20 KB capture over the UART, so Betaflight spent most of a run in RX failsafe; capturing int8 and streaming it out between packets took a 60 s run from 56/139 (40%) to 121/139 (87%). Hub bytes were always 0 because the drone had `FEATURE_TELEMETRY` off; turning it on (the only config change) brought hub frames. And our carrier sat about 35 kHz above the drone's receive frequency at FOFS -50 kHz, so the drone lost some trigger packets: FOFS **-75 kHz** got 97.8–100% of triggers answered, against 82% at -50 kHz back to back. The id rule also changed to Betaflight's: the next telemetry id only after a reply echoed the last one, otherwise resend the same id.
+**Getting to near 100% first.** Three fixes came between Section 8 and the stack (`bench/d8-tx/results/telemetry/SUMMARY.md`). The old firmware stopped transmitting for about 0.22 s while it sent each 20 KB capture over the UART, so Betaflight spent most of a run in RX failsafe; capturing int8 and streaming it out between packets took a 60 s run from 56/139 (40%) to 121/139 (87%). Hub bytes were always 0 because the drone had `FEATURE_TELEMETRY` off; turning it on (the only config change) brought hub frames. And our carrier sat about 35 kHz above the drone's receive frequency at FOFS -50 kHz, so the drone lost some trigger packets: FOFS **-75 kHz** got 97.8–100% of triggers answered, against 82% at -50 kHz back to back. (That is a property of the cloned E8 binding; once the drone was bound to the ESP32 itself, -75 kHz became the worse setting, Section 10.) The id rule also changed to Betaflight's: the next telemetry id only after a reply echoed the last one, otherwise resend the same id.
 
-**Telemetry in d8tx.** `D8Link.start()` now turns telemetry on by default ([`PROTOCOL.md`](../../../protocol/PROTOCOL.md), "Telemetry in the library"): a trigger every 48 slots, a 9 ms capture streamed in int8, and FOFS -75000 Hz unless the caller sets one. A worker thread decodes each capture with a vendored copy of the RX decoder (about 5 ms each) and acks the id. The backend puts a `radio` object in `/api/status` and every WebSocket message: powered (reply within 3 s), link (within 1 s), catch rate over 10 s, reply age, RSSI, A1 battery voltage (`absent` below 2 V), hub fields and an inferred `armed`. The page's "Drone (radio)" cell shows powered, link, battery and armed.
+**Telemetry in d8tx.** (The backend and Python library described here were later replaced by the browser app of Section 11, which reuses the same recipe and id rule.) `D8Link.start()` now turns telemetry on by default ([`PROTOCOL.md`](../../../protocol/PROTOCOL.md), "Telemetry in the library"): a trigger every 48 slots, a 9 ms capture streamed in int8, and FOFS -75000 Hz unless the caller sets one. A worker thread decodes each capture with a vendored copy of the RX decoder (about 5 ms each) and acks the id. The backend puts a `radio` object in `/api/status` and every WebSocket message: powered (reply within 3 s), link (within 1 s), catch rate over 10 s, reply age, RSSI, A1 battery voltage (`absent` below 2 V), hub fields and an inferred `armed`. The page's "Drone (radio)" cell shows powered, link, battery and armed.
 
 A 60 s library run answered 138 of 138 triggers. A 10-minute run through the backend, with MSP readback and sticks at 20 Hz, answered **1387 of 1395 (99.4%)**, never below 97.2% in any minute (`bench/d8-tx/results/telemetry-stack/`). The sender held 111 Hz, 66,706 sends, none skipped, worst late 799 µs.
 
@@ -298,6 +300,125 @@ The radio values agree with MSP_ATTITUDE (-1.8, 1.2 deg vs -18, 12 deci-deg) and
 
 **What this does not show.** No flight with telemetry, and nothing on battery: the battery fields all read 0. The 8/4/2 Hz hub rates were not measured, only their ratio. The hub stall in the 10-minute run is explained by a model and by timing, but the reply byte counts were not logged and the fix (a guard in the patched firmware) is not built. The blackbox result is one 14 s log on the bench, with a rebuilt header, and the setup that produced it also hung the flight controller.
 
+### 10. Binding over the air, with an identity of its own
+
+Sections 7 to 9 never bound anything. The ESP32 sent the E8's transmitter ID and hop table, which the drone had stored when it was bound to the real E8. That works for one drone, as long as nobody turns the E8 on, and it means every DevKit built from this repository would pretend to be the same E8. So each DevKit now has an identity of its own and binds the drone to it, the way a FrSky transmitter does.
+
+**Identity.** On its first boot the firmware draws a random transmitter ID (two bytes, `txid`) and a hop-table start and step with `esp_random`, and stores the four bytes in NVS (namespace `d8tx`, key `ident`; [`PROTOCOL.md`](../../../protocol/PROTOCOL.md), "Bind"). The table is entry 0 = 0, the bind channel, then entry i = (start + step·i) mod 256 for i = 1..46. `ID` prints the identity, `ID new` draws another one, and `ID xxxx s t` loads a given one, which keeps the E8 clone possible (`ID 42b2 2 55`). `INFO` reports the txid, and the links match telemetry replies against it instead of the old constant 0x42B2.
+
+**What Betaflight expects.** A D8 bind packet is the same 18-byte frame with a different layout: `11 03 01 txid0 txid1 idx h[idx] … h[idx+4] 00 … 01` plus the CRC, that is the transmitter ID and the five hop-table entries starting at `idx`. The firmware's `BIND` command sends one per 8.994 ms slot on hop channel 0 (plus the current `FOFS`), with idx cycling 0, 5, …, 45, so the whole table goes out every 10 slots, about 90 ms. It does not hop, and it stops on `STOP` or after 30 s.
+
+On the drone, Betaflight 4.2's bind state machine ([`cc2500_frsky_shared.c`](https://github.com/betaflight/betaflight/blob/4.2.11/src/main/rx/cc2500_frsky_shared.c), `frSkySpiDataReceived`) goes bind requested → tuning → Bind1 → Bind2 → complete. Tuning listens on channel 0 with address filter 0x03, sweeps the CC2500's frequency offset register (FSCTRL0) from −126 to +126 in steps of 5, one step every 50 ms, and keeps the first offset at which a bind packet arrives with a good CRC and LQI above 50. So the receiver tunes itself to whatever carrier the transmitter really has, and the FOFS correction of Section 7 should no longer be needed. Bind1 takes the idx-0 packet (txid and entries 0–4); Bind2 takes idx 5, 10, … strictly in order and ends at the first 0 at idx 45 or later, which gives a 47-entry list. Then it writes the result to EEPROM itself. Before any radio test, `firmware/test/test_packet.c` runs a C port of Betaflight's `getBind1` and `getBind2` ([`bf_bind_port.c`](../../../firmware/test/bf_bind_port.c)) over the firmware's own bind frames, for the E8 identity and 200 generated ones, starting at every idx, and checks that it recovers the txid and the full hop list.
+
+**Hop tables that look like D8.** The first rule for a generated table only asked for 46 distinct entries inside the LO range (2 to 246). That also accepts small steps: steps 1–5 and 251–255 pack all 47 hops into a narrow slice of the band. The identity the drone was first bound to on the bench (below) was one of these, step 254, every second channel from 115 to 205. A real D8 table spreads over the whole band, so that a narrowband interferer costs a few hops rather than most of them. Generated identities now follow the rules of the reference transmitter implementation, Multiprotocol's FrSkyD: consecutive hops at least 30 channels (about 9 MHz) apart, no unused gap wider than 32 channels between channels 2 and 234, no entry above 234 or equal to 0x5a or 0xdc, and a first txid byte other than 0x00, 0x03 and 0xff. 142 of the 65,536 start and step pairs pass (steps 43, 65, 73, 84, 103 and 110 and their negatives). `ID xxxx s t` keeps the permissive rule, so clones like the E8 table still load.
+
+**The bench bind.** All in [`bench/d8-tx/results/bind/SUMMARY.md`](../../../bench/d8-tx/results/bind/SUMMARY.md); props off, drone on USB power, arming disallowed in every link. The DevKit drew `txid=6ff3 start=205 step=254` on its first boot and still had it after a reset. With `BIND 30` running at FOFS 0, I typed `bind_rx` into the drone's Betaflight CLI. Four seconds later `get frsky_spi` showed the new identity, saved by the receiver code without a `save`:
+
+| | before (E8) | after (ESP32) |
+|---|---|---|
+| `frsky_spi_tx_id` | 66,178 | 111,243 (= 0x6f, 0xf3) |
+| `frsky_spi_offset` | −32 | 4 (3 in a second bind) |
+| `frsky_spi_bind_hop_data` | E8 table | 0, 203, 201, …, 115, 113 = (205 + 254·i) mod 256 |
+
+Those three lines are the only difference between the `diff all` before and after. The receiver's offset moved by +36 steps, about +57 kHz. That is the same correction the cloned binding had needed from the transmitter side, FOFS −50 to −75 kHz in Sections 7 and 9, now made by the receiver. The binding survives a reboot and also works without one: in the second bind, driven from the TypeScript link with the flight controller still sitting in the CLI, the link that followed got 90.9% of telemetry triggers answered.
+
+**FOFS 0 is now the right offset.** Four 60 s links followed the first bind, telemetry on, fixed sticks read back over MSP:
+
+| Power | FOFS | Triggers | Replies | Catch | Drone RSSI | RC readback |
+|---|---|---|---|---|---|---|
+| 127 | 0 | 534 | 507 | **94.9%** | −67.6 dBm | 238/238 exact |
+| 127 | −75 kHz | 619 | 451 | 72.9% | −70.2 dBm | 238/238 exact |
+| 30 | 0 | 662 | 431 | 65.1% | −81.8 dBm | 235/235 exact |
+| 30 | −75 kHz | 702 | 371 | 52.8% | −86.2 dBm | 239/239 exact |
+
+The −75 kHz offset that Section 9 needed for the cloned binding now costs packets at both powers. So the default offset in the libraries went back to 0, and `D8Link.bind()` sends `FOFS` before `BIND`: the receiver locks to whatever offset the bind packets had, so a bind at −75 kHz left over from an earlier link, followed by links at 0, would mis-tune it. In every run the sender held 111.18 Hz with no skipped slot, RX failsafe never came back after lock, and the drone never armed. Power 30 is near the receiver's sensitivity edge on this bench, so comparisons use 127. One earlier power-30 run, not in the table because its log was overwritten, ended at about 52 s with `link_end why=err`: the torn UART line of Section 12.
+
+**One click.** Typing `bind_rx` into a CLI was the last manual step. Betaflight also has an MSP v2 command, `MSP2_BETAFLIGHT_BIND` (0x3000), the one Betaflight Configurator's "Bind receiver" button sends, and on this 4.2.11 build it puts the SPI receiver into bind mode with no CLI and no reboot. The app's Bind button runs the rest (`bind()` in [`packages/core/src/worker/host.ts`](../../../packages/core/src/worker/host.ts)): it pauses the link, sends `FOFS` and `BIND 40` to the DevKit, then `MSP2_BETAFLIGHT_BIND` to the drone over its USB, waits 6 s, stops the bind packets and starts a short link with arming disallowed. It reports the drone bound when a telemetry reply carrying the DevKit's txid arrives within 5 s or, failing that, when the drone's own MSP status shows its receiver out of failsafe. The bench notes record it working on 3 of 3 binds ([`.ru/memories/betaflight-drone-firmware.md`](../../../.ru/memories/betaflight-drone-firmware.md)). The app runs of Section 13 used a newer identity, txid `3537`, and the drone answered it: telemetry is only decoded when the reply carries the DevKit's own txid.
+
+![The one-click bind: the worker sends FOFS 0 and BIND 40 to the ESP32 and MSP2_BETAFLIGHT_BIND to Betaflight; the ESP32 keys bind packets on channel 0; the CC2500 sweeps its offset, locks, takes Bind1 and Bind2, saves; then a confirm link waits for a telemetry reply with this txid.](../../diagrams/bind.svg)
+
+*Figure 18 ([source](../../diagrams/bind.excalidraw)). The one-click bind across the laptop, the DevKit and the drone, and the confirm link that follows it.*
+
+**What this does not show.** One drone, one bench, and a handful of binds; I did not test binding at a distance, with a second drone, or with the drone's physical bind button. The 6 s bind window is about the 2–5 s the receiver took, not a measured margin.
+
+### 11. A browser app with no backend
+
+Section 8's controller needed Python on the laptop: a FastAPI server owned the serial port and the 9 ms sender, and the page talked to it over a WebSocket. That is one more program to install and keep running. Everything now runs in the browser instead, or in an Electron shell around the same build ([`ARCHITECTURE.md`](../../../ARCHITECTURE.md)). The firmware protocol did not change.
+
+**The worker owns the cadence.** Everything with a deadline runs in a Web Worker ([`packages/core/src/worker/host.ts`](../../../packages/core/src/worker/host.ts)): `D8Link`, a TypeScript port of the Python link, writes one `S` line per 8.994 ms slot on absolute deadlines, triggers and decodes telemetry and acks its id, and a poller reads the flight controller over MSP. The React page only posts stick and settings intents and draws the state the worker posts back at 50 Hz. A stalled page does not stall the link, and if the page says nothing for 2.5 s the worker disarms and centres the sticks while the link stays up.
+
+**Both boards over Web Serial.** Chrome and Edge reach serial ports directly. The worker tells the boards apart by USB vendor and product ID ([`packages/serial/src/web.ts`](../../../packages/serial/src/web.ts)): the DevKit by its USB bridge (CP2102 10c4:ea60, or a CH340 or CH9102), the flight controller by the STM32 virtual COM port, 0483:5740. The same core runs in Node behind a serial adapter, which is what the Electron app, the bench scripts and the hardware tests use.
+
+**The demodulator in WebAssembly.** The telemetry decoder was Python. For the browser it is now a small C demodulator, [`demod/src/d8demod.c`](../../../demod/src/d8demod.c), with no libc, built three ways: WebAssembly for the apps (it imports only `atan2f`, `sinf`, `cosf` and `floorf`), native for tests, and a compile check for the ESP32. `make -C demod check` runs the WebAssembly build in Node over the 14 I/Q captures in [`protocol/captures/`](../../../protocol/captures/) (real int8 replies, the same replies requantized to int4, and noise) and compares with the Python decoder's output: the same packet bytes from every capture, and carrier offsets that agree to the 0.1 Hz printed, `14 captures, 0 failures`.
+
+**One spec, shared vectors.** [`protocol/PROTOCOL.md`](../../../protocol/PROTOCOL.md) is the only description of the wire format, and the golden vectors next to it in [`protocol/vectors/`](../../../protocol/vectors/) (commands, replies, telemetry headers, hub frames, MSP frames, the telemetry-id rule) are generated from the Python package. The firmware tests (`firmware/test/test_vectors.c`), the TypeScript tests (`packages/core/src/vectors.ts`) and the Python tests all read them, so an implementation that drifts from the others fails its own tests.
+
+**Auto link and persistence.** The worker behaves like a radio: while the DevKit is connected it keeps a link running with the current settings. It starts the link on connect, restarts it when a setting changes (never under an armed drone: the change waits for disarm), and after a lost port or link it reconnects with backoff from 250 ms to 3 s. Every start or restart holds the arm channel low until the page sends a disarmed frame. Settings and the chosen ports are saved, so a reload or an app restart reconnects by itself.
+
+**Exclusive ports.** Each serial port has one owner. Web Serial opens ports exclusively, and the Node adapter sets `TIOCEXCL` to behave the same way ([`packages/serial/src/node.ts`](../../../packages/serial/src/node.ts)). A second tab or app that tries gets "in use by another app or tab" and retries every 2 s, so closing the first one hands the boards over.
+
+**Flashing from the app.** The page also installs and updates the DevKit firmware, with esptool-js over the same Web Serial port ([`packages/ui/src/flash/`](../../../packages/ui/src/flash/)). It writes only the bootloader, partition table and app, never erases the whole flash, refuses any image that would overlap NVS (0x9000–0xF000), and checks each image by MD5, so the identity of Section 10 survives an update and the drone stays bound. `INFO` reports a version with a source hash, and the button reads Install, Update or Reinstall accordingly. The bundled images are release builds, which leave out the single-channel and tone bench modes of Sections 1 to 5 ([Regulatory status](#regulatory-status)).
+
+![The control path from a key press to the motors: React UI and the worker's D8Link sender on the laptop, Web Serial and USB to the CP2102, the firmware's line parser, packet and CRC, the Wi-Fi PHY's tone generator and LO as a 2-FSK transmitter, then the drone's CC2500, Betaflight and motors.](../../diagrams/overview-control.svg)
+
+*Figure 19 ([source](../../diagrams/overview-control.excalidraw)). The control path, one packet every 8.994 ms. Blue runs in the browser, grey is the operating system and USB, green is firmware.*
+
+![Three slots to scale: the ESP32 sends a 6.70 ms trigger packet in slot k, skips slot k+1 and captures 9 ms on its channel while the drone replies 1.38 ms after the trigger ends, then sends normally in slot k+2.](../../diagrams/timeline.svg)
+
+*Figure 20 ([source](../../diagrams/timeline.excalidraw)). A telemetry trigger, to scale. Every 12 slots or more, the slot after a trigger is a listen slot.*
+
+![The telemetry path: the drone's reply through the ESP32's receive chain, boxcar decimation and int4 packing in the firmware, over the UART to the Web Worker, CRC-32 check, the WASM demodulator, and the reply fields to the React UI, with a TID ack back to the ESP32.](../../diagrams/overview-telemetry.svg)
+
+*Figure 21 ([source](../../diagrams/overview-telemetry.excalidraw)). The telemetry path back, about 8.5 replies a second, decoded in the browser.*
+
+### 12. What the hardware found
+
+The TypeScript core was tested against a simulated DevKit first. The real hardware turned up four problems the simulation did not have; the first two are now simulated too ([`packages/serial/src/mock.ts`](../../../packages/serial/src/mock.ts)), so the tests cover them.
+
+**STAT goes unanswered while a capture ships.** While linked, the firmware skips a `STAT` request without a reply if it is busy shipping a telemetry capture over the UART. With telemetry on, that was about 75% of them, so the status poll timed out most of the time. The host now resends an unanswered `STAT` after 120 ms (`STAT_RESEND_MS` in [`packages/core/src/link.ts`](../../../packages/core/src/link.ts)) and when a capture ends ([`.ru/memories/d8tx-link-uart-limits.md`](../../../.ru/memories/d8tx-link-uart-limits.md)).
+
+**A host stall overflows the UART FIFO.** The firmware keys a packet, or listens for a reply, with interrupts off, for up to about 11.3 ms. During that time the only buffer for incoming bytes is the ESP32's 128-byte hardware UART FIFO. A sender that falls behind (a busy laptop, a slow worker turn) and then catches up in a burst writes three `S` lines and a `TID` at once, 129 bytes. The last byte is lost, the firmware reads a torn line, answers `ERR unknown cmd`, and ends the link with `link_end why=err`. That is the power-30 run that died at 52 s in Section 10. The sender now never writes two `S` lines closer than 0.8 slot apart (`SENDER_MIN_SPACING`), so it catches up gradually; two `S` lines plus a `TID` and a `STAT` fit.
+
+**A link left running.** Closing a tab or killing the app does not stop the DevKit, so the next session can find the firmware still linked from the previous one. While linked, any request other than `S`, `STOP` and `STAT` ends the link and gets `ERR busy`. The start sequence now treats that as expected: its first `FOFS` ends the old link, and the retry lands on an idle firmware. A timeout at that point is also retried, because opening the port can reset the ESP32 and it may still be booting.
+
+**Closing the port hung Node.** In the desktop app and the Node tests, closing the DevKit's port after a streaming session could block the whole main thread for a minute or more inside the macOS kernel, in `close` on the CP2102 driver. The cause was the way the port was configured: running `stty` as a child process on the port's own file descriptor cleared its non-blocking flag, so a read could sit in the threadpool and pin the descriptor. The port is now configured through a second, short-lived descriptor, and closing stops issuing reads and writes, waits for the ones in flight, flushes both tty queues and only then closes ([`packages/serial/src/node.ts`](../../../packages/serial/src/node.ts)).
+
+Two smaller findings from the validation runs: the firmware's `slots` counter only counts keyed slots, so with telemetry on it reads about 90% of elapsed slots by definition, not because of loss; and a minimized Electron window still reports itself visible (with background throttling off), so the page's "hidden tab disarms" rule never fires in the desktop app ([`docs/validation/d8tx-web-desktop.md`](../../validation/d8tx-web-desktop.md)).
+
+### 13. Validation of the app
+
+The app was checked on the bench by a test harness that drives the real Electron app with Playwright ([`apps/desktop/e2e/run.mjs`](../../../apps/desktop/e2e/run.mjs)) and clicks the same buttons a user would. A tap inside the worker observes, without changing, every line to and from the DevKit and every MSP reply from the drone. Drone on USB, props off, no battery (MSP reported 0 cells, 0.0 V). Write-up of the runs: [`docs/validation/d8tx-web-desktop.md`](../../validation/d8tx-web-desktop.md); raw results: [`apps/desktop/e2e/results/`](../../../apps/desktop/e2e/results/).
+
+**Ten minutes, window minimized.** Link at power 127, telemetry on, arming disallowed, window minimized 3 s after the start (`soak-2026-11-09T18-22-51-299Z.json`). This run was before the bind work, so it used the cloned E8 identity at FOFS −75 kHz.
+
+| | Measured |
+|---|---|
+| `S` lines written | 64,409 (106.5 a second), longest gap 24.4 ms, none over 50 ms |
+| Keyed slots, firmware count | 61,921 against 61,716 expected from the elapsed time minus listen slots (ratio 1.003) |
+| Link lost | 0; the link ended with `why=stop` when the harness pressed Stop |
+| Telemetry | 5,100 replies to 5,312 triggers (96.0%), 506–512 a minute; reply age under 1 s in every 1 Hz sample |
+| Flight-controller attitude over MSP | 10.73 Hz |
+
+**Arm, throttle, disarm, port loss** (`arm-2026-11-09T18-35-15-559Z.json`, window visible, max throttle set to 15%). Holding `R` for 1.2 s armed Betaflight; holding `W` took throttle to the 1150 µs cap in 1.0 s, and the drone's MSP RC channels read 1150 and arm channel 2000 while the prop-less motors spun up. `X` disarmed within 309 ms (the MSP status poll interval) and the motors went back to 1000. Then, armed again, the harness made the DevKit's port fail the way an unplug does (every read and write rejects). The worker reported the link lost 11 ms later, the page showed "Link lost: DevKit port closed" at 12 ms and DISARMED at 16 ms. With no more `S` lines the firmware stopped transmitting after its 300 ms timeout, and Betaflight went to failsafe at about 1.05 s, motors to 1000 at about 1.31 s and disarmed by about 1.57 s, its own failsafe timing.
+
+**Auto link** (`autolink-2026-11-09T20-45-56-554Z.json`, after the bind, txid `3537`, FOFS 0, arming disallowed):
+
+| Event | Link up | Telemetry flowing |
+|---|---|---|
+| Connect the DevKit | 197 ms | 831 ms |
+| Power changed in Settings (incl. the page's 600 ms debounce; `STOP`, `FOFS 0`, `LINK 100 300`) | 690 ms (down at 638 ms) | 5.6 s |
+| Simulated port loss (seen lost at 54 ms) | 565 ms | 3.6 s |
+| Page reload, settings kept | 337 ms | 1.3 s |
+| App quit (214 ms) and restart, settings kept, drone reconnected | 1.19 s | 1.66 s |
+
+Times are from the action to the worker's state. I did not break down why telemetry takes seconds longer than the link after a settings change or a port loss.
+
+**A second instance.** With app A linked, a fresh app B tried to connect both boards. B showed "DevKit in use" after 91 ms and the drone's USB in use after 118 ms, and kept retrying. Over the next 20 s, A's link carried on undisturbed: 101.8 keyed slots and 6.7 telemetry replies a second, no link loss. When A was closed, B took both boards over and had the link up in 1.74 s and telemetry in 1.95 s.
+
+**With the ESP32's own identity.** A 2-minute minimized run after the bind (`soak-2026-11-09T20-47-17-909Z.json`, txid `3537`, FOFS 0) held the sender the same way (longest `S` gap 23.9 ms, no link loss), but answered only 946 of 1,292 triggers, **73.2%**, against 96.0% in the 10-minute run and 94.9% in Section 10's bind tests. I have not found why. The identity, the drone's position and the day's interference all differ between those runs, and none of them was isolated.
+
+**What this does not show.** No flight from the app: the owner's piloted flight from Chrome and from the desktop app is not in these results. The Chrome build was not soaked in a background tab, only the Electron app. The port loss was simulated at the stream level; nobody pulled the cable. There is no results file for the in-app firmware flashing, only its tests (`packages/ui/src/flash/flash.test.ts`). And the battery was never connected.
+
 ## Regulatory status
 
 Educational and research use. This is how the project reads under US FCC rules (47 CFR Part 15); it is not legal advice, and **you are responsible for following the regulations where you are** before building or using the transmit code.
@@ -326,7 +447,8 @@ The ESP32 at power 127, the maximum, arrives about **26 dB below** the E8 (18 to
 
 ## What this does not show
 
-- **Sections 1–6: not binding, control or flight** (Sections 7–9 cover those). Hopping works against the diagnostic receiver, which was given the hop table directly. No bind exchange and no stock Betaflight receiver were involved: the proof is that a CC2500 with the D8 settings and an independent CRC accepted the packets, not that a model aircraft would.
+- **Shown since:** binding over the air (Section 10), control of stock Betaflight and a scripted takeoff (Section 7), telemetry (Sections 8 and 9), and the browser and desktop app (Sections 11 to 13). **Still not shown:** measured output power, range, piloted flight, or any drone and receiver other than this one Tinyhawk.
+- **Sections 1–6: not binding, control or flight** (Sections 7–10 cover those). Hopping works against the diagnostic receiver, which was given the hop table directly. No bind exchange and no stock Betaflight receiver were involved: the proof is that a CC2500 with the D8 settings and an independent CRC accepted the packets, not that a model aircraft would.
 - **Not a calibrated transmitter.** The ±1-step deviation (≈39 kHz) is 23% wider than the stock 31.7 kHz, there is no Gaussian shaping, and the power setting has no verified output level: output power is estimated from receiver RSSI, not measured (see [Regulatory status](#regulatory-status)). The packet was radiated within bench range; there is no distance or attenuation information. Frequency accuracy rests on the 100 kHz-granularity scan and a coarse FREQEST. That the packet works says the receiver is tolerant, not that the ESP32 is accurate.
 - **7/10 was one batch, and partly the receiver.** Section 5 repeats the measurement with the fixed receiver (about 94%); the cause of the remaining misses is open.
 - **The ESP32's readback is not RF evidence.** `late_bits=207` of 208, `max_late_ns=1266` is timing of the CPU loop. It is small compared with a bit time (~32 µs) but I did not verify it on air.
@@ -348,12 +470,4 @@ python3 bench/d8-tx/analysis/plot_tx.py --summary                 # numbers only
 
 Offline firmware and host tests: `python3 -m unittest discover -s bench/d8-tx/tests`, `firmware/test/run.sh`. No RF hardware is needed for any of this. The script reads only files in this repo.
 
-## Since then
-
-The rest of this write-up is frozen as the story of how it came to work. Three things changed afterwards.
-
-- **Over-the-air bind with a per-ESP identity.** Sections 7 to 9 cloned the E8's transmitter ID. The firmware now draws a random `txid` and hop table on first boot (kept in NVS) and binds the drone to it: the drone took the new identity within about 4 s of `bind_rx`, saved it itself, and keeps it across reboots. With that binding, a carrier offset of 0 beat the old -75 kHz workaround (94.9% against 72.9% telemetry catch at power 127). Results: [`bench/d8-tx/results/bind/SUMMARY.md`](../../../bench/d8-tx/results/bind/SUMMARY.md).
-- **A browser and desktop app with no backend.** The app no longer needs the Python and WebSocket backend of Section 8. The link controller, MSP client and telemetry decoder are TypeScript running in a Web Worker, the demodulator is the same C compiled to WebAssembly, and the DevKit and the drone are both reached through Web Serial (Chrome, Edge) or an Electron shell. A 10-minute minimized-window run held 96.0% telemetry with no stick gap over 50 ms: [`docs/validation/d8tx-web-desktop.md`](../../validation/d8tx-web-desktop.md).
-- **One-click bind and in-app flashing.** The app's Bind button does the whole bind over USB, and it installs or updates the DevKit firmware itself (bootloader, partition table and app only, so the identity survives). See [Getting started](../../getting-started.md).
-
-Still true: output power is estimated, not measured; range has not been tested; only one drone has been used.
+For Sections 10 to 13: `make -C demod check` (the WebAssembly demodulator against the Python decoder's output on `protocol/captures`), `pnpm -r test` (TypeScript core, serial adapters, UI). The hardware runs need the DevKit and the drone: `node packages/core/scripts/bind-check.ts` binds and verifies ([`docs/how-to/bind.md`](../../how-to/bind.md)), and `cd apps/desktop && node e2e/run.mjs soak 10`, `node e2e/run.mjs autolink` and `E2E_ALLOW_ARM=1 node e2e/run.mjs arm` (props off) repeat Section 13 ([`docs/validation/d8tx-web-desktop.md`](../../validation/d8tx-web-desktop.md)). To use the app rather than test it, see [Getting started](../../getting-started.md).

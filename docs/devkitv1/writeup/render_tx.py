@@ -24,7 +24,7 @@ m = re.match(r"\s*<p><em>(.*?)</em></p>", body, re.S)
 by, body = m.group(1), body[m.end():]
 chapter = f"""{BEGIN}
 <hr>
-<p><em>The write-up above is the receive story as it stood when it was written: a board that could only listen. What follows is a later, separate result from the transmit branch of the project: the same chip transmitting one packet.</em></p>
+<p><em>The write-up above is the receive story as it stood when it was written: a board that could only listen. What follows is a later, separate result from the transmit branch of the project: the same chip transmitting, from one packet to the whole FrSky D8 protocol.</em></p>
 <h2 id="tx-chapter">{html.escape(title)}</h2>
 <p class="by"><em>{by}</em></p>
 {body.rstrip()}

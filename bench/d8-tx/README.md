@@ -1,6 +1,6 @@
 # bench/d8-tx
 
-**TX research (educational; radiated indoors at bench range; see the [regulatory status](../../docs/devkitv1/writeup/tx.md#regulatory-status) and check your local regulations):** one FrSky D8 packet sent by the ESP32 (`firmware/`, app `d8tone`) and received by a receive-only CC2500 diagnostic on an STM32 board (`../cc2500-rxdiag/`). Story and figures: [TX HTML write-up](../../docs/devkitv1/writeup/index.html#tx-chapter) ([Markdown](../../docs/devkitv1/writeup/tx.md), chapter source).
+**TX research (educational; radiated indoors at bench range; see the [regulatory status](../../docs/devkitv1/writeup/tx.md#regulatory-status) and check your local regulations):** the ESP32 (`firmware/`, app `d8tone`) speaking FrSky D8: first one packet, received by a receive-only CC2500 diagnostic on an STM32 board (`../cc2500-rxdiag/`), then hopping, control, telemetry and bind. Story and figures: [TX HTML write-up](../../docs/devkitv1/writeup/index.html#tx-chapter) ([Markdown](../../docs/devkitv1/writeup/tx.md), chapter source).
 
 ## Verified result (one packet, one batch)
 Receiver tuned to 2412000 kHz, E8 off, 10 PKT sent at power 127, vector `1142b2000001cacacaca8888cacacaca8888` (CRC `afa7` appended by firmware): 7 of 10 received with hardware CRC_OK=1 and bytes equal to the vector; the real E8 control at 2421032 kHz gave 32 CRC-valid packets, source-off noise none CRC-valid. Details: [results/packet/NOTE.md](results/packet/NOTE.md), `analysis_batch1.txt`.
