@@ -174,3 +174,74 @@ def cell_alpha(c, a):
     c[0].set_stroke(opacity=a)
     c[1].set_fill(opacity=a)
     return c
+
+
+# ---------------------------------------------------------------------------------------------------------
+# Narration (manim-voiceover). Scene files only do:  class S0x(Narrated, MovingCameraScene):  and
+#     with self.voiceover(text="Written form, 6BD and 1150 µs.") as tracker:
+#         self.play(..., run_time=tracker.duration)
+# The text is respelled for the voice (see spoken()) automatically; the caption keeps the written form.
+# ---------------------------------------------------------------------------------------------------------
+import re as _re
+import subprocess as _sp
+from pathlib import Path as _Path
+
+from manim_voiceover import VoiceoverScene
+from manim_voiceover.helper import remove_bookmarks as _remove_bookmarks
+from manim_voiceover.services.base import SpeechService, initialize_speech_service, path_to_string
+
+_SPOKEN = [  # order matters: longer / more specific first
+    (r"\bCC2500\b", "C C twenty-five hundred"), (r"\bESP32\b", "E S P thirty-two"), (r"\b6BD\b", "six B D"),
+    (r"\bSPI\b", "S P I"), (r"\bkHz\b", "kilohertz"), (r"\bMHz\b", "megahertz"), (r"\bGHz\b", "gigahertz"),
+    (r"µs|μs", " microseconds"), (r"\bms\b", "milliseconds"), (r"−", "minus "), (r"±", "plus or minus "),
+]
+
+
+def spoken(text):
+    """Written form -> what the TTS should say. Leaves <bookmark mark='X'/> tags untouched. Extend _SPOKEN."""
+    out = []
+    for part in _re.split(r"(<bookmark\s*mark\s*=\s*['\"]\w*['\"]\s*/>)", text):
+        if not part.startswith("<bookmark"):
+            for pat, rep in _SPOKEN:
+                part = _re.sub(pat, rep, part)
+            part = _re.sub(r"\s+", " ", part)
+        out.append(part)
+    return "".join(out)
+
+
+class MacSayService(SpeechService):
+    """Offline macOS `say` -> aiff -> mp3 (ffmpeg). No word timings: bookmarks use a linear text->time fallback."""
+
+    def __init__(self, voice="Samantha", rate=165, **kwargs):
+        initialize_speech_service(self, kwargs)
+        self.voice, self.rate = voice, rate
+
+    def generate_from_text(self, text, cache_dir=None, path=None, **kwargs):
+        cache_dir = cache_dir or self.cache_dir
+        input_text = _remove_bookmarks(text)
+        input_data = {"input_text": input_text, "service": "macsay", "voice": self.voice, "rate": self.rate}
+        cached = self.get_cached_result(input_data, cache_dir)
+        if cached is not None:
+            return cached
+        audio_path = path_to_string(path) if path else self.get_audio_basename(input_data) + ".mp3"
+        aiff = _Path(cache_dir) / (audio_path + ".aiff")
+        _sp.run(["say", "-v", self.voice, "-r", str(self.rate), "-o", str(aiff), input_text], check=True)
+        _sp.run(["ffmpeg", "-loglevel", "error", "-y", "-i", str(aiff), str(_Path(cache_dir) / audio_path)], check=True)
+        aiff.unlink()
+        return {"input_text": text, "input_data": input_data, "original_audio": audio_path}
+
+
+def voice_service():
+    """THE ONE LINE TO CHANGE to swap the narrator voice (e.g. GTTSService(), OpenAIService(voice="onyx"), ElevenLabsService(...))."""
+    return MacSayService(voice="Samantha", rate=165)
+
+
+class Narrated(VoiceoverScene):
+    """Mixin/base: put first, e.g. `class S01(Narrated, MovingCameraScene)`. Sets the voice and respells the text."""
+
+    def setup(self):
+        super().setup()
+        self.set_speech_service(voice_service(), create_subcaption=False)
+
+    def voiceover(self, text=None, **kwargs):
+        return super().voiceover(text=spoken(text), **kwargs)

@@ -28,7 +28,11 @@ def drone_2d():
     return VGroup(arms, motors, body, rx, rxl).scale(0.85).move_to(DX)
 
 
-class S05(ThreeDScene):
+class S05(Narrated, ThreeDScene):
+    def say(self, text):
+        print("VO %.2f %s" % (self.renderer.time, text), flush=True)
+        return self.voiceover(text=text)
+
     def cap(self, text, size=32):
         return caption(text, size)
 
@@ -50,11 +54,12 @@ class S05(ThreeDScene):
         c = self.cap("caught by the drone's CC2500 radio")
         self.fix(drone, c)
         self.remove(drone, c)
-        self.play(FadeOut(stream_caption), strip.open(), blk.animate.scale(0.5 * STREAM_W / CLOSE_W).move_to(LEFT * 3.0),
-                  *[FadeOut(n, shift=d * 3.0) for n, d in zip(side, (LEFT, RIGHT))], FadeIn(drone, shift=LEFT * 0.3), run_time=0.8)
-        self.play(strip.go(K_RX), MoveAlongPath(blk, Line(LEFT * 3.0, rx.get_center())), blk.animate.scale(0.3), FadeIn(c),
-                  run_time=1.4, rate_func=linear)
-        self.play(strip.close(), Flash(rx, color=RED_A, line_length=0.2, flash_radius=0.4), run_time=0.6)
+        with self.say("The drone's CC2500 radio catches the burst."):
+            self.play(FadeOut(stream_caption), strip.open(), blk.animate.scale(0.5 * STREAM_W / CLOSE_W).move_to(LEFT * 3.0),
+                      *[FadeOut(n, shift=d * 3.0) for n, d in zip(side, (LEFT, RIGHT))], FadeIn(drone, shift=LEFT * 0.3), run_time=0.8)
+            self.play(strip.go(K_RX), MoveAlongPath(blk, Line(LEFT * 3.0, rx.get_center())), blk.animate.scale(0.3), FadeIn(c),
+                      run_time=1.4, rate_func=linear)
+            self.play(strip.close(), Flash(rx, color=RED_A, line_length=0.2, flash_radius=0.4), run_time=0.6)
 
         # ---- inverse of S03: the wave, read back into bits ----
         waves = [fsk_wave(8.0, lit=i, center=WC5, width=WW5, amp=WA5) for i in range(9)]
@@ -65,11 +70,11 @@ class S05(ThreeDScene):
         c2 = self.cap("the wave, read back into bits")
         self.fix(wave, bits, c2)
         self.remove(wave, bits, c2)
-        self.play(FadeOut(c), ReplacementTransform(blk, wave), run_time=1.0)
-        self.play(FadeIn(c2), run_time=0.4)
-        for i in range(8):
-            self.play(Transform(wave, waves[i + 1]), FadeIn(bits[i], shift=UP * 0.15), run_time=0.28, rate_func=linear)
-        self.wait(0.5)
+        with self.say("It reads the up and down nudges in the wave back as ones and zeros,"):
+            self.play(FadeOut(c), ReplacementTransform(blk, wave), run_time=1.0)
+            self.play(FadeIn(c2), run_time=0.4)
+            for i in range(8):
+                self.play(Transform(wave, waves[i + 1]), FadeIn(bits[i], shift=UP * 0.15), run_time=0.26, rate_func=linear)
 
         # ---- inverse of S02: the bits regroup into the bracketed packet ----
         row = packet_row(center=ROW_C, scale=ROW_K, hexsize=BHEX, lab_size=16)
@@ -79,33 +84,46 @@ class S05(ThreeDScene):
         c3 = self.cap("the bits, back in their packet")
         self.fix(row, c3)
         self.remove(row, c3)
-        self.play(FadeOut(c2), FadeOut(wave), ReplacementTransform(bits, cells[6]), FadeIn(others), FadeIn(row["braces"]),
-                  FadeIn(row["labels"]), run_time=1.2)
-        self.play(FadeIn(c3), run_time=0.4)
-        self.wait(0.5)
+        with self.say("reassembles the packet,"):
+            self.play(FadeOut(c2), FadeOut(wave), ReplacementTransform(bits, cells[6]), FadeIn(others), FadeIn(row["braces"]),
+                      FadeIn(row["labels"]), FadeIn(c3), run_time=1.0)
 
         # ---- checksum ok ----
         pulse = ShowPassingFlash(Line(cells[0].get_left(), cells[19].get_right(), color=YELLOW_A, stroke_width=SW_FLASH)
                                  .shift(DOWN * (BCELL * ROW_K / 2 + 0.06)), time_width=0.3, run_time=1.0)
         self.fix(pulse.mobject)
-        self.play(FadeOut(c3), pulse)
+        with self.say("and checks the checksum."):
+            self.play(FadeOut(c3), pulse)
         tick = label("✓", 30, GREEN_A).next_to(cells[19], RIGHT, buff=0.2)
         c = self.cap("checksum ok")
         self.fix(tick, c)
         self.remove(tick, c)
-        self.play(cells[18][0].animate.set_stroke(GREEN_A, opacity=1), cells[19][0].animate.set_stroke(GREEN_A, opacity=1),
-                  cells[18][1].animate.set_fill(GREEN_A, opacity=1), cells[19][1].animate.set_fill(GREEN_A, opacity=1),
-                  FadeIn(tick, scale=0.6), FadeIn(c), run_time=0.7)
-        self.wait(0.8)
+        with self.say("Everything checks out."):
+            self.play(cells[18][0].animate.set_stroke(GREEN_A, opacity=1), cells[19][0].animate.set_stroke(GREEN_A, opacity=1),
+                      cells[18][1].animate.set_fill(GREEN_A, opacity=1), cells[19][1].animate.set_fill(GREEN_A, opacity=1),
+                      FadeIn(tick, scale=0.6), FadeIn(c), run_time=0.7)
 
         # ---- stage b: over SPI to the flight controller (map strip) ----
         c2 = self.cap("over SPI to the flight controller")
         self.fix(c2)
         self.remove(c2)
-        self.play(FadeOut(c), FadeOut(tick), strip.open(), run_time=0.6)
-        self.play(strip.go(K_FC), FadeIn(c2), run_time=1.2, rate_func=linear)
-        self.wait(0.2)
-        self.play(strip.close(), FadeOut(c2), run_time=0.5)
+        # a small packet token rides the marker along the SPI wire; the packet row pulses as it feeds the wire
+        token = VGroup(RoundedRectangle(corner_radius=0.03, width=0.46, height=0.16, color=YELLOW_A, stroke_width=SW_LINE,
+                                        fill_color=BG, fill_opacity=1),
+                       *[Line(UP * 0.04, DOWN * 0.04, color=YELLOW_A, stroke_width=SW_THIN).move_to(RIGHT * (k - 2) * 0.07) for k in range(5)])
+        token.set_opacity(0)
+        token.add_updater(lambda m: m.move_to(strip.marker.get_center() + UP * 0.3))
+        flashes = [ShowPassingFlash(Line(cells[0].get_left(), cells[19].get_right(), color=YELLOW_A, stroke_width=SW_FLASH)
+                                    .shift(DOWN * (BCELL * ROW_K / 2 + 0.06)), time_width=0.3, run_time=1.2) for _ in range(3)]
+        self.fix(token, *[f.mobject for f in flashes])
+        self.remove(token, *[f.mobject for f in flashes])
+        with self.say("It passes the packet over SPI, a short wire, to the flight controller running Beta flight."):
+            self.play(FadeOut(c), FadeOut(tick), strip.open(), run_time=0.6)
+            self.add(token)
+            self.play(strip.go(K_FC), FadeIn(c2), token.animate.set_opacity(1), Succession(*flashes), run_time=4.4, rate_func=linear)
+            token.clear_updaters()
+            self.play(FadeOut(token), run_time=0.01)
+            self.play(strip.close(), FadeOut(c2), run_time=0.5)
 
         # ---- 0x6bd lifts out of the throttle cells -> 1150 in the channel list ----
         names = ["roll", "pitch", "throttle", "yaw"]
@@ -119,13 +137,13 @@ class S05(ThreeDScene):
         hx = mono("0x6bd", 40, YELLOW_A).move_to([-1.0, 0.4, 0])
         self.fix(hx, rows, val, unit, fc)
         self.remove(hx, rows, val, unit, fc)
-        self.play(TransformFromCopy(throttle_glyphs(row), hx), FadeIn(fc), FadeIn(rows), run_time=0.9)
-        self.play(FadeTransform(hx, val), FadeIn(unit), FadeOut(row), run_time=0.8)
         c = self.cap("the flight controller reads throttle 1150")
         self.fix(c)
         self.remove(c)
-        self.play(FadeIn(c), run_time=0.5)
-        self.wait(1.0)
+        with self.say("The flight controller unpacks the throttle, eleven fifty,"):
+            self.play(TransformFromCopy(throttle_glyphs(row), hx), FadeIn(fc), FadeIn(rows), run_time=1.2)
+            self.play(FadeTransform(hx, val), FadeIn(unit), FadeOut(row), run_time=1.0)
+            self.play(FadeIn(c), run_time=0.5)
 
         # ---- 1150 splits into four motor commands (on the silhouette), then the quad in 3D ----
         motors2d = drone[1]
@@ -133,23 +151,34 @@ class S05(ThreeDScene):
         c2 = self.cap("mixed into 4 motors")
         self.fix(copies, c2)
         self.remove(copies, c2)
-        self.play(FadeOut(c), FadeOut(rows), FadeOut(fc), FadeOut(unit), run_time=0.5)
-        self.play(LaggedStart(*[TransformFromCopy(val, cp_, path_arc=-30 * DEGREES) for cp_ in copies], lag_ratio=0.1),
-                  strip.go(K_MOT), motors2d.animate.set_fill(PURPLE_A, 0.2), FadeIn(c2), run_time=1.5)
-        self.wait(0.6)
+        with self.say("and mixes it into commands for all four motors,"):
+            self.play(FadeOut(c), FadeOut(rows), FadeOut(fc), FadeOut(unit), run_time=0.5)
+            self.play(LaggedStart(*[TransformFromCopy(val, cp_, path_arc=-30 * DEGREES) for cp_ in copies], lag_ratio=0.1),
+                      strip.go(K_MOT), motors2d.animate.set_fill(PURPLE_A, 0.2), FadeIn(c2), run_time=2.5)
+        with self.say("along with the corrections that keep the drone level."):
+            self.play(LaggedStart(*[Indicate(cp_, color=YELLOW_A, scale_factor=1.3) for cp_ in copies], lag_ratio=0.25), run_time=2.5)
         quad, props = self.make_quad()
         quad.scale(1.5).shift(RIGHT * 1.0 + DOWN * 0.6)
-        self.play(FadeOut(drone), FadeOut(copies), GrowFromCenter(quad), val.animate.move_to([-4.6, 2.4, 0]).set_opacity(0.5),
-                  run_time=0.8)
-        self.move_camera(phi=62 * DEGREES, theta=-45 * DEGREES, zoom=1.0, run_time=1.4)
-        for p in props:
-            p.add_updater(lambda m, dt: m.rotate(9 * dt, about_point=m.get_center()))
-        self.play(quad.animate.shift(OUT * 0.3), run_time=1.8, rate_func=smooth)
-        self.begin_ambient_camera_rotation(rate=0.08)
-        self.wait(1.6)
+        with self.say("The motor drivers turn those commands into spin,"):
+            self.play(FadeOut(drone), FadeOut(copies), GrowFromCenter(quad), FadeOut(c2), val.animate.move_to([-4.6, 2.4, 0]).set_opacity(0.5),
+                      run_time=0.8)
+            self.move_camera(phi=62 * DEGREES, theta=-45 * DEGREES, zoom=1.0, run_time=1.4)
+            spun = [0.0]
+
+            def spin(m, dt):
+                m.rotate(9 * dt, about_point=m.get_center())
+                if m is props[0]:
+                    spun[0] += 9 * dt
+            for p in props:
+                p.add_updater(spin)
+        with self.say("and the drone lifts."):
+            self.begin_ambient_camera_rotation(rate=0.08 * 1.6 / 1.5)   # same total turn as before (0.128 rad)
+            self.play(quad.animate.shift(OUT * 0.3), run_time=1.5, rate_func=smooth)
         self.stop_ambient_camera_rotation()
         for p in props:
             p.clear_updaters()
+        for p in props:   # land on the same prop angle as before narration (old total spin time 3.4 s)
+            p.rotate(9 * 3.4 + 0.495 - spun[0], about_point=p.get_center())
         self.wait(0.5)
 
     def make_quad(self):

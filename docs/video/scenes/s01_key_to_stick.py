@@ -4,7 +4,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from parts import *
 
 
-class S01(MovingCameraScene):
+class S01(Narrated, MovingCameraScene):
     def construct(self):
         frame = self.camera.frame
         strip = MapStrip(K_KEY, lambda: (frame.get_center(), frame.width))
@@ -114,27 +114,41 @@ class S01(MovingCameraScene):
                 cap[1].set_color(YELLOW_A if lit else INK)
 
         apply()
-        self.play(FadeIn(ui), strip.go(K_APP), run_time=1.2)
         ui.add_updater(apply)
-
-        # The sticks, the drone and the channel bars all move together; one caption at a time.
-        T = 9.6                  # seconds of free movement
+        T = 12.1                 # seconds of free movement (u runs 0..1 over the first four sentences)
 
         def move(dt, *anims):
-            self.play(u.animate.set_value(min(u.get_value() + dt / T, 1.0)), *anims, run_time=dt, rate_func=linear)
-        c = caption_at(frame, 'The browser turns keys into channels', 32)
-        move(.6, FadeIn(c)); move(3.6); move(.3, FadeOut(c))
-        c = caption_at(frame, 'All four stick channels move at once', 32)
-        move(.6, FadeIn(c)); move(4.2); move(.3, FadeOut(c))
+            if dt > 0.02:
+                self.play(u.animate.set_value(min(u.get_value() + dt / T, 1.0)), *anims, run_time=dt, rate_func=linear)
 
+        def say(text):
+            print('SENTENCE', round(self.renderer.time, 2), text, flush=True)
+            return self.voiceover(text=text)
+
+        with say("This is the browser app we fly the drone with.") as t:
+            self.play(FadeIn(ui), strip.go(K_APP), run_time=1.2)
+            c = caption_at(frame, 'The browser turns keys into channels', 32)
+            move(.6, FadeIn(c)); move(t.duration - 1.8)
+        with say("Everything the pilot can control is a channel, and there are eight of them.") as t:
+            move(t.duration)
+        with say("Four come from the sticks: throttle, yaw, pitch and roll.") as t:
+            c2 = caption_at(frame, 'All four stick channels move at once', 32)
+            move(.4, FadeOut(c)); move(.6, FadeIn(c2)); move(t.duration - 1.0)
+        with say("Move the sticks and all four change at once.") as t:
+            move(t.duration)
         # Focus: the other channels dim, throttle comes down to 1150 µs and turns yellow.
         value = num('1150', 30, YELLOW_A).next_to(bars[0][0], UP, buff=.12)
         c = caption_at(frame, "Let's focus on the throttle", 32)
-        self.play(f.animate.set_value(1.0), FadeIn(c), run_time=1.4)
-        self.play(FadeIn(value), run_time=.5)
-        self.wait(2.0)
-        ui.remove_updater(apply)
-        # Preserve the exact hero_number shared with S02.
-        target = hero_number()
-        self.play(FadeOut(ui), FadeOut(c), ReplacementTransform(value, target), run_time=1.5)
+        with say("Let's follow just one of them, the throttle,") as t:
+            u.set_value(1.0)
+            self.play(FadeOut(c2), run_time=.3)
+            self.play(f.animate.set_value(1.0), FadeIn(c), run_time=1.4)
+            self.play(FadeIn(value), run_time=.5)
+            self.wait(max(t.duration - 2.2, 0))
+        with say("from the key press all the way to the motors.") as t:
+            self.wait(max(t.duration - 1.5, 0))
+            ui.remove_updater(apply)
+            # Preserve the exact hero_number shared with S02.
+            target = hero_number()
+            self.play(FadeOut(ui), FadeOut(c), ReplacementTransform(value, target), run_time=1.5)
         self.wait(.5)
