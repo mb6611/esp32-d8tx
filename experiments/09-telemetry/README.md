@@ -4,6 +4,10 @@ By [08](../08-first-flight-cloned-e8/README.md) the ESP32 could fly stock Betafl
 
 That means the ESP32 has to stop transmitting, retune to the next channel and start listening within about a millisecond. After each trigger packet the firmware unkeyed, retuned and started an I/Q capture 207 to 368 µs later, recorded 10.3 ms at 500 kS/s, and sent the samples to the Mac, where `tools/d8-tx-host/tlm_listen.py` decoded them with the D8 decoder from the receive project. I sent one trigger every 48 slots at power 127, with FOFS (the frequency offset that the cloned E8 binding needs, from 08) at −50 kHz.
 
+![Three slots to scale: the ESP32 sends a 6.70 ms trigger packet in slot k, skips slot k+1 and captures 9 ms on its channel while the drone replies 1.38 ms after the trigger ends, then sends normally in slot k+2](../../docs/diagrams/timeline.svg)
+
+*Figure: a telemetry trigger, to scale. The slot after a trigger is a listen slot; here a trigger went out every 48 slots ([13](../13-fast-attitude-telemetry/README.md) later brought that down to 12). The 1.38 ms is Betaflight's nominal reply delay; the measured replies started 1.34 to 1.51 ms after the trigger. Source: [`docs/diagrams/timeline.excalidraw`](../../docs/diagrams/timeline.excalidraw).*
+
 The first run with the drone on battery caught a CRC-valid reply with the drone's ID in 26 of 46 trigger slots. The replies started 1.34 to 1.51 ms after the trigger packet, close to Betaflight's nominal 1380 µs, and carried A1, A2, an RSSI byte of 71 to 76 and the correct telemetry ID. So the turnaround on the hacked transmit path works. But half the replies were missing, the misses came in long runs, and the hub byte count was 0 in every frame.
 
 The long runs of misses happened because the ESP32 stopped transmitting after every trigger. After each one it captured the slot where the reply should be and sent that capture to the host as 20 KB of int16 samples over the UART, and it did nothing else for the roughly 0.22 s that took, about 24 slots with no packets. I saw this by repeating the run with the drone on USB power and logging Betaflight's status over MSP at about 7 Hz: Betaflight saw the packets stop, went into RX failsafe (318 of 400 MSP rows in a 60 s run), and then took seconds to find the hop phase again. That run caught 56 of 139 (40%). I changed the firmware to capture int8, about 9 KB, and stream it out in the roughly 1.9 ms gaps between packets, so the link never stops. The same 60 s run then caught 121 of 139 (87%), with failsafe only in Betaflight's first 2 s after the link starts. I also changed how the telemetry ID advances: the host now sends the next ID only after a reply echoed the last one, otherwise it repeats the same ID, which is Betaflight's own rule.
@@ -18,7 +22,7 @@ As a fallback I added a re-trigger to the firmware. After each capture it checks
 
 So the ESP32 can hear Betaflight's telemetry, and with the offset centred it gets 97.8 to 100% of replies. What I didn't know then is that −75 kHz only suits the cloned E8 binding. Once the drone was bound to the ESP32 itself, the drone's receiver corrected its own offset and FOFS 0 became the right setting ([15](../15-ota-bind/README.md)). None of this was in flight, and only the first run was on battery.
 
-There is no figure for this experiment; the per-run numbers are in the tables of `data/SUMMARY.md`.
+The per-run numbers are in the tables of `data/SUMMARY.md`.
 
 ---
 

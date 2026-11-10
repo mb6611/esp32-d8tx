@@ -10,9 +10,13 @@ So on the bench I went to decimation 64. With int8 and a trigger every 16 slots 
 
 Then I flashed build `c3f351e4` with patch 0003 and ran the link end to end for 60 s. It got 511 replies (8.5 a second): 340 with the attitude block, 5.7 a second, and 171 with hub bytes. The time between attitude updates was 0.12 s at the median and 0.23 s at the 95th percentile, since every third reply is a hub reply. Acceleration still arrived about every 1.4 s. The radio's attitude agreed with Betaflight's MSP_ATTITUDE read over USB at the same time: roll −1.8°, pitch 1.2° against −18 and 12 in MSP's tenths of a degree.
 
+![The telemetry path: the drone's reply through the ESP32's receive chain, decimation and int4 packing in the firmware, over the UART to the Web Worker, CRC-32 check, the WASM demodulator, and the reply fields to the React UI, with a TID ack back to the ESP32](../../docs/diagrams/overview-telemetry.svg)
+
+*Figure: the telemetry path back, about 8.5 replies a second, decoded in the browser. Source: [`docs/diagrams/overview-telemetry.excalidraw`](../../docs/diagrams/overview-telemetry.excalidraw).*
+
 So attitude now arrives about 5.7 times a second, about 0.1 s after it is requested, which is fast enough for the app's live 3D view. That is what the app's 3D panel uses. It was all on the bench with the drone sitting still, so it doesn't show how the block behaves in motion, and the hub-stall guard in the same patch was not tested against the 36-minute idle condition that triggers the stall.
 
-There is no figure for this experiment; the numbers are in the per-run result files in `data/`.
+The numbers are in the per-run result files in `data/`.
 
 ---
 

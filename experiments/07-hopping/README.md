@@ -6,6 +6,10 @@ The tone generator can't do the hopping by itself. Its steps only reach about ±
 
 Before hopping I checked that a retune lands where it should. The ESP32 retuned to 2404, 2412, 2441 and 2478 MHz and keyed a 150 ms tone at each, with the CC2500 watching each frequency. All four showed up, with the receiver's frequency estimate within 13 kHz of nominal. During the hopping runs the firmware measured each retune at no more than 0.39 ms (363 µs in run A, 389 µs in run B), and the packet started at most 81 µs late, so the slot timing held to about 80 µs.
 
+![Retune gate: maximum RSSI per window with the tone off and keyed, at four retuned LO frequencies, with the carrier offset estimate](figures/hop-retune-gate.png)
+
+*Figure: grey, baseline RSSI with the tone off; green, the three keyed 150 ms tones at 2404, 2412, 2441 and 2478 MHz. The label is the largest FREQEST offset of the three. The 2441 MHz baseline had a steady in-band interferer, so its rise is smaller. Source: `data/retune_gate/summary.md`.*
+
 For the runs, the ESP32 hopped through the E8's own hop table with its transmitter ID (42B2), and the CC2500 ran a diagnostic mode that follows the same table (`rxdiag hop`). There was no bind: I gave the receiver the table directly, the one a bound receiver would have learned. I recorded the real E8 first as a control, then two ESP32 runs, with the sticks fixed at 1500 µs.
 
 The E8 got 2133 of 2204 slots through in 20 s (96.8%). The ESP32 got 543 of 556 in run A (97.7%) and 921 of 940 in run B (98.0%). In all three runs every one of the 47 channels decoded, the hop counter had no gaps, and the decoded sticks read 1500 µs. The ESP32's misses were scattered: the longest run of consecutive misses was 2 slots, and no channel lost more than two.
@@ -17,6 +21,14 @@ So the ESP32 can run the full 47-channel hop sequence at least as well as the E8
 ![Hop map of ESP32 run B: time against RF frequency, the expected hop sequence, received and missed slots, and per-channel received fraction](figures/runB_hop_map.png)
 
 *Figure: hop map of ESP32 run B, 921 of 940 slots. Line: expected hop sequence. Dots: slots received CRC-valid. Crosses: slots with no valid packet. Source: `data/esp_hop/runB_*`.*
+
+![Hop map of ESP32 run A, drawn the same way as run B](figures/runA_hop_map.png)
+
+*Figure: hop map of ESP32 run A, 543 of 556 slots; line, dots and crosses as for run B. Source: `data/esp_hop/runA_*`.*
+
+![The same hop map for the real E8 control, drawn the same way; its weak channels show as red bars in the per-channel panel](figures/e8_hop_map.png)
+
+*Figure: hop map of the real E8, 2133 of 2204 slots over 20 s; line, dots and crosses as for run B. Channels 25 (2411.5 MHz) and 133 (2443.9 MHz) are weak, at 29 of 47 and 22 of 47. Source: `data/e8_control/`.*
 
 ![Per-channel received percentage for the E8 and ESP32 run B, channels 25 and 133 labelled](figures/hop-per-channel.png)
 

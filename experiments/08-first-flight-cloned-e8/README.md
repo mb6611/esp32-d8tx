@@ -18,6 +18,10 @@ The last test was failsafe, with props off: arm at idle, then stop the host send
 
 So the ESP32 can drive a stock Betaflight drone, through arming, throttle and failsafe. What it doesn't show: the takeoff was a scripted 1 s throttle pulse, not piloted flight; there was no range test; and the link only works because the ESP32 copies the E8's identity and frequency error. A bind of its own came later ([15](../15-ota-bind/README.md)). Everything here also went one way, from the ESP32 to the drone, and Betaflight sends telemetry back, which is the next experiment ([09](../09-telemetry/README.md)).
 
+![The control path from a key press to the motors: UI and sender on the laptop, USB to the ESP32, firmware packet and CRC, the Wi-Fi PHY's tone generator and LO as a 2-FSK transmitter, then the drone's CC2500, Betaflight and motors](../../docs/diagrams/overview-control.svg)
+
+*Figure: the control path, one packet every 8.994 ms. Blue runs in the browser, grey is the operating system and USB, green is firmware. Source: [`docs/diagrams/overview-control.excalidraw`](../../docs/diagrams/overview-control.excalidraw).*
+
 [![First takeoff, a frame from the phone video](../../docs/lab-log/media/esp32-first-takeoff-poster.jpg)](../../docs/lab-log/media/esp32-first-takeoff.mp4)
 
 *Video: motor test 8, the first takeoff, 34 s, recompressed to 720p from my phone recording ([mp4](../../docs/lab-log/media/esp32-first-takeoff.mp4)). Sender log: `data/motor_test/motor_test8_fullthrottle_1s_sender.csv`.*

@@ -2,6 +2,10 @@
 
 By now the app drove both boards itself, with no Python backend: it sends one stick update per 8.994 ms slot to the ESP32, triggers and decodes telemetry, and polls the flight controller over MSP. I wanted to know if it held the link and the telemetry on real hardware over a long run, and if arming, disarming and losing the ESP32 behaved safely. The drone was on USB, props off, no battery. The first runs used the cloned E8 identity at FOFS −75 kHz, with the fast telemetry recipe from [13](../13-fast-attitude-telemetry/README.md).
 
+![The Sticks page in mock mode: link off, throttle 0%, left stick (yaw, throttle) and right stick (roll, pitch)](figures/d8tx-sticks-ui.png)
+
+*Figure: the Sticks page with `?mock=1`, a headless Chrome screenshot of `app`. The backend is a mock, so it shows the layout, not a flight.*
+
 The main run was 10 minutes with arming disallowed and the app window minimized. The app sent 64,409 stick updates, 106.5 a second, and the longest gap between two was 24.4 ms, so the firmware's 300 ms silence timeout never fired. The firmware counted 61,921 transmitted slots against 61,716 expected from the elapsed time minus the listen slots, a ratio of 1.003, so no slot was missing. Telemetry decoded 5,100 replies to 5,312 triggers (96.0%), 506 to 512 a minute, and the newest reply was always under 1 s old. Attitude over MSP came at 10.73 Hz.
 
 Next, with the throttle capped at 15%, I armed and ran the motors. Betaflight armed after the arm control was held for 1.2 s, and the drone's own RC channels read throttle 1150 µs, the cap, and arm channel 2000 while the prop-less motors spun up. Disarm took effect within 309 ms, the MSP poll interval, and the motors went back to 1000. Then, armed again, I made the ESP32's serial port fail the way an unplug does. The app showed the link lost and disarmed within 16 ms. With no more stick updates the firmware stopped transmitting after its 300 ms timeout, and Betaflight went to failsafe at about 1.05 s and disarmed at about 1.57 s, which is its own failsafe timing.
@@ -10,7 +14,7 @@ The last run was a 2-minute minimized run after the bind of [15](../15-ota-bind/
 
 So the app holds the link and the telemetry for 10 minutes on real hardware, and losing the ESP32 ends in Betaflight's failsafe. This doesn't include a flight from the app or a physical unplug: the port loss was simulated.
 
-There is no figure for this experiment; the numbers are fields in the result files in `data/e2e-results/`.
+The numbers are fields in the result files in `data/e2e-results/`.
 
 ---
 

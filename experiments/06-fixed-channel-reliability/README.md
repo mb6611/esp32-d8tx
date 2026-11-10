@@ -10,7 +10,15 @@ Across both sessions the ESP32 got 132 of 140 attributable packets through (94%)
 
 For the batches with a tight time anchor, the received packets sit on a straight line against send time with at most 91 µs of residual. That predicts when each missing packet should have arrived to about 0.1 ms. At those instants the receiver logged no record and no noise fragment; the nearest noise record was at least 41 ms away. So these are clean missed sync detections. Whether the receiver was blind at that moment or the start of the ESP32 packet was occasionally not decodable, this setup can't separate, because the E8 baseline loses packets at the same rate.
 
+![Receiver-minus-host clock against send time for batches 3, 6 and 9, with the expected time of each unobserved send marked](figures/reliability-timing.png)
+
+*Figure: matched receptions lie on a line of slope 0.175% (receiver clock fast against the host), and each unobserved send is placed by that line. Batch 6 lost two in a row. Source: `data/reliability/batch{3,6,9}_*`.*
+
 I also logged the CC2500's per-packet frequency estimate (FREQEST) for 50 more packets (47 received). The ESP32 averaged +1.8 kHz with a 16.4 kHz standard deviation, the E8 −1.8 kHz and 14.7 kHz, and the estimate clamps at ±33.3 kHz. That spread is wider than the ±10 kHz carrier wander I was trying to see, so it can't answer how accurate the ESP32's carrier is.
+
+![FREQEST histogram for ESP32 and real E8 packets, spanning about -33 to +33 kHz](figures/freqest-hist.png)
+
+*Figure: receiver FREQEST of CRC-valid packets, in 4 kHz bins, each series normalised to its own packet count. Dashed lines: the ±21 LSB clamp. Source: `data/freqest/batch*_stm.txt`, `data/*/control_e8_{pre,post}.txt`.*
 
 So on one channel the ESP32 performs like the real radio on this receiver. The next question was whether it could keep that up while retuning to a new channel every 9 ms ([07](../07-hopping/README.md)).
 
