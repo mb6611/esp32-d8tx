@@ -19,7 +19,7 @@ d = subprocess.run([OD, "-d", "--no-show-raw-insn", LIB], capture_output=True, t
 blk = d.split("<get_txdumpaddr>:")[1][:400]
 chk("vendor get_txdumpaddr returns 0x3ffe8000 (=txeng sample base)", "3ffe8000" in blk, "size arg " + str(re.findall(r"movi.n\s+a8, (\d+)", blk)[:1]))
 chk("vendor clear_txdumpmem spans 0x3ffe8000 + 0x3fff words (16384 words = 64 KiB)", "3ffe8000" in d.split("<clear_txdumpmem>:")[1][:300] and "3fff" in d.split("<clear_txdumpmem>:")[1][:300])
-doc = open("/Users/1unoe/Developer/personal/esp32-devkitv1-sdr/docs/devkitv1/ring-feasibility.md").read()
+doc = open("/Users/1unoe/Developer/personal/esp32-d8rx/docs/devkitv1/ring-feasibility.md").read()
 doc = " ".join(doc.split())
 chk("measured (capture side) bank map: mode2=lower, mode1=upper, offsets 0..8191 land in the bank, >=8192 dropped",
     "`MAC_DUMP_MODE` 2 gives the RF the lower bank" in doc and "1 gives it the upper bank" in doc and "offsets 0..8191 land in that mode's bank" in doc)

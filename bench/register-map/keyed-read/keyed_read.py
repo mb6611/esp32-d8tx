@@ -7,7 +7,7 @@ from dev import Dev, Hang
 RATE = 1 << 15
 PH = ["after_key(pre_clr18)", "after_F_CLR18", "mid_run", "at_done", "after_unkey"]
 REGS = ["b8", "bc", "c4", "a0", "50f0"]
-log = open('/Users/1unoe/Developer/personal/esp32-devkitv1-sdr/bench/register-map/keyed-read/logs/session.log', 'a')
+log = open('/Users/1unoe/Developer/personal/esp32-d8rx/bench/register-map/keyed-read/logs/session.log', 'a')
 d = Dev(log=log)
 print(d.reset())
 out = []
@@ -19,4 +19,4 @@ for pwr in (127, 0):
     keyed = int(e[16]); print(f"pwr={pwr} keyed_us={keyed} ndone={e[5]}")
     out.append(dict(pwr=pwr, raw=raw))
     if keyed > 400: print("OVERRUN, stop"); break
-json.dump(out, open('/Users/1unoe/Developer/personal/esp32-devkitv1-sdr/bench/register-map/keyed-read/keyed_read.json', 'w'), indent=1)
+json.dump(out, open('/Users/1unoe/Developer/personal/esp32-d8rx/bench/register-map/keyed-read/keyed_read.json', 'w'), indent=1)

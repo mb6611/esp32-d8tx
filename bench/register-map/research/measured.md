@@ -10,9 +10,9 @@ Sources inventoried (all local, paths relative to `/Users/1unoe/Developer/person
 | S0 | `auto-drone/stage0/README.md`, `capture.py`, `captures/summary_2437MHz_rate1.json` | esp-sdr CAP16 baseline, 2437 MHz, AGC on |
 | S1 | `auto-drone/stage1/README.md`, `census.csv` (128 rows), `census.log`, `census/main/census.c` | RW-mask census of `0x60033d00..0x60033dff`, 2 passes |
 | S2 | `auto-drone/stage2/README.md`, `run.py`, `results.csv` (1105 rows), `results.log`, `txeng/main/txeng.c`, `iq.py` | Engine behaviour A–E, keying, loopback |
-| PB | `esp32-devkitv1-sdr/bench/cc2500-rxdiag/playback-check/{README.md,inband/,intended/,bank-check/}` | CC2500 external detector vs keyed engine |
-| RF | `esp32-devkitv1-sdr/docs/devkitv1/ring-feasibility.md` | Capture ring mode and bank ownership (RX side) |
-| SRC | `esp32-devkitv1-sdr/main/targets/esp32/receiver.c`, `iq_stream.c`; `~/esp/esp-idf/components/esp_rom/esp32/ld/esp32.rom.ld`; `components/soc/esp32/register/soc/dport_reg.h` | Source constants we rely on |
+| PB | `esp32-d8rx/bench/cc2500-rxdiag/playback-check/{README.md,inband/,intended/,bank-check/}` | CC2500 external detector vs keyed engine |
+| RF | `esp32-d8rx/docs/devkitv1/ring-feasibility.md` | Capture ring mode and bank ownership (RX side) |
+| SRC | `esp32-d8rx/main/targets/esp32/receiver.c`, `iq_stream.c`; `~/esp/esp-idf/components/esp_rom/esp32/ld/esp32.rom.ld`; `components/soc/esp32/register/soc/dport_reg.h` | Source constants we rely on |
 | EXT | <https://github.com/whstudio123/esp32-iq-tx/blob/main/docs/REGISTERS.md> | Third-party ESP32-S3 / S31 TX register reference (fetched 2026-11-06) |
 | AUD | Parent node's classic-ROM source audit, reported by message 2026-11-06 | Three NCO enables, `0x600060a0`, `0x60006000`; no `dactrig`. Not re-derived here; rows citing it are marked SRC-AUDIT |
 

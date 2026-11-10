@@ -1,10 +1,10 @@
 # A 2.4 GHz SDR on a $5 ESP32
 
-*Matthew Banaag · November 2026 · [esp32-devkitv1-sdr](https://github.com/mb6611/esp32-devkitv1-sdr)*
+*Matthew Banaag · November 2026 · [esp32-d8rx](https://github.com/mb6611/esp32-d8rx)*
 
 I wanted to see whether a classic ESP32 DevKit V1, the cheap board with a CP2102 USB-serial chip, could work as a 2.4 GHz software-defined receiver. I built one on the I/Q capture path that [esp-sdr](https://github.com/ESPARGOS/esp-sdr) found in the chip, got it streaming without gaps over the board's slow serial link, and tried it on Wi-Fi, Bluetooth LE advertising and a FrSky D8 RC transmitter. In the end it follows the D8 transmitter across all 47 of its hop channels and decodes about 108 packets a second live. Everything here is receive-only.
 
-> *Note:* the receive-only code this chapter describes (the `esp32sdr` host package, firmware profile, bench captures) lives in the public RX repository, [mb6611/esp32-devkitv1-sdr](https://github.com/mb6611/esp32-devkitv1-sdr). This repository keeps only the TX work; the RX chapters stay here as the story's first half. The TX follow-up is its own chapter: [Making a $5 ESP32 speak FrSky D8](index.html#tx-chapter) ([Markdown](tx.md), chapter source).
+> *Note:* the receive-only code this chapter describes (the `esp32sdr` host package, firmware profile, bench captures) lives in the public RX repository, [mb6611/esp32-d8rx](https://github.com/mb6611/esp32-d8rx). This repository keeps only the TX work; the RX chapters stay here as the story's first half. The TX follow-up is its own chapter: [Making a $5 ESP32 speak FrSky D8](index.html#tx-chapter) ([Markdown](tx.md), chapter source).
 
 ---
 
@@ -326,8 +326,8 @@ The follower drops the lock only after 47 silent hops, then waits up to a whole 
 You need an ESP32 DevKit V1 (CP2102), a Mac or Linux machine, ESP-IDF at commit `25fe69f946311abdaf9ad56591f25fedbc20ac98` in `~/esp/esp-idf`, and Python 3.11+.
 
 ```sh
-git clone --recursive https://github.com/mb6611/esp32-devkitv1-sdr
-cd esp32-devkitv1-sdr
+git clone --recursive https://github.com/mb6611/esp32-d8rx
+cd esp32-d8rx
 
 # firmware
 . ~/esp/esp-idf/export.sh

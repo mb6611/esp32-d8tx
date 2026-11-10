@@ -12,7 +12,7 @@ This repository is licensed under the MIT License (see `LICENSE`), with these ex
 
 The RX chapters of `docs/devkitv1/writeup/` describe receive-only work done with the
 ESPARGOS esp-sdr firmware (<https://github.com/ESPARGOS/esp-sdr>); that code lives in
-the public RX repository (<https://github.com/mb6611/esp32-devkitv1-sdr>). No esp-sdr
+the public RX repository (<https://github.com/mb6611/esp32-d8rx>). No esp-sdr
 source code is in this repository or its history.
 `firmware/main/tlm_cap.c` is an independent single-core implementation of the
 bank-rotation + sentinel capture scheme of esp-sdr's `main/common/ring_capture.c` (itself
