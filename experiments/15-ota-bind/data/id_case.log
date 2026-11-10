@@ -1,0 +1,14 @@
+> ID 6FF3 205 254
+OK txid=6ff3 start=205 step=254
+> ID 6ff3 205 254
+OK txid=6ff3 start=205 step=254
+> ID 6FF3 205 1
+ERR range hop_table
+> ID
+OK txid=6ff3 start=205 step=254
+> ID 42B2 2 55
+OK txid=42b2 start=2 step=55
+> ID 6ff3 205 254
+OK txid=6ff3 start=205 step=254
+> ID
+OK txid=6ff3 start=205 step=254

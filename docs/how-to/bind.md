@@ -17,7 +17,7 @@ In the Betaflight CLI, `get frsky_spi_tx_id` must equal the DevKit's `txid` (the
 node packages/core/scripts/bind-check.ts --esp PORT --fc PORT     # add --new-id to generate a fresh identity first
 ```
 
-Leaving the Betaflight CLI with `exit` reboots the FC; the bind is already saved. Measured results of the one bench bind: [bench/d8-tx/results/bind/SUMMARY.md](../../bench/d8-tx/results/bind/SUMMARY.md).
+Leaving the Betaflight CLI with `exit` reboots the FC; the bind is already saved. Measured results of the one bench bind: [experiments/15-ota-bind/data/SUMMARY.md](../../experiments/15-ota-bind/data/SUMMARY.md).
 
 ## New identity
 

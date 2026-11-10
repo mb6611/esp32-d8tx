@@ -15,13 +15,13 @@ The E8's certification test report (Shenzhen Tongzhou Testing, report TZ21090256
 
 The same CC2500 receiver (the MATEK F411RX running `rxdiag`) reported the signal strength of the real E8 and of the ESP32, from CRC-valid packets in the saved logs (RSSI conversion in [`protocol/PROTOCOL.md`](protocol/PROTOCOL.md)):
 
-| Source | Mode, power | Mean RSSI | Log (under `bench/d8-tx/results/`) |
+| Source | Mode, power | Mean RSSI | Log (under `experiments/`) |
 |---|---|---|---|
-| Real E8 | hopping, 2133 packets | -32.3 dBm | `hop/e8_control/e8_hop_20s.txt` |
-| ESP32 | hopping, `HOP 556 127` | -58.7 dBm (two runs, 510 and 472 packets) | `bf_link/offset_tune/runA.txt`, `runB.txt` |
-| Real E8 | fixed 2421.032 MHz | -32.8 to -36.2 dBm (three controls) | `packet/control_e8_2421032.txt`, `packet/reliability/control_e8*.txt` |
-| ESP32 | fixed 2412.000 MHz, `PKT ... 127` | about -59.5 dBm in 12 batches; -54 in three; -65.9 in the first (7 packets) | `packet/reliability/batch*_stm.txt`, `packet/freqest/batch*_stm.txt`, `packet/batch1_2412000_stm.txt` |
+| Real E8 | hopping, 2133 packets | -32.3 dBm | `07-hopping/data/e8_control/e8_hop_20s.txt` |
+| ESP32 | hopping, `HOP 556 127` | -58.7 dBm (two runs, 510 and 472 packets) | `08-first-flight-cloned-e8/data/offset_tune/runA.txt`, `runB.txt` |
+| Real E8 | fixed 2421.032 MHz | -32.8 to -36.2 dBm (three controls) | `05-first-packet/data/control_e8_2421032.txt`, `06-fixed-channel-reliability/data/reliability/control_e8*.txt` |
+| ESP32 | fixed 2412.000 MHz, `PKT ... 127` | about -59.5 dBm in 12 batches; -54 in three; -65.9 in the first (7 packets) | `06-fixed-channel-reliability/data/reliability/batch*_stm.txt`, `06-fixed-channel-reliability/data/freqest/batch*_stm.txt`, `05-first-packet/data/batch1_2412000_stm.txt` |
 
 The ESP32 at power 127, the maximum, arrives about **26 dB below** the E8 (18 to 33 dB across all runs). The CC2500 reads power while a packet is on air, so the comparison is against the E8's peak: the ESP32 is about **-25 dBm peak EIRP**, -32 to -17 dBm across runs. Even the highest run is about 16 dB under the -1.25 dBm average limit (a continuous tone's average equals its peak) and far under the peak limit. The estimate is not a measurement: distance, orientation and antennas were not controlled, the RSSI is uncalibrated, the ESP32 level moved about 5 dB between sessions, and our E8 unit may not radiate exactly what the tested sample did. The margin is larger than these uncertainties are likely to be.
 
-The same section, with the surrounding measurements, is in the [writeup](docs/devkitv1/writeup/tx.md#regulatory-status).
+The same section, with the surrounding measurements, is in the [writeup](docs/lab-log/tx.md#regulatory-status).

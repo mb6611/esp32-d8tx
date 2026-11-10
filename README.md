@@ -71,7 +71,7 @@ The same receiver logged which channel each packet arrived on, for the E8 and fo
 
 | Real E8 | ESP32 |
 |---|---|
-| ![](docs/devkitv1/writeup/img/tx-evidence/hop-e8-map.png) | ![](docs/devkitv1/writeup/img/tx-evidence/hop-esp-runB-map.png) |
+| ![](docs/lab-log/img/tx-evidence/hop-e8-map.png) | ![](docs/lab-log/img/tx-evidence/hop-esp-runB-map.png) |
 
 How the ESP32 was made to do this, with every measurement, is in the [technical writeup](https://d8tx.mb6611.workers.dev/writeup/). The code's design is in [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -90,7 +90,7 @@ Open the [live app](https://d8tx.mb6611.workers.dev) in Chrome or Edge (Web Seri
 
 ## Status
 
-Works: control, hopping, bind, telemetry, in-browser flashing, desktop (Electron) build, [validated on the bench](docs/validation/d8tx-web-desktop.md) and flown once (see the video above).
+Works: control, hopping, bind, telemetry, in-browser flashing, desktop (Electron) build, [validated on the bench](experiments/14-app-validation/data/validation-report.md) and flown once (see the video above).
 
 Not yet: range tests, a measured output power, D16 protocol, ESP32-S3/C3, Firefox and Safari (no Web Serial).
 
@@ -104,11 +104,12 @@ Not yet: range tests, a measured output power, D16 protocol, ESP32-S3/C3, Firefo
 | `demod/` | C demodulator for D8 telemetry (native and WASM) |
 | `protocol/` | [PROTOCOL.md](protocol/PROTOCOL.md), golden vectors, I/Q captures |
 | `python/` | reference library (`D8Link`, `BetaflightMSP`) |
-| `bench/` | bench runner, decoders, raw results behind the writeup |
-| `docs/` | [writeup](docs/devkitv1/writeup/tx.md), [validation](docs/validation/d8tx-web-desktop.md), guides |
+| `experiments/` | [the experiments](experiments/README.md) in the order they ran: raw data, scripts and figures |
+| `tools/` | bench runner, decoders, receiver diagnostics, Betaflight patches |
+| `docs/` | [lab log](docs/lab-log/tx.md) (the original writeup, archived), guides |
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## License
 
-MIT, see [LICENSE](LICENSE), except `bench/betaflight-patch/` and `bench/cc2500-rxdiag/` (Betaflight derivatives, GPL-3.0-or-later). See [NOTICE.md](NOTICE.md).
+MIT, see [LICENSE](LICENSE), except `tools/betaflight-patch/` and `tools/cc2500-rxdiag/` (Betaflight derivatives, GPL-3.0-or-later). See [NOTICE.md](NOTICE.md).

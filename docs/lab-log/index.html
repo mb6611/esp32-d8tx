@@ -1,0 +1,971 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A 2.4 GHz SDR on a $5 ESP32</title>
+<meta name="description" content="A receive-only 2.4 GHz SDR on a classic ESP32 DevKit V1: gapless streaming over a 921600-baud UART, a live view in SDR++, and tests on Wi-Fi, Bluetooth LE and a FrSky D8 transmitter, ending with following all 47 of its hop channels and decoding about 108 packets a second live.">
+<style>
+:root{--fg:#1d1d1f;--muted:#6b6b70;--border:#e3e3e6;--bg2:#f6f6f7;--link:#1a5fb4;
+--serif:Charter,"Bitstream Charter","Iowan Old Style",Georgia,serif;--sans:-apple-system,system-ui,Helvetica,Arial,sans-serif;--mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace}
+*{box-sizing:border-box}
+html{background:#fff;color:var(--fg);font:19px/1.6 var(--serif);-webkit-font-smoothing:antialiased}
+body{margin:0}
+header,main{max-width:700px;margin:0 auto;padding:0 1.3rem}
+header{padding-top:4.5rem;padding-bottom:1rem}
+h1{font-size:2.3rem;line-height:1.15;margin:0 0 .6rem;font-weight:700}
+.by{font-family:var(--sans);color:var(--muted);font-size:.8rem;margin-bottom:1.6rem}
+.by a{color:var(--muted)}
+h2{font-size:1.45rem;line-height:1.25;margin:2.8rem 0 .8rem}
+p{margin:0 0 1rem}
+a{color:var(--link);text-underline-offset:2px}
+code{font-family:var(--mono);font-size:.82em;background:var(--bg2);border-radius:3px;padding:.05em .3em}
+pre{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:.9rem 1rem;overflow-x:auto;font-size:.78rem;line-height:1.5;margin:1.1rem 0 1.4rem}
+pre code{background:none;padding:0;font-size:inherit}
+ul{padding-left:1.3rem}li{margin:.2rem 0}
+hr{border:0;border-top:1px solid var(--border);margin:2.4rem 0}
+figure{margin:1.6rem 0 1.8rem}
+figure a{display:block}
+figure img{display:block;width:100%;height:auto;border:1px solid var(--border);border-radius:4px}
+figcaption{font-family:var(--sans);color:var(--muted);font-size:.8rem;line-height:1.45;margin-top:.5rem}
+figcaption em{font-style:normal}
+.tw{overflow-x:auto;margin:1.1rem 0 1.4rem}
+table{border-collapse:collapse;width:100%;font-family:var(--sans);font-size:.85rem}
+th,td{border-bottom:1px solid var(--border);padding:.4rem .6rem;text-align:left}
+th{color:var(--muted);font-weight:600}
+main{padding-bottom:5rem}
+@media (max-width:600px){html{font-size:17px}h1{font-size:1.9rem}}
+figcaption a{display:inline}
+</style>
+</head>
+<body>
+<header>
+<h1>A 2.4 GHz SDR on a $5 ESP32</h1>
+<div class="by">Matthew Banaag · November 2026 · <a href="https://github.com/mb6611/esp32-d8rx">github.com/mb6611/esp32-d8rx</a></div>
+</header>
+<main>
+<p>I wanted to see whether a classic ESP32 DevKit V1, the cheap board with a CP2102 USB-serial chip, could work as a 2.4 GHz software-defined receiver. I built one on the I/Q capture path that <a href="https://github.com/ESPARGOS/esp-sdr">esp-sdr</a> found in the chip, got it streaming without gaps over the board's slow serial link, and tried it on Wi-Fi, Bluetooth LE advertising and a FrSky D8 RC transmitter. In the end it follows the D8 transmitter across all 47 of its hop channels and decodes about 108 packets a second live. Everything here is receive-only.</p>
+<blockquote><p><em>Note:</em> the receive-only code these chapters describe lives in the public RX repository, <a href="https://github.com/mb6611/esp32-d8rx">mb6611/esp32-d8rx</a>. This repository keeps only the TX work; the RX chapters stay as the story's first half. The TX follow-up is its own chapter: <a href="#tx-chapter">Making a $5 ESP32 speak FrSky D8</a>.</p></blockquote>
+<hr>
+<h2 id="the-capture-path">The capture path</h2>
+<p>The ESP32's Wi-Fi radio has an undocumented debug feature that copies raw I/Q samples from the receiver into RAM. ESPARGOS figured out how to drive it and wrapped it in firmware with a small serial protocol (tune, capture, spectrum). My project is a fork of theirs.</p>
+<p>The capture window is 64 KiB of SRAM. The radio fills it with 16380 I/Q samples at 16, 40 or 80 MS/s and stops, so one capture is about 1 ms of signal at 16 MS/s, or 205 µs at 80. esp-sdr already supported the classic ESP32, but it expected a faster serial link than my board has.</p>
+<h2 id="build-profile-and-921600-baud">Build profile and 921600 baud</h2>
+<p>The CP2102 tops out at 921600 baud. Asked for 2 Mbaud, as in the stock build, the board just never replies, which took me a while to work out. So I added a build profile, <code>esp32-devkitv1</code>, with the UART at 921600.</p>
+<pre class="sh"><code>. ~/esp/esp-idf/export.sh
+idf.py -B build-esp32-devkitv1 -DIDF_TARGET=esp32 \
+  -DSDKCONFIG_DEFAULTS=sdkconfig.defaults.esp32-devkitv1 build
+idf.py -B build-esp32-devkitv1 -p /dev/cu.usbserial-0001 -b 921600 flash</code></pre>
+<p>After a reset the ROM bootloader logs at 115200 baud, which at 921600 reads as <code>0x00</code> and <code>0x80</code> bytes, so I wait about 3 seconds before talking to the board.</p>
+<p>On the Mac, a small Python package, <code>esp32sdr</code>, handles <code>info</code>, <code>tune</code>, <code>capture</code> and <code>spectrum</code> and saves <a href="https://sigmf.org">SigMF</a>. Its first version dropped bytes because it set pyserial's timeout before every read; opening the port once with a fixed timeout and reading in bulk fixed it.</p>
+<pre><code>$ esp32sdr capture --freq 2437 --rate 40 --n 16380 -o ch6 --psd ch6.png
+captured 16380 samples at 40 MS/s, 2437 MHz, 8-bit, CRC ok, 0.36 s -&gt; ch6.sigmf-data
+peak 2446.297 MHz 17.4 dB, median -5.1 dB (DC ±0.2 MHz excluded)</code></pre>
+<figure><a href="img/ch6-capture-psd.png"><img src="img/ch6-capture-psd.png" alt="power spectrum of one 410 µs capture at 2437 MHz, with a packet at 2440–2449 MHz about 20 dB above the rest" loading="lazy"></a><figcaption>One 410 µs capture on Wi-Fi channel 6, which caught a packet at about 2440–2449 MHz, roughly 20 dB above the floor.</figcaption></figure>
+<p>350 captures back to back, at all three rates and in 8 and 10 bits, gave no CRC failures, resets or hangs.</p>
+<h2 id="the-uart-bottleneck">The UART bottleneck</h2>
+<p>Each capture is 32,760 bytes, which takes about 355 ms to send at 921600 baud. You get 1 ms of radio, then you're deaf for a third of a second, which is no good for something like a phone sending a packet every 30 ms.</p>
+<p>921600 baud is 92,160 bytes a second; with 15% headroom, about 78 KB/s. The radio at 16 MS/s with 8-bit I and Q makes 32 MB/s. To stream without gaps, the chip has to filter and throw away almost all of it; decimating by 512 gives 31.25 kS/s, or 62.5 KB/s at 8 bits.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>mode</th>
+<th>bandwidth</th>
+<th>gaps</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>burst</td>
+<td>16–80 MHz</td>
+<td>~1 ms of radio, then ~355 ms blind</td>
+</tr>
+<tr>
+<td>stream</td>
+<td>15.6–62.5 kHz</td>
+<td>none</td>
+</tr>
+</tbody>
+</table></div>
+<p>Burst mode already worked. Streaming didn't exist on this chip yet.</p>
+<h2 id="continuous-capture-on-the-classic-esp32">Continuous capture on the classic ESP32</h2>
+<p>To stream, the radio has to keep writing while the CPU reads. esp-sdr does that on the ESP32-S3, but I hadn't seen it done on the classic ESP32, so I first added probe commands and tried the registers one at a time.</p>
+<p><strong>The window can loop.</strong> One control bit makes the writer wrap around the buffer instead of stopping. In 1 ms the write pointer wrapped 4, 2 and 0 times at 80, 40 and 16 MS/s, as the rates predict.</p>
+<p><strong>The window is two banks.</strong> It's two 32 KiB halves, and <code>MAC_DUMP_MODE</code> in DPORT decides which one the radio owns: mode 2 the lower, mode 1 the upper. If the CPU reads the radio's half it gets the constant <code>0xa55aa55a</code>, but it can read the other half normally.</p>
+<p>That allows ping-pong buffering: the radio writes bank A while the CPU reads bank B, then they swap. My first version swapped when the pointer wrapped and lost a few samples per swap, 0.21 per 8192 on average at 16 MS/s and never more than 7 at 80 MS/s. Each was counted, because unwritten positions keep a sentinel pattern. The final firmware swaps on a fixed schedule a little before each lap ends, and in normal running loses nothing.</p>
+<p><strong>The CPU is fast enough.</strong> The build runs FreeRTOS on one core, so I run the second core bare-metal: no RTOS, interrupts off, code in IRAM. A decimate-by-16 boxcar costs 5.37 cycles per I/Q pair at 240 MHz, 36% of the core at 16 MS/s.</p>
+<p>What surprised me is that reading one bank while the radio writes the other is about twice as slow, around 10 cycles a pair instead of 6. So core 1 only swaps banks and runs the cheap boxcar, and the real filter runs on core 0.</p>
+<figure><a href="img/pipeline.svg"><img src="img/pipeline.svg" alt="block diagram: the Wi-Fi radio at 16 MS/s writes a 64 KiB window split into banks A and B; core 1 swaps banks and runs a /16 boxcar into a 1 MS/s queue; core 0 runs the FIR and builds IQS1 frames, sent over the 921600-baud UART and CP2102 to the Mac, where esp32sdr writes SigMF or serves rtl_tcp" loading="lazy"></a></figure>
+<p>Core 0 runs a Kaiser-windowed FIR that decimates by the rest (<code>dec/16</code>, up to 256 taps), rounds to 4, 8 or 16 bits, and packs samples into <code>IQS1</code> frames: a 24-byte header, up to 1024 bytes of samples, and a CRC32. Each frame carries the index of its first sample, so any loss shows up exactly.</p>
+<h2 id="streaming-over-uart">Streaming over UART</h2>
+<pre><code>$ esp32sdr stream --freq 2402 --dec 512 --bits 8 --seconds 60 -o ble</code></pre>
+<ul>
+<li>1,874,990 samples (31,250 a second for 60 s) in 3663 frames</li>
+<li>0 bad CRCs, 0 sequence gaps</li>
+<li>0 lost samples, and the firmware's own count agrees</li>
+</ul>
+<p>That's about 960 million radio samples filtered and decimated without a gap. The link only has room for some settings, and the firmware refuses the rest before touching the radio:</p>
+<div class="tw"><table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>bits</th>
+<th>dec 256 (62.5 kS/s)</th>
+<th>dec 512 (31.25 kS/s)</th>
+<th>dec 1024 (15.6 kS/s)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>4</td>
+<td>yes (70% of link)</td>
+<td>yes (35%)</td>
+<td>yes (17%)</td>
+</tr>
+<tr>
+<td>8</td>
+<td>no (139%)</td>
+<td><strong>yes (70%)</strong></td>
+<td>yes (35%)</td>
+</tr>
+<tr>
+<td>16</td>
+<td>no</td>
+<td>no (139%)</td>
+<td>yes (70%)</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="live-view-in-sdr">Live view in SDR++</h2>
+<p>I wanted a waterfall. <code>esp32sdr bridge</code> speaks rtl_tcp, the protocol RTL-SDR dongles use, so ordinary SDR programs can connect, and it retunes the board when they ask. For SDR++ there's one command:</p>
+<pre class="sh"><code>esp32sdr sdrpp          # defaults: --freq 2480 --dec 512 --bits 8</code></pre>
+<p>It reconfigures and launches SDR++ and presses play through its rigctl server. SDR++'s rtl_tcp source won't go below 250 kS/s, so the bridge interpolates 8× and SDR++ decimates back to the real 31.25 kHz. You can retune from a terminal:</p>
+<pre class="sh"><code>printf &#39;F 2402000000\n&#39; | nc 127.0.0.1 4532</code></pre>
+<p>gqrx works too, awkwardly: it only tunes what a real RTL-SDR can (24–1766 MHz), so I run <code>bridge --offset-mhz 2000</code> and set an LNB LO of 2000 MHz in gqrx.</p>
+<p>One bug to watch for: when the client stops reading (gqrx with its DSP off), a blocking socket write stalls the serial reader, the USB-serial buffer overflows, and frames arrive cut short. The socket now has its own writer thread, and a slow client's blocks are dropped and counted instead. A 2.5-minute SDR++ session with retunes lost 0 samples and dropped 0 blocks.</p>
+<h2 id="bluetooth-advertising-at-2480-mhz">Bluetooth advertising at 2480 MHz</h2>
+<p>The first real test was BLE advertising channel 39, at 2480 MHz above Wi-Fi. I put an iPhone running nRF Connect's advertiser on top of the board and recorded 20 s with it off and 20 s with it on (dec 512, 8-bit, no samples lost). The stream sees 31 kHz of the 1 MHz channel: not enough to decode, but enough to see energy.</p>
+<p>With a threshold set from the off run, I counted <strong>27 bursts with the advertiser off and 259 with it on</strong>, about ten times more.</p>
+<figure><a href="img/compare_on_off.png"><img src="img/compare_on_off.png" alt="received power at 2480 MHz over 20 s, advertiser off (27 bursts above threshold) and on (259 bursts)" loading="lazy"></a><figcaption>Same threshold, same position, 20 s each.</figcaption></figure>
+<p>Other devices in the room advertise too, so I wanted to pick out the phone. A BLE device advertises every <em>advInterval</em> plus a random 0–10 ms <em>advDelay</em>. For each candidate interval T, I counted pulse pairs whose gap falls between T and T + 10.5 ms. The on run has a sharp peak at <strong>T = 29.5 ms</strong>, with harmonics; the off run has nothing there.</p>
+<p>Then I looked for the longest train of pulses where each gap is T plus up to 10 ms. In the on run, <strong>515 of 1026 pulses form one train spanning 19.6 s</strong>, 89% of the events you'd expect. In the off run only 24 pulses (4%) chain up by chance. The train pulses are also stronger (median SNR 23.3 dB against 20.7 dB for the rest), which makes sense for a phone lying on the board.</p>
+<figure><a href="img/phone_isolation.png"><img src="img/phone_isolation.png" alt="top: pulse-pair count vs candidate interval, peak at 29.5 ms with the advertiser on, flat with it off; middle: pulses on the 29.5 ms train in red over 20 s; bottom: train pulses are stronger, with gaps between 29.5 and 40 ms" loading="lazy"></a><figcaption>Step 1 finds the interval, step 2 the train. Gaps inside the train fall between 29.5 and 40 ms: T plus the random delay.</figcaption></figure>
+<figure><a href="img/spectrogram_phone_isolated_1s.png"><img src="img/spectrogram_phone_isolated_1s.png" alt="spectrogram of one second: all signal, the phone&#39;s pulses only, and everything else" loading="lazy"></a><figcaption>One second of the on run, split into the phone's pulses and everything else.</figcaption></figure>
+<p>As a check, I removed the phone's pulses from the on recording and compared the rest with the off recording. The spectrum difference fell from up to 7.5 dB to about 1–2.5 dB, and the pulse rate (26.4/s) came out close to the off run's 24.0/s.</p>
+<figure><a href="img/residual_vs_off.png"><img src="img/residual_vs_off.png" alt="average spectrum and pulse statistics: the on recording with the phone&#39;s pulses removed is close to the off recording" loading="lazy"></a></figure>
+<h2 id="frsky-d8-hop-sequence">FrSky D8 hop sequence</h2>
+<p>Next I tried the FrSky D8 link from an EMAX E8 RC transmitter, which hops across 47 channels about every 9 ms. The drone's receiver has to follow the same hops, so its Betaflight backup has a <code>frsky_spi_bind_hop_data</code> line with 47 entries, and with Betaflight's CC2500 settings, channel <em>n</em> is at 2404.000 MHz + <em>n</em> × 299.93 kHz. The modulation is GFSK at about 31 kbaud, ±31.7 kHz deviation. The drone was off and the transmitter 0.5–1 m from the board.</p>
+<p><strong>Where it transmits.</strong> I took a full-band max-hold with the on-chip spectrum (80 MS/s, 2048 bins of 39 kHz, 5 s), transmitter on and off. To stay independent of the AGC, I measured each peak above its local median. The 47 table channels average <strong>+10.8 dB</strong>; the 199 unused channels on the same grid average <strong>−0.1 dB</strong>. With the transmitter off, both are +0.1 dB.</p>
+<figure><a href="img/maxhold_on_off.png"><img src="img/maxhold_on_off.png" alt="full-band max-hold with the transmitter on and off, and the difference, with the 47 bind-table frequencies marked" loading="lazy"></a><figcaption>The red lines are the 47 frequencies from the bind table.</figcaption></figure>
+<p><strong>When it transmits.</strong> Each on-chip spectrum frame comes from one short capture, well under a millisecond, and the firmware timestamps it. In 20 s I got 835 frames about 24 ms apart, slower than the hopping. But the sequence repeats, so if you fold each timestamp by the cycle length, the way a strobe light freezes a spinning wheel, every snapshot lands in some slot of one cycle.</p>
+<p>Searching over cycle lengths, the best fit was <strong>422.70 ms = 47 × 8.994 ms</strong>. Then for each slot I checked which table channel had the energy.</p>
+<figure><a href="img/hop_cycle_on_vs_off.png"><img src="img/hop_cycle_on_vs_off.png" alt="top: one 47-hop cycle rebuilt from 835 snapshots with the transmitter on, following the predicted hops, and slot vs bind-table entry showing a diagonal; bottom: the same with the transmitter off, showing nothing" loading="lazy"></a><figcaption>Left: one hop cycle rebuilt from 20 s of snapshots, predicted hops in cyan. Right: power at each table channel in each slot. Transmitter on (top) and off (bottom), same colour scale.</figcaption></figure>
+<p>Slot <em>k</em> lights up table entry <em>k</em>, which shows as a diagonal. The matched score is 23.4 dB against 4.5 ± 0.2 dB for random slot assignments (z ≈ 89); with the transmitter off it's 3.1 against 2.9 ± 0.1. So although the board samples far too slowly to follow a single hop, it recovered the hop order.</p>
+<h2 id="decoding-the-d8-packets">Decoding the D8 packets</h2>
+<p>Seeing the hops was nice, but I wanted to read what the transmitter was actually saying: the stick positions. That turned out to be most of the work.</p>
+<p>The first problem is length. A D8 packet is 4 preamble bytes, 2 sync bytes, a length byte, 17 bytes of data and a 2-byte CRC, 208 bits in all, which at 31 kbaud takes about 6.7 ms. A burst capture is 1 ms long, so it only ever holds a slice of a packet. To get a whole one I had to use the stream.</p>
+<p>The second problem is width. With two tones at ±31.7 kHz and 31 kbaud of data, the signal is about 95 kHz wide. The widest stream my UART allowed was 4 bits at dec 256: 62.5 kS/s, which only covers ±31 kHz, with 2 samples per bit. The two tones sat right at the edge of the filter, and at that rate they fold onto each other, so an ordinary FM demodulator can't tell a 1 from a 0.</p>
+<h2 id="spending-the-bits-better">Spending the bits better</h2>
+<p>I was stuck on this for a while until I thought about it in terms of information. The packet carries about 31 kbit/s. The UART carries 737 kbit/s, more than twenty times that. So the link was never really too slow; I was spending its bits badly.</p>
+<p>Plain I/Q samples spend most of their bits on amplitude: how strong the signal is at each instant. But FSK is constant-envelope. The transmitter never changes its amplitude, and all the information is in which way the phase is turning. So I added a 1-bit mode to the firmware. After the filter, it keeps only the sign of I and the sign of Q, and packs four complex samples into a byte. You lose the amplitude, which you didn't need, and keep the phase to within a quarter turn, which is enough to see which way it's spinning.</p>
+<p>With 1 bit, 250 kS/s is 62.5 KB/s, 70% of the link, the same as 4 bits at a quarter of the rate. I first tried 125 kS/s to leave more room, and in simulation it failed, which puzzled me until I worked out why. Taking signs is a very nonlinear thing to do. If you hard-limit a pure tone, you don't get a pure tone back; you get it plus odd harmonics at 3, 5, 7 times its frequency. At 125 kS/s the −3rd harmonic of one tone, −95 kHz, wraps around to +30 kHz and lands right on the other tone. At 250 kS/s it has room and stays out of the way. The simulated bit error rate went from 1–23% at 125 kS/s to nearly zero at 250 kS/s.</p>
+<p>The firmware then fell behind. Core 0 runs the FIR, and at 250 kS/s output it does about 24 million multiply-adds a second. GCC's version of the dot product loaded one 16-bit value at a time and took about 220 cycles per input block, around 92% of the core, and the queue in front of it overflowed. The ESP32's Xtensa core has a multiply-accumulate unit that can multiply the low halves and the high halves of two 32-bit registers, so I wrote the inner loop in inline assembly: two 32-bit loads feed two multiply-adds, in a hardware loop with no branch overhead. I also handed the filter whole runs of blocks instead of one at a time. That brought it to 77–119 cycles per block, about 50% of core 0 at 1-bit dec 64. Three 20-second runs had no gaps and no lost samples.</p>
+<h2 id="the-first-packets">The first packets</h2>
+<p>Before the 1-bit mode worked, I'd already tried the old 4-bit recording at 62.5 kS/s, the one with 2 samples per bit and the tones folded together. Since the plain demodulator couldn't separate the tones, I made the decoder model the whole receiver instead: for every possible run of 9 bits, it computes what my filter chain would put out, then searches for the bit sequence whose predicted output best matches the recording (a Viterbi search). It's slow, but it found <strong>31 packets with a valid CRC</strong>, all with the same transmitter ID, 66,178, and stick values that made sense.</p>
+<p>The CRC is what makes me trust that. It's a 16-bit checksum the transmitter computes over the packet and sends at the end. If even one bit comes out wrong, the checksum almost never matches, so a packet that passes is, with very high odds, exactly what was sent.</p>
+<h2 id="tuning-off-to-the-side">Tuning off to the side</h2>
+<p>The 1-bit mode had a problem of its own. Every direct-conversion receiver leaks a little of its own local oscillator into the signal, which shows up as a strong spike at 0 Hz. With 8-bit samples you can just ignore it. With 1-bit samples you can't, because the sign of each sample is decided by whichever is stronger, and near 0 Hz that is often the leakage.</p>
+<p>The firmware already had a "mode 2" from esp-sdr: tune the LO 4 MHz below the channel, then on the chip multiply the samples by <em>j</em>ⁿ (1, <em>j</em>, −1, −<em>j</em>, ...), which shifts everything by a quarter of 16 MS/s, 4 MHz, before the filter. The channel comes back to 0 Hz and the leakage moves to −4 MHz, where the filter throws it away before anything gets reduced to signs. I added <code>--center</code> and <code>--mode 2</code> to the host so it works out the LO for you.</p>
+<p>The difference is large. In one recording where I moved the sticks slowly from end to end, mode 2 gave 22 CRC-valid packets and mode 0 gave 3.</p>
+<figure><a href="img/stick_sweep.png"><img src="img/stick_sweep.png" alt="decoded stick values over 20 s: mode 2 gives 22 CRC-valid packets following the stick movement, mode 0 only 3" loading="lazy"></a><figcaption>The same stick sweep in mode 2 (top) and mode 0 (bottom). Dots were received exactly, crosses had one bit repaired using the CRC.</figcaption></figure>
+<h2 id="where-the-transmitter-really-is">Where the transmitter really is</h2>
+<p>22 out of a possible 47 was still poor, and fixing it took longer than I'd like to admit, because several things were wrong at once and each hid the others.</p>
+<p>The first was the frequency. I'd been tuning to 2421.096 MHz, the table channel I was recording. When I looked at the recordings I found the transmitter apparently at 2421.14, so I moved there. That made things worse. In the end I stopped trusting the stream and measured the transmitter directly from 16 MS/s burst captures, at two different LO settings so that anything belonging to the receiver would move and anything real would not. Both gave <strong>2421.032 MHz</strong>, 64 kHz below nominal, about −26 parts per million. The E8's crystal is simply a little slow.</p>
+<p>So what was at 2421.14? There's a second burst about 9 ms before the real one, and it decodes, with the same transmitter ID. 9 ms earlier the E8 was on its previous hop, at 2404 MHz, 17 MHz away, so I think this is that packet leaking through somehow. Its apparent frequency shifted by tens of kHz as I moved the LO by megahertz. That could mean the E8 really emits it, or that my receiver makes it up; the measurements were too weak to say which, and I still don't know the mechanism. It's a good reminder that a clean, CRC-valid packet tells you what was sent, not where.</p>
+<p>The second was the gain. When the stream starts, the radio's automatic gain control picks a gain, and sometimes it picks a bad one. One recording got gain index 16 and decoded 1 packet in 20 s. I never saw this coming, because nothing looks broken: the samples arrive, the stream is clean, and the signal is just buried. With the gain fixed manually anywhere from 30 to 81 almost every packet decodes. I use 40.</p>
+<p>With 1-bit samples the decoder's own channel filter also matters more than I expected: ±35–50 kHz works, ±75 kHz loses a third of the packets, so it now tries a few widths and keeps whichever passes the CRC.</p>
+<p>With the right frequency, a fixed gain and mode 2, a 20-second recording had <strong>47 CRC-valid packets out of 47</strong> visits to the channel. The carrier estimates of those packets came out within a fraction of a kHz of 2421.032 MHz, which agrees with the burst measurement.</p>
+<figure><a href="img/centred_m2_decode.png"><img src="img/centred_m2_decode.png" alt="47 of 47 hop visits decoded in 20 s, channel values steady, carrier offset within 1 kHz" loading="lazy"></a><figcaption>Every visit to the channel in 20 s decoded (top), with the sticks at rest (middle). The carrier offsets (bottom) are all within 1 kHz of 2421.032 MHz.</figcaption></figure>
+<h2 id="can-it-hop">Can it hop?</h2>
+<p>Hearing one channel means hearing one packet in 47. To hear them all, the board would have to hop along with the transmitter. A slot is 9 ms and a packet 6.7 ms, so there are about 2 ms between packets to retune.</p>
+<p>A normal tune on the ESP32 takes 25–60 ms, because it recalibrates the receiver. I timed the parts. The ROM function that actually moves the synthesizer takes about 0.25 ms, and a small register release before it takes 12 µs. Watching the board's own 40 MHz crystal harmonics during a hop, the LO leaves the old frequency within about 50 µs and is on the new one by the time the call returns. So a hop without recalibration costs about <strong>0.26 ms</strong> out of the 2 ms.</p>
+<p>Why does the calibration exist, then? It's there for Wi-Fi. 64-QAM packs information into fine differences of both amplitude and phase, so DC offsets and I/Q imbalance have to be measured and removed carefully, it has to work on weak signals across the whole gain range, and Wi-Fi rarely changes channel, so spending 50 ms on it is cheap. FSK from a transmitter a metre away needs none of that care: it only cares which way the phase is turning. To check that skipping it doesn't break anything, I calibrated once at 2404 MHz and fast-retuned through all 47 D8 channels in hop order, comparing each with a fully recalibrated tune. The crystal-harmonic line landed in the right FFT bin on every channel, and DC offset and clipping were the same either way.</p>
+<h2 id="watching-the-sticks-live">Watching the sticks live</h2>
+<p>The last piece was to decode in real time. <code>esp32sdr d8live</code> streams 1-bit samples at 250 kS/s in mode 2 and decodes as they arrive. Running the full decoder on every sample would use about a quarter of a core, so after the first good packet it locks on: the E8 comes back to my channel every 422.6 ms, so it only decodes a 20 ms window around the next expected packet, and corrects its timing from each hit. That's under 5% of the samples, and about 5% of a CPU. The results go over a WebSocket to a small web page with two stick gimbals, bars for the eight channels and a plot over time.</p>
+<pre class="sh"><code>cd host/web/d8live &amp;&amp; npm install &amp;&amp; npm run build   # once
+cd host &amp;&amp; .venv/bin/esp32sdr d8live --center 2421.032 --gain 40 --open
+# http://127.0.0.1:8765/</code></pre>
+<figure><a href="img/d8live-sticks.gif"><img src="img/d8live-sticks.gif" alt="the two sticks of the E8, redrawn from 30 s of packets decoded live while I moved them around; the knob glides between updates, which arrive about 2.4 times a second" loading="lazy"></a><figcaption>My two sticks, redrawn from 30 s of packets decoded live while I moved them. Real updates arrive about 2.4 times a second; the knob glides in between.</figcaption></figure>
+<p>In one 274-second run it decoded <strong>649 of the 649</strong> visits to the channel, with no lost samples. It updates about 2.4 times a second, which is exactly what you'd expect from hearing 1 channel out of 47. It works, but it's slow next to the 111 packets a second the transmitter is really sending. To get those, the board has to hop.</p>
+<h2 id="who-keeps-the-time">Who keeps the time</h2>
+<p>"Can it hop?" said the retune fits in the gap. The harder question was who decides when to do it. A command over the UART takes a few milliseconds to arrive, and not always the same few, so the Mac can't just say "retune now" 108 times a second. The board can't decide on its own either, because the decoder runs on the Mac.</p>
+<p>So I split the job. The Mac loads the 47 frequencies into the board once, with a <code>HOPTAB</code> command. While the stream is running, it sends one short line, <code>HS slot pair period</code>, which means: at stream sample number <em>pair</em>, go to <em>slot</em>, then step to the next slot every <em>period</em>. The schedule is written in stream samples, not in wall-clock time, so the board and the Mac agree exactly on where every hop happened, and timer jitter on the board doesn't pile up. A one-shot timer on core 0 does the retune; core 1 keeps swapping banks as before.</p>
+<p>The board also marks the stream. At each retune it ends the current frame, and the next frame's header says: a new channel starts here, it's slot <em>k</em>, and the first <em>n</em> samples are the LO moving, so skip them. The Mac never has to guess which samples belong to which channel. There are no replies to these commands; you see their effect in the marks.</p>
+<p>Before I tried it on the transmitter, I checked that retuning mid-stream doesn't break the stream. I pointed one slot at the board's own 40 MHz crystal harmonic at 2400 MHz and the other 10 MHz away, and flipped between them every 9 ms for 5 seconds. That was 512 retunes with no lost samples and no bad CRCs. The retune call took at most about 0.4 ms, and the line on the new channel was back within 10% of its normal level 0.3 ms after the mark. Each retune lands about 1.15 ms before a packet, so that's well clear of it.</p>
+<h2 id="locking-on">Locking on</h2>
+<p>The Mac starts by sitting on one channel, 2421.032 MHz, the one I'd been decoding all along, and waits for a packet. The E8 comes round every 422.5 ms, so the first one arrives within half a second (0.14–0.40 s in my runs). Its preamble time tells you where all the later packets will be: hop <em>m</em> is at <em>a</em> + <em>m</em>·<em>P</em>, on the next slot in the bind table. The Mac sends one <code>HS</code> so that each retune lands 1.15 ms before the next predicted preamble, in the middle of the gap.</p>
+<p>After that it decodes each marked segment on its own and fits a straight line through the times of the last 141 packets. When the fit says the schedule would be more than 15 µs off ten hops ahead, it sends a new <code>HS</code>. That works out to about one every 15–20 s. If 47 hops in a row go by without a good packet, it gives up, goes back to 2421.032 and waits again.</p>
+<p>I only ever measured one channel's true frequency. The E8 sits 26.4 ppm low on 2421.032, so I applied the same −26.4 ppm to the whole table. Packets on the other channels came in 0.3–1.8 kHz off centre, so that one measurement was enough.</p>
+<p>To test recovery I added a <code>--kick</code> option that pushes the board's schedule 4 ms off the transmitter, so every retune lands in the middle of a packet. The follower noticed after the 47 hops (0.44 s) and was locked again 0.11–0.37 s later.</p>
+<h2 id="packets-a-second">108 packets a second</h2>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>run</th>
+<th>length</th>
+<th>good packets/s</th>
+<th>slots decoded</th>
+<th>lock losses</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>d8live --follow</code></td>
+<td>159 s</td>
+<td>108.0</td>
+<td>97.7% (17,155 of 17,557)</td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>d8follow</code></td>
+<td>630 s</td>
+<td>108.5</td>
+<td>97.8% (68,408 of 69,926)</td>
+<td>0</td>
+</tr>
+</tbody>
+</table></div>
+<p>The 10.5-minute run kept its lock the whole time with 37 schedule corrections. Every packet arrived on the slot the schedule said, and the packet counter went up by exactly one per hop. The only damage in the stream was one frame with a bad CRC: 2248 samples lost out of 157.6 million. Gains of 30, 40 and 50 all gave the same rate. The board's automatic gain never locked at all, the same failure I'd seen on one channel, so it stays on manual gain.</p>
+<p>The fit also measured the hop period properly: <strong>8.989 ms</strong>, a 422.50 ms cycle. My strobe estimate from the max-hold snapshots was 422.70 ms, 47 × 8.994. That's only 0.05% off, but at 108 hops a second it would push the retunes into the packets within a few seconds, so the follower has to measure it. Over the ten minutes the period also crept from 8.9893 to 8.9887 ms as the two crystals drifted against each other, which the line fit tracks without any help.</p>
+<figure><a href="img/d8live-follow-sticks.gif"><img src="img/d8live-follow-sticks.gif" alt="the restyled d8live Channels tab, sticks and bars moving smoothly with about 108 packets a second while I moved both sticks" loading="lazy"></a><figcaption>The same page in follow mode, replayed from 30 s of packets logged live while I moved both sticks. Compare the GIF above: there it was 2.4 updates a second, here it's about 108.</figcaption></figure>
+<p>The difference is obvious the moment you touch the sticks. On one channel the page got a new value every 420 ms or so, so the knobs jumped from place to place and a quick flick could happen entirely between two packets and never show up. Following the hops, a new value lands every 9 ms, faster than the screen refreshes, and the knobs track my thumbs with no visible lag. It stopped feeling like a readout of the radio and started feeling like the radio.</p>
+<h2 id="the-one-channel-that-wont-decode">The one channel that won't decode</h2>
+<p>One channel, 2411.435 MHz (slot 33 in hop order, channel 25 in the bind table), almost never passes the CRC: 0% in the 10-minute run, and never more than 7% at any setting I tried. In that run every other slot decoded 99% or more. It's the red square on the page's hit map.</p>
+<figure><a href="img/d8live-stats.png"><img src="img/d8live-stats.png" alt="the Stats for nerds tab: packets, hop-follow and stream tables, and a 47-cell hit map with one red cell" loading="lazy"></a><figcaption>The Stats tab of the live page after about 18 minutes: 97.8% of slots, no lock losses. Each square is one hop slot, in hop order; the red one is 2411.435 MHz.</figcaption></figure>
+<p>My first thought was that it was my receiver, so I tried to make it decode:</p>
+<ul>
+<li>recorded that channel alone, no hopping: 0 good packets</li>
+<li>mode 0 instead of mode 2: 0</li>
+<li>LO moved ±50 and ±100 kHz: 0</li>
+<li>manual gain 20, 60 and 81: 0, 2 and 0</li>
+<li>4-bit samples and the slow Viterbi decoder: 0 of 10</li>
+</ul>
+<p>In the same sessions two nearby channels, 2410.835 and 2415.933 MHz, decoded every packet, and 2410.835 gave 14 of 14 with the Viterbi decoder. The bad channel's bursts are as strong as its neighbour's, the same 7 ms long, and there's nothing else on the channel. On the hop map further down it looks just like the others.</p>
+<p>The CRC-valid packet on the slot before tells me what the bad one should contain: the counter is one higher, and 9 ms later the stick values are almost certainly the same. So I could work out the ideal frequency of each bad packet and subtract it from what I received.</p>
+<figure><a href="img/slot33_resid.png"><img src="img/slot33_resid.png" alt="frequency residual over 6.5 ms packets: flat within about ±2 kHz on slot 19, but jumping in steps of 8–20 kHz on slot 33" loading="lazy"></a><figcaption>What's left after subtracting the ideal signal. A good slot (top) stays flat; slot 33 (bottom) jumps around.</figcaption></figure>
+<p>On a good slot the residual is flat, 0.7 kHz rms. On slot 33 the carrier jumps by 8–20 kHz for 0.1–0.3 ms at a time, all through the packet. The tones are only ±31.7 kHz from centre, so jumps like that flip bits, and often break the preamble or sync word before the decoder gets going: only 15 of 70 bad-slot segments in one 30 s run even found the sync word. Faster carrier tracking and single-bit CRC repair recovered 0–1 of 70.</p>
+<p>So the signal itself looks wrong, and my best guess is the transmitter's synthesizer. The CC2500 makes its carrier with a fractional-N synthesizer from a 26 MHz crystal, and for this channel the ratio is 92.74993, about 2 kHz from exactly 3/4. Synthesizers like that tend to make spurs and wander when the fraction sits just next to a simple ratio, and this is the only one of the 47 channels within 8 kHz of a ratio with a denominator of 8 or less.</p>
+<p>That's a guess, though. I haven't looked at this transmitter with a proper receiver, haven't tried another transmitter, and haven't checked whether a real D8 receiver also loses this channel. What I can say is that nothing I change on my side makes a difference. The follower doesn't mind: one missed slot per cycle doesn't threaten the lock, it just caps the slot rate at 46/47, 97.9%.</p>
+<h2 id="making-the-decoder-cheaper">Making the decoder cheaper</h2>
+<p>The first follow runs used 0.57 s of CPU per second of stream, more than half a core on the Mac. The decoder was trying all five filter widths on every segment, the trick from the frequency chapter that made single-channel decoding reliable.</p>
+<p>Three changes fixed it. Each segment holds at most one packet, so the decoder now tries the widths in the order that has worked before and stops at the first one that passes the CRC. The clock recovery loop reads plain Python floats instead of indexing a numpy array one sample at a time, which alone was about five times faster. And the search for the packet's exact start time does all 33 candidate times in one numpy pass instead of a loop. Over the 10.5-minute run that came to <strong>0.068 s of CPU per second of stream</strong>, about 8 times less, at the same decode rate.</p>
+<h2 id="seeing-the-hops">Seeing the hops</h2>
+<p>I also wanted to see the hopping, not just the numbers. The live page got a Waterfall tab. In follow mode it shows a hop map: one narrow strip per channel, sorted by frequency, each ±125 kHz around the channel. A strip only lights up while the receiver is on that channel, about once every 422 ms, so every column fills with short dashes, one per visit.</p>
+<figure><a href="img/d8live-hopmap.png"><img src="img/d8live-hopmap.png" alt="the Waterfall tab&#39;s hop map: 47 narrow columns labelled from 2403.9 to 2477.4 MHz, each with a dash every 0.42 s" loading="lazy"></a><figcaption>About 22 s of the hop map. Each dash is one 9 ms visit. The 2411.4 column looks like all the others: the signal is there, it just doesn't decode.</figcaption></figure>
+<p>So the transmitter really is on that channel, as strong as anywhere else; the trouble is in what it sends.</p>
+<p>The page was redone at the same time to look like this write-up, in three tabs: Channels for the sticks, Waterfall, and "Stats for nerds" for the numbers above. The waterfall rows are made on the Mac with a 256-point FFT, 25 rows a second, and only while the tab is open; the page reports about 1% of a core for it.</p>
+<h2 id="whats-next">What's next</h2>
+<p>The follower drops the lock only after 47 silent hops, then waits up to a whole cycle on one channel, so a real outage costs up to about 0.9 s. Coasting on the old schedule through a short fade, and listening for the first packet on more than one channel, would both shorten that. And I'd like to check the 2411.435 MHz theory on a proper receiver.</p>
+<h2 id="reproducing-it">Reproducing it</h2>
+<p>You need an ESP32 DevKit V1 (CP2102), a Mac or Linux machine, ESP-IDF at commit <code>25fe69f946311abdaf9ad56591f25fedbc20ac98</code> in <code>~/esp/esp-idf</code>, and Python 3.11+.</p>
+<pre class="sh"><code>git clone --recursive https://github.com/mb6611/esp32-d8rx
+cd esp32-d8rx
+
+# firmware
+. ~/esp/esp-idf/export.sh
+idf.py -B build-esp32-devkitv1 -DIDF_TARGET=esp32 \
+  -DSDKCONFIG_DEFAULTS=sdkconfig.defaults.esp32-devkitv1 build
+idf.py -B build-esp32-devkitv1 -p /dev/cu.usbserial-0001 -b 921600 flash
+
+# host tools
+cd host &amp;&amp; python3 -m venv .venv &amp;&amp; . .venv/bin/activate &amp;&amp; pip install -e .[dev,plot]
+
+esp32sdr info                                                    # expect TRANSPORT UART 921600
+esp32sdr capture --freq 2437 --rate 40 --n 16380 -o ch6 --psd ch6.png
+esp32sdr stream --freq 2402 --dec 512 --bits 8 --seconds 60 -o ble
+esp32sdr sdrpp                                                   # live waterfall at 2480 MHz
+
+# the bluetooth test: phone advertiser off, then on
+esp32sdr stream --freq 2480 --dec 512 --bits 8 --seconds 20 -o /tmp/ble/off
+esp32sdr stream --freq 2480 --dec 512 --bits 8 --seconds 20 -o /tmp/ble/on
+
+# D8: record 20 s centred on the E8&#39;s channel at manual gain 40, then decode
+python ../docs/devkitv1/bench/d8/rec_centred.py /tmp/d8/c 2421.032 40 20
+python -m esp32sdr.d8_cli /tmp/d8/c.sigmf-data
+esp32sdr d8live --center 2421.032 --gain 40 --open      # live page, one channel (build host/web/d8live first)
+
+# D8, all 47 hop channels
+esp32sdr d8follow --seconds 60 --gain 40                # console only: packets/s, slots, period, CPU
+esp32sdr d8live --follow --gain 40 --open               # live page; #waterfall and #stats open those tabs</code></pre>
+<p>Following needs the current firmware (it adds <code>HOPTAB</code>) and a manual gain; the board's automatic gain doesn't lock.</p>
+<p><code>--port</code> defaults to <code>/dev/cu.usbserial-0001</code>. The analysis scripts (numpy, scipy, matplotlib; reading from <code>/tmp/ble</code> and <code>/tmp/d8</code>) are in <a href="https://github.com/mb6611/esp32-d8rx/tree/main/docs/devkitv1/bench"><code>docs/devkitv1/bench/</code></a>: <code>ble-onoff/analyze.py</code> and <code>isolate.py</code> for Bluetooth, <code>d8/maxhold.py</code>, <code>strobe.py</code>, <code>strobe2.py</code> and <code>sbs.py</code> for the D8 hops, and <code>d8/rec_centred.py</code> (which also sets a manual gain), <code>cap16_bursts.py</code> and <code>cap16_tones.py</code> for the decoding work. The decoder is <code>host/esp32sdr/d8.py</code> and the follower <code>host/esp32sdr/d8follow.py</code>; the fast-retune measurements are in <a href="https://github.com/mb6611/esp32-d8rx/blob/main/docs/devkitv1/fast-hop.md">fast-hop.md</a>, hop following (commands, runs, the slot 33 analysis and its scripts in <code>bench/hop-follow/</code>) in <a href="https://github.com/mb6611/esp32-d8rx/blob/main/docs/devkitv1/hop-follow.md">hop-follow.md</a> and the decoding notes in <a href="https://github.com/mb6611/esp32-d8rx/blob/main/docs/devkitv1/bench/d8/centred-m2.md">bench/d8/centred-m2.md</a>. Full numbers are in <a href="https://github.com/mb6611/esp32-d8rx/blob/main/docs/devkitv1/bench-results.md">bench-results.md</a>, register probes in <a href="https://github.com/mb6611/esp32-d8rx/blob/main/docs/devkitv1/ring-feasibility.md">ring-feasibility.md</a>, the link budget in <a href="https://github.com/mb6611/esp32-d8rx/blob/main/docs/devkitv1/iq-stream-uart.md">iq-stream-uart.md</a> and viewer setup in <a href="https://github.com/mb6611/esp32-d8rx/blob/main/docs/devkitv1/live-view.md">live-view.md</a>.</p>
+<hr>
+<p>RX work originally built against <a href="https://github.com/ESPARGOS/esp-sdr">esp-sdr</a> by ESPARGOS (no esp-sdr code is in this repository).</p>
+
+<!-- BEGIN TX CHAPTER (generated by render_tx.py from tx.md; do not edit) -->
+<hr>
+<p><em>The write-up above is the receive story as it stood when it was written: a board that could only listen. What follows is a later, separate result from the transmit branch of the project: the same chip transmitting, from one packet to the whole FrSky D8 protocol.</em></p>
+<h2 id="tx-chapter">Making a $5 ESP32 speak FrSky D8</h2>
+<p class="by"><em>TX research note · November 2026 · continuing the RX write-up above</em></p>
+
+<p>The RX write-up ended with a board that could listen: record a FrSky D8 transmitter, decode it, follow its hops. That is a long way from talking. Nothing in it showed that the same chip could produce a packet a real D8 receiver chip would accept. This chapter starts with the first time that happened, on a bench, once: an ESP32 DevKit V1 transmitted a hand-built D8 packet and an independent CC2500 reported it with a valid hardware CRC. The first try got 7 of 10; after fixing a receiver-side bug, 140 more attempts got about 94%, the same rate the real E8 transmitter gets on that receiver. Then it hopped all 47 D8 channels at about 98%, slightly better than the E8 on the same receiver (Sections 1 to 6).</p>
+<p>It ends with the whole protocol: the ESP32 drives a stock Betaflight drone at 111 packets a second while hopping (Section 7, including a first takeoff), receives its telemetry replies (Sections 8 and 9), binds the drone to an identity of its own over the air (Section 10), and does all of it from a browser tab or desktop app with no server (Sections 11 to 13). It is still not a calibrated transmitter: output power is estimated, not measured, and there is no range test.</p>
+<p>The short version of what worked: the ESP32’s Wi-Fi PHY has a test-tone generator whose frequency can be stepped by a ROM function. Switching that tone between two steps at 31 kbaud is a crude 2-FSK modulator. A CC2500 listening on the channel decoded it. Most of the effort went into finding out where the tone actually lands, because the first attempts saw nothing.</p>
+<p>All numbers below are re-derived from the raw logs by <a href="../../experiments/05-first-packet/scripts/plot_tx.py"><code>bench/d8-tx/analysis/plot_tx.py</code></a> (<code>--summary</code> prints them). Raw logs are in <a href="../../experiments/"><code>bench/d8-tx/results/</code></a>.</p>
+<h2 id="why-one-packet-and-how-to-know-it-worked">Why one packet, and how to know it worked</h2>
+<p>The plan was one packet before any hopping, on purpose. A single fixed-channel packet is the smallest thing that can fail for only a few reasons (wrong frequency, wrong timing, wrong bytes), and it gives a yes/no answer that does not depend on my own decoder: the receiver’s CRC check.</p>
+<p>That independence matters. The ESP32 can read back its own registers and report that it “keyed for 6700 µs”, but that proves the CPU ran a loop, not that RF came out (<a href="../../firmware/main/d8tone.c"><code>d8tone.c</code></a> says so in its header: “none of this is RF evidence”). The only evidence accepted here is a <strong>second radio, receiving</strong>:</p>
+<ul>
+<li>A MATEK F411RX board with a CC2500, running a locally built Betaflight with a receive-only diagnostic (<code>rxdiag</code>, <a href="../../tools/cc2500-rxdiag/firmware/README.md">firmware README</a>). Its transmit path is guarded off. <code>rxdiag freq</code> reports, per 100 ms window, how many samples had carrier sense (<code>ncs</code>); <code>rxdiag pkt</code> reports each packet it demodulates with the chip’s hardware CRC flag.</li>
+<li>A real FrSky E8 transmitter, used only as a <strong>positive control</strong>: if the receiver cannot see the real thing at that frequency and setup, an absence of ESP32 packets means nothing.</li>
+<li>The ESP32 firmware, <code>d8tone</code>, is RF-silent at boot and keys only on a command (<code>TONE</code>, <code>ALT</code>, <code>PKT</code>) for at most 200 ms, with a host-side envelope on power, duration and command count (<a href="../../tools/d8-tx-host/README.md"><code>bench/d8-tx/README.md</code></a>).</li>
+</ul>
+<h2 id="the-transmitter">The transmitter</h2>
+<p>The transmit path is not a documented API. It reuses what Espressif’s PHY already does for calibration: a numerically controlled oscillator injects a tone, and the ROM function <code>rom_start_tx_tone_step(1, f, 127, …)</code> sets its frequency as a signed step <code>f</code> from the Wi-Fi channel centre (here channel 1, 2412 MHz). <code>rom_pbus_force_test(5, 1, pwr)</code> then turns the transmit chain on (<a href="../../firmware/main/d8tone.c"><code>key()</code> and <code>tone_set()</code> in <code>d8tone.c</code></a>). The keying sequence is adapted from an earlier experiment, not written from documentation.</p>
+<p>What the packet needs from it:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th></th>
+<th>Stock D8 (CC2500)</th>
+<th>This ESP32</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Modulation</td>
+<td>Gaussian-filtered 2-FSK</td>
+<td>abrupt 2-FSK by switching tone step</td>
+</tr>
+<tr>
+<td>Deviation</td>
+<td>±31.7 kHz (DEVIATN 0x42)</td>
+<td>±1 step ≈ ±39.06 kHz (40 MHz/1024)</td>
+</tr>
+<tr>
+<td>Baud</td>
+<td>31,044 (MDMCFG4/3 = 0xAA/0x39)</td>
+<td>7731 CPU cycles/bit at 240 MHz ≈ 31,043 baud</td>
+</tr>
+<tr>
+<td>Packet</td>
+<td>4×0xAA preamble, D3 91 sync, length+17 bytes, CRC16</td>
+<td>same bytes</td>
+</tr>
+<tr>
+<td>Duration</td>
+<td></td>
+<td>208 bits × 7731 cycles = 6.70 ms</td>
+</tr>
+</tbody>
+</table></div>
+<p>The register arithmetic is in the comments at <a href="../../firmware/main/d8tone.c"><code>run_packet()</code></a>; the cycle count is rounded to an integer, accumulating under 9 cycles of drift over the packet. The deviation difference (39 vs 31.7 kHz) is a limit of the tone path, and it was not tuned or compensated.</p>
+<p><strong>Packet bytes.</strong> <a href="../../firmware/main/packet.c"><code>packet.c</code></a> builds the 26 on-air bytes: <code>AA AA AA AA D3 91</code>, then the 18-byte frame (length <code>0x11</code> plus 17 payload bytes), then a CRC16 (poly 0x8005, init 0xFFFF) over those 18 bytes. The frame layout (transmitter ID <code>42 B2</code>, hop counter, eight 12-bit channels split across low bytes and shared nibbles) comes from the host builder <a href="../../tools/d8-tx-host/d8_vectors.py"><code>d8_vectors.py</code></a>, which does not import the RX decoder, and each has offline tests (<a href="../../firmware/test/test_packet.c"><code>test_packet.c</code></a>, <a href="../../tools/d8-tx-host/tests/test_d8_pkt.py"><code>test_d8_pkt.py</code></a>). The test vector is <code>d8_vectors.build(0)</code>, body <code>1142b2000001cacacaca8888cacacaca8888</code>, CRC <code>afa7</code>. Each bit becomes tone step +1 for a 1 and −1 for a 0, switched from a busy loop with interrupts off.</p>
+<h2 id="what-happened">What happened</h2>
+<h3 id="the-first-attempt-nothing-and-a-firmware-bug">1. The first attempt: nothing, and a firmware bug</h3>
+<p>Before any RF, the first firmware image rebooted every 3.5 s while idle. <a href="../../experiments/03-tone-first-attempt/data/esp_idle_wdt_reboot_observation.txt"><code>esp_idle_wdt_reboot_observation.txt</code></a> shows <code>I,boot,reason=7</code> (RTC watchdog) at 3.8, 7.3 and 10.8 s with nothing commanded. The watchdog was meant to guarantee that a hang reboots into the RF-silent state; instead it fired on a healthy idle loop, so no keying was attempted on that image. The current source feeds it from the input poll (at most every 10 ms) and at the start of each keyed window; the fixed image idled 16 s without a reboot (<a href="../../experiments/03-tone-first-attempt/data/esp_idle_retry.txt"><code>esp_idle_retry.txt</code></a>). The old input loop used blocking <code>fgetc(stdin)</code>; ESP-IDF’s UART VFS waited indefinitely for a character, so the idle loop could not feed the RTC watchdog. Replacing it with a bounded 10 ms UART read fixed the idle-reset observation. That diagnosis comes from source inspection plus the before/after idle logs, not a hardware trace of the watchdog.</p>
+<p>Then the first RF test: 12 keyings (tone at steps 0, +16, −16 and an alternating pair, 150/100 ms, power 32) with the CC2500 at 2412.000 MHz, 812 kHz bandwidth, AGC 251/64. The ESP32’s own readback was fine for all 12. The CC2500 saw nothing: the maximum <code>ncs</code> in any window of any run was 1, a single stray count in one window, <strong>250 ms after</strong> the tone had ended (panel A below, <a href="../../experiments/03-tone-first-attempt/data/NOTE.md"><code>NOTE.md</code></a>). The positive control at that setting did work: the real E8 produced carrier-sense in 28 of 50 windows at 2421.032 MHz.</p>
+<p>So: the ESP32 believed it was transmitting, the receiver could hear a real transmitter, and no ESP32 RF was detected. That is a <strong>null result, not a negative</strong>. Candidate explanations were all untested at this point: tone too weak at power 32, tone outside the receiver’s bandwidth, or no RF at all.</p>
+<figure>
+<a href="img/tx-evidence/null-and-trap.png"><img loading="lazy" src="img/tx-evidence/null-and-trap.png" alt="Left: 12 keyings at power 32 produce no carrier sense. Middle and right: with the AGC 203/66 setting, source-off carrier sense is in 30/30 windows at 812 kHz but only 2/30 at 102 kHz." /></a>
+<figcaption>Figure 1 (<a href="img/tx-evidence/null-and-trap.svg">SVG</a>). A: max <code>ncs</code> in any 100 ms window for each of the 12 first-attempt keyings. B, C: carrier-sense counts with nothing keyed at 2412.000 MHz and AGC 203/66. Source: <code>results/tone/retry_*_stm.txt</code>, <code>rerun2/control_source_off_2412000.txt</code>, <code>rerun3/control_bw102.txt</code>.</figcaption>
+</figure>
+<h3 id="the-detector-trap">2. The detector trap</h3>
+<p>Raising the receiver gain (AGC 203/66, a more sensitive setting) and the transmit power to 127 made the next run look like a success: <code>ncs</code> rose about 5–20× in the keyed windows. It was not interpretable. With nothing keyed, <strong>all 30 of 30</strong> windows already had carrier sense, <code>ncs</code> 18–149, and the frequency estimate was pinned at its limits (<a href="../../experiments/04-tone-scan/data/rerun2/NOTE.md"><code>rerun2/NOTE.md</code></a>). At 203 kHz bandwidth the estimate was still saturated in 24/30 windows. Only at 102 kHz was the source-off control quiet (2/30 windows, <code>ncs</code> 3 each; panel C).</p>
+<p>This is the lesson of the whole bench phase: a detector that fires on noise cannot confirm a signal. The previous run had to be thrown out, not argued about, and every later keyed measurement used the quiet 102 kHz setting, with a source-off control first.</p>
+<h3 id="narrowing-and-finding-where-the-tone-is">3. Narrowing, and finding where the tone is</h3>
+<p>At 102 kHz bandwidth, keying the tone at the centre (step 0) gave a clean response: <code>ncs</code> ≈ 1970 in the peak window against ~0–3 with nothing keyed. So the keyed carrier was in-band at 2412.000 MHz. But the receiver’s frequency estimate (FREQEST) was not usable: the same step-0 tone read −9.5, +11.1 and −12.7 kHz on three keyings, a spread bigger than any difference I wanted to measure (<a href="../../experiments/04-tone-scan/data/rerun3/NOTE.md"><code>rerun3/NOTE.md</code></a>). A scan from −500 to +500 kHz around 2412 MHz in 50 kHz steps then failed to locate the ±16 tones (<a href="../../experiments/04-tone-scan/data/scan/NOTE.md"><code>scan/NOTE.md</code></a>). I was looking in the wrong place.</p>
+<p>The wide scan (<a href="../../experiments/04-tone-scan/data/scan-wide/NOTE.md"><code>scan-wide</code></a>, 51 keyings, power 127, 150 ms) widened to ±3.5 MHz at 812 kHz bandwidth, then zoomed at 100 kHz bandwidth:</p>
+<ul>
+<li>tone +16 responded around <strong>2412.6–2412.7 MHz</strong> (≈ +650 kHz) and tone −16 at <strong>2411.4 MHz</strong> (≈ −600 kHz), with <code>ncs</code> 1917–1961 on every confirming keying, roughly symmetric about the step-0 carrier;</li>
+<li>at bw 102, +16 was not seen at 2412.8 MHz and above, and −16 not at 2411.3 MHz (a weaker 440 at 2411.5 was not counted as a hit).</li>
+</ul>
+<p>If the step is 40 MHz/2¹⁰ = 39.06 kHz, ±16 steps is ±625 kHz, inside those hits. A 100 kHz scan cannot resolve the step to better than that, and 2411.35 MHz was not measured, so this is a consistent estimate, not a measurement of 39.06 kHz. That would explain part of Section 1: with the receiver at 2412.000 MHz and 812 kHz bandwidth (±406 kHz), the ±16 tones (and the alternating ±16 pair) sat outside the passband, so those nine keyings were never going to be seen. It does not explain the three step-0 keyings, which were at the receiver centre but at power 32 and AGC 251/64 and still showed nothing. Later step-0 keyings at power 127 and AGC 203/66 were seen (<code>ncs</code> 830 at bw 812), so low power or low sensitivity is the likely reason for those three, but I did not run the one change that would separate them.</p>
+<p>The fine steps ±1, ±2, ±4 (the ones the packet uses) all produced a response at the predicted offsets (<a href="../../experiments/04-tone-scan/data/fine/NOTE.md"><code>fine/NOTE.md</code></a>): <code>ncs</code> 1953–1981, RSSI 14–21 at receiver centres 2412.039/2411.961, ±78 and ±156 kHz. A step +1 tone with the receiver parked on the carrier (2412.000) gave only RSSI 2 against 14–21 in the matched positions, consistent with it sitting off-centre at the filter edge. The estimate for negative steps was stable (−42.2, −82.8, −144.9 kHz measured vs −39, −78, −156 predicted), but FREQEST is only about ±10 kHz and was unstable for positive steps, so this confirms roughly 39 kHz steps, not an exact calibration.</p>
+<figure>
+<a href="img/tx-evidence/tone-scan.png"><img loading="lazy" src="img/tx-evidence/tone-scan.png" alt="Tone scan: ncs versus receiver centre for ±16-step tones, with 0.5 MHz coarse steps and 0.1 MHz zooms around the responses at +650 kHz and −600 kHz." /></a>
+<figcaption>Figure 2 (<a href="img/tx-evidence/tone-scan.svg">SVG</a>). Peak carrier-sense windows vs receiver centre for tones ±16 at AGC 203/66, power 127. Panel A: stage A, bw 812 kHz, with the step-0 reference (★). Panels B, C: stage B, bw 102 kHz; “response” means <code>ncs</code> ≥ 1500 (pre-key baseline windows at bw 102 ranged about 110–860 <code>ncs</code> in these runs, so ambient interference was present; every response is at least 2× the highest baseline). Stage A is wide enough that responses are broad. The centre of a response is not defined by this plot to better than the 100 kHz grid. Source: <code>results/tone/scan-wide/results.jsonl</code>.</figcaption>
+</figure>
+<h3 id="the-packet">4. The packet</h3>
+<p>With the offset understood, the ESP32 firmware put the ±1-step 2-FSK packet on 2412.000 MHz and the CC2500 was set to the same centre with the stock D8 register set (<code>rxdiag pkt</code>; its deliberate differences, such as CRC autoflush off so that failures are visible, are listed in its <a href="../../tools/cc2500-rxdiag/firmware/README.md">README</a>). Order of operations, from <a href="../../experiments/05-first-packet/data/NOTE.md"><code>packet/NOTE.md</code></a>:</p>
+<ol type="1">
+<li><strong>Source off (E8 off):</strong> at 2412.000 MHz two runs gave 10 P records in total, all <code>crc_ok=0</code> fragments; a later recheck gave 0. At 2421.032 MHz: 2 records, both CRC-bad. None began with the E8’s ID bytes. Noise produces short fragments, but never a CRC-valid packet.</li>
+<li><strong>Real-E8 control at 2421.032 MHz, 20 s:</strong> 77 P records, <strong>32 with <code>crc_ok=1</code></strong>, all starting <code>11 42 B2 00</code>.</li>
+<li><strong>ESP32 test:</strong> 10 <code>PKT</code> commands at power 127, one batch. All 10 replied OK with <code>bits=208</code>, <code>on_us</code> 6700–6704 and no reboot. The CC2500, at 2412.000 MHz, reported 23 P records (<a href="../../experiments/05-first-packet/data/batch1_2412000_stm.txt"><code>batch1_2412000_stm.txt</code></a>):
+<ul>
+<li><strong>7</strong> whose 18 bytes are exactly the vector body with <code>crc_ok=1</code> (RSSI raw 11–13, LQI 51);</li>
+<li>2 more whose 18 bytes equal the body but with <code>crc_ok=0</code>, <code>rssi=lqi=0</code>;</li>
+<li>14 other fragments, noise as in the source-off check.</li>
+</ul></li>
+</ol>
+<figure>
+<a href="img/tx-evidence/packet-outcome.png"><img loading="lazy" src="img/tx-evidence/packet-outcome.png" alt="Left: stacked count of P records for the ESP32 batch (7 CRC-valid, 2 body-match with CRC flag 0, 14 other) and the E8 control (32 CRC-valid of 77). Right: source-off controls have no CRC-valid records." /></a>
+<figcaption>Figure 3 (<a href="img/tx-evidence/packet-outcome.svg">SVG</a>). Receiver outcomes. “Body matches” = 18 bytes equal to <code>d8_vectors.build(0)[:18]</code>. Source: <code>results/packet/*.txt</code>, classified by <code>plot_tx.py</code>; CRC flag = CC2500 hardware CRC_OK, which strips the two CRC bytes, so a P record carries 18 bytes and a flag (the same for the E8, for which the 32 valid records are all 18 bytes).</figcaption>
+</figure>
+<p>The ESP32 build used here has SHA-256 <code>3698ae6f6bbe0b11bfac103c9f008320d9d90dfe9d22d179d55da0bcd5c60461</code> (<a href="../../experiments/05-first-packet/data/esp_hashes.txt">flash/hash evidence</a>); its generated <code>.bin</code> is not included in this clone, so it must be rebuilt from <code>firmware/</code>. The STM diagnostic binary and checksum manifest are included under <code>bench/cc2500-rxdiag/firmware/out/4bdc8581/</code>.</p>
+<p>The result: with a source of known state, a distinctive byte sequence and a CRC computed independently on the receiving chip, <strong>7 of 10 packets were received intact</strong>, while the real transmitter’s control worked and the empty channel never produced a valid record. Of the other three, I do not know why. One has no full record, two have the right bytes with the CRC flag cleared. The E8 control shows the same signature (an <code>EPART</code> error and a 2-byte stray record beside valid ones), so a receiver-side FIFO-split artefact is the likely explanation. It is a hypothesis; I did not isolate it. Section 5 shows it was right: the diagnostic’s 500 µs packet-end wait was shorter than the CRC gap.</p>
+<h3 id="fixed-channel-reliability-about-94-the-same-as-the-real-transmitter">5. Fixed-channel reliability: about 94%, the same as the real transmitter</h3>
+<p>Seven of ten is not a reliability figure, and Section 4 already suspected the receiver. A closer look found it. The diagnostic firmware decides that a packet has ended after 500 µs with no new bytes in the FIFO. The two CRC status bytes arrive about 515 µs after the payload (two bytes at 31 kbaud, 257.7 µs each), so the 500 µs window closed just before them. Some packets were therefore reported as a body fragment plus a separate two-byte stray, and the “CRC flag 0” records of Section 4 are that split. Raising the quiet time to 2000 µs fixed it, and the ESP32 was then measured on the same fixed channel, 2412.000 MHz, with no hopping, about one packet every 516 ms, power 127. Each group was preceded by a source-off capture, and E8 controls bracketed the sessions.</p>
+<p><strong>Ten batches of ten.</strong> Nine of the ten batches (1b, 3–10) were tied to their commands: <strong>85 CRC-valid receptions, 5 unobserved</strong> (one each in batches 1b, 3, 9 and two in batch 6), no CRC-invalid or malformed record. Batch 2 received 8 CRC-valid packets, but they cannot be assigned to commands. That batch had no timestamp taken just before the start command, so the receiver’s clock was only known against the host’s to within 0.54 s, more than the 0.5 s packet spacing: each reception fits two neighbouring commands. The two clocks also drift apart by about 0.18% (1.75 ms per second; Figure 7), so the offset cannot be extrapolated from elsewhere in the run. Later batches took an anchor, narrowing the uncertainty to 30–40 ms. Counting batch 2 as raw receptions, 93 of 100 commands produced a valid packet. No batch had a CRC-invalid copy: when the sync was found, the payload was right.</p>
+<p><strong>FREQEST session.</strong> The receiver also reports its frequency estimate (FREQEST) per packet. Five more batches of ten, with that field logged, gave <strong>47 of 50</strong>; the ESP32 and real E8 FREQEST distributions look alike (Figure 6). Over 47 ESP32 and 88 E8 packets the means were +1.8 and −1.8 kHz and the standard deviations 16.4 and 14.7 kHz. The values stop at ±21 LSB, ±33.3 kHz, which is the clamp: 5 of 135 packets sit on it. A spread that wide, with a clamp inside it, is too noisy to resolve carrier wander of the kind the tone work suspected (±10 kHz keying to keying), so FREQEST cannot say whether the ESP32 carrier lands where it should.</p>
+<p><strong>The E8 on the same receiver.</strong> The real transmitter, one visit every 422.7 ms, would show about 47 packets per 20 s. Four controls gave 46, 41, 44 and 44: <strong>175 of about 189, 93%</strong>. The ESP32 got 132 of 140 attributed commands, 94%. The two intervals overlap (Figure 5, panel B), so the misses look at least partly like receiver or bench effects, not like something only the ESP32 does.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Measurement</th>
+<th>Sent / expected</th>
+<th>Received (CRC-valid)</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reliability, batches 1b, 3–10</td>
+<td>90</td>
+<td>85</td>
+<td>5 unobserved, 0 CRC-invalid</td>
+</tr>
+<tr>
+<td>Reliability, batch 2</td>
+<td>10</td>
+<td>8 raw</td>
+<td>not attributable to commands</td>
+</tr>
+<tr>
+<td>FREQEST session, 5 batches</td>
+<td>50</td>
+<td>47</td>
+<td>3 unobserved</td>
+</tr>
+<tr>
+<td>Real E8, 4 × 20 s</td>
+<td>≈189</td>
+<td>175</td>
+<td>one visit per 422.7 ms</td>
+</tr>
+</tbody>
+</table></div>
+<figure>
+<a href="img/tx-evidence/reliability-outcome.png"><img loading="lazy" src="img/tx-evidence/reliability-outcome.png" alt="Left: per-batch outcomes of the ESP32 reliability and FREQEST batches. Right: received fraction with 95% intervals, ESP32 and real E8." /></a>
+<figcaption>Figure 5 (<a href="img/tx-evidence/reliability-outcome.svg">SVG</a>). Panel A: each bar is ten commands; red is a command with no receiver record, the hatched bar is batch 2 (see text). Panel B: Wilson 95% intervals; the E8 denominator is the expected visit count, not an observed one, so its interval is approximate. Source: <code>results/packet/{reliability,freqest}/batch*_report.txt</code>, <code>control_e8*</code>; <code>plot_reliability.py</code>.</figcaption>
+</figure>
+<figure>
+<a href="img/tx-evidence/freqest-hist.png"><img loading="lazy" src="img/tx-evidence/freqest-hist.png" alt="FREQEST histogram for ESP32 and real E8 packets, spanning about −33 to +33 kHz." /></a>
+<figcaption>Figure 6 (<a href="img/tx-evidence/freqest-hist.svg">SVG</a>). Receiver FREQEST of CRC-valid packets, in 4 kHz bins, each series normalised to its own packet count. Dashed lines: the ±21 LSB clamp. Source: <code>results/packet/freqest/batch*_stm.txt</code>, <code>control_e8_{pre,post}.txt</code>.</figcaption>
+</figure>
+<p><strong>Where the misses fall in time.</strong> For the three batches with a tight anchor and a miss, the received packets sit on a straight line against send time with at most 91 µs of residual, so the expected arrival of each missing packet is known to about 0.1 ms. At those instants the receiver recorded no packet and no noise fragment (<a href="../../experiments/06-fixed-channel-reliability/data/reliability/missing_four_offline.md"><code>missing_four_offline.md</code></a>). The packet is 6.7 ms long, the nearest noise record was at least 41 ms away, and the receiver reported no errors. These look like clean “sync not detected” events. Two explanations remain open: the receiver was blind to a sync at that instant, or the ESP32 packet start was occasionally not decodable. The recorded noise rate allows a blind time of at most about 1%, which makes four or five misses in 80–90 attempts unlikely, but that argument assumes the unrecorded events are as common as the recorded ones.</p>
+<figure>
+<a href="img/tx-evidence/reliability-timing.png"><img loading="lazy" src="img/tx-evidence/reliability-timing.png" alt="Receiver-minus-host clock against send time for batches 3, 6 and 9, with the expected time of each unobserved send marked." /></a>
+<figcaption>Figure 7 (<a href="img/tx-evidence/reliability-timing.svg">SVG</a>). Matched receptions lie on a line of slope 0.175% (receiver clock fast against the host), and each unobserved send is placed by that line. Batch 6 lost two in a row. Source: <code>results/packet/reliability/batch{3,6,9}_*</code>.</figcaption>
+</figure>
+<p><strong>What this shows and does not show.</strong> On a fixed channel, on one bench with one receiver position, the ESP32 packet is received CRC-valid about 94% of the time, close to what the real E8 achieves on the same receiver, and a received packet is never corrupt. It does not give an ESP32 loss rate, because receiver loss and send-side loss are not separated: the E8 baseline is about as lossy. Nor does it say why the roughly 6% are missing. The receiver would need to log every sync detect, or the ESP32 keyings would need to be captured with an SDR beside it. FREQEST cannot settle carrier accuracy. Hopping and flight are untested, and the RSSI of received packets stepped down by about 5 dB between batches 3 and 4 when the setup was touched, which did not change the loss pattern.</p>
+<h3 id="hopping-all-47-channels-at-98">6. Hopping: all 47 channels at ~98%</h3>
+<p><strong>Why the tone cannot hop by itself.</strong> The tone generator’s frequency steps only reach about ±20 MHz around the LO, and the D8 hop table spans 2404–2478 MHz. The 39.06 kHz step also does not divide the 299.93 kHz channel spacing, so even a reachable channel would be off-grid. So each hop retunes the LO instead (fast-hop mode 1, one retune per slot), and the tone steps only carry the data bits. The firmware measured the retune at at most 0.39 ms (363 µs in run A, 389 µs in run B) of an 8.994 ms slot, and the keying start was at most 81 µs late, so slot timing holds to about 80 µs.</p>
+<p><strong>Retune gate.</strong> Before hopping, a 150 ms tone was keyed after retuning to 2404, 2412, 2441 and 2478 MHz, and the receiver diagnostic watched each. All four passed, with the tone’s FREQEST within 13 kHz of nominal (the 2441 MHz window had a steady in-band interferer; the tone still stood 23–31 counts above it). The receiver diagnostic was then given the hop table directly (<code>rxdiag hop</code>); there was no bind, so it followed the table a bound receiver would have learned.</p>
+<figure>
+<a href="img/tx-evidence/hop-retune-gate.png"><img loading="lazy" src="img/tx-evidence/hop-retune-gate.png" alt="Retune gate: maximum RSSI per window with the tone off and keyed, at four retuned LO frequencies, with the carrier offset estimate." /></a>
+<figcaption>Figure 8 (<a href="img/tx-evidence/hop-retune-gate.svg">SVG</a>). Grey: baseline RSSI with the tone off. Green: the three keyed 150 ms tones. The label is the largest FREQEST offset of the three. The 2441 MHz baseline had a steady in-band interferer, so its rise is smaller. Source: <code>results/hop/retune_gate/summary.md</code>; <code>plot_hop.py</code>.</figcaption>
+</figure>
+<p><strong>Runs.</strong> The real E8 was recorded first as a control, then the ESP32 sent 556 slots (run A) and 940 slots (run B), always hop-counter-ordered, sticks at 1500 µs.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th></th>
+<th>E8 control (20 s)</th>
+<th>ESP32 run A</th>
+<th>ESP32 run B</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Slots</td>
+<td>2204</td>
+<td>556</td>
+<td>940</td>
+</tr>
+<tr>
+<td>CRC-valid</td>
+<td>2133 (96.8%)</td>
+<td>543 (97.7%)</td>
+<td>921 (98.0%)</td>
+</tr>
+<tr>
+<td>Longest loss run</td>
+<td>1</td>
+<td>1</td>
+<td>2</td>
+</tr>
+<tr>
+<td>Counter discontinuities</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>Channels decoding</td>
+<td>47 of 47</td>
+<td>47 of 47</td>
+<td>47 of 47</td>
+</tr>
+<tr>
+<td>Sticks decoded</td>
+<td>1500 µs</td>
+<td>1500 µs</td>
+<td>1500 µs</td>
+</tr>
+</tbody>
+</table></div>
+<p>Channel and ID mismatches were zero throughout (ID 42B2). The one RESYNC in each ESP32 run came after the ESP32 stopped sending, so it is not a loss.</p>
+<figure>
+<a href="img/tx-evidence/hop-esp-runB-map.png"><img loading="lazy" src="img/tx-evidence/hop-esp-runB-map.png" alt="Hop map of ESP32 run B: time against RF frequency, cyan line the expected hop sequence, blue dots received, red crosses unreceived, zoom of the first 47-hop cycle below, per-channel received fraction on the right (red below 90%)." /></a>
+<figcaption>Figure 9. The ESP32 (run B), 921 of 940 slots. Cyan line: the expected hop sequence. Blue dots: slots received CRC-valid, at their expected frequency. Red X: slots with no valid packet. The 19 misses are scattered, and no channel lost more than two. Source: <code>results/hop/esp_hop/runB_*</code>.</figcaption>
+</figure>
+<figure>
+<a href="img/tx-evidence/hop-e8-map.png"><img loading="lazy" src="img/tx-evidence/hop-e8-map.png" alt="The same hop map for the real E8 control, drawn the same way; its weak channels show as red bars in the per-channel panel." /></a>
+<figcaption>Figure 10. The real FrSky E8, same receiver and drawing as Figure 9 (line, dots and red X mean the same), 2133 of 2204 slots over 20 s. Channels 25 (2411.5 MHz) and 133 (2443.9 MHz) are weak, at 29/47 and 22/47. Source: <code>results/hop/e8_control/</code>.</figcaption>
+</figure>
+<p><strong>The weak channels.</strong> The E8’s 96.8% hides two poor channels, ch25 and ch133. The RX write-up had already noticed ch25 and suspected the transmitter. The ESP32 decodes the same two channels fine (19/20 each in run B, 12/12 each in run A) on the same receiver.</p>
+<figure>
+<a href="img/tx-evidence/hop-per-channel.png"><img loading="lazy" src="img/tx-evidence/hop-per-channel.png" alt="Per-channel received percentage against RF frequency for the real E8 and the ESP32 run B; channels 25 and 133 are labelled." /></a>
+<figcaption>Figure 11 (<a href="img/tx-evidence/hop-per-channel.svg">SVG</a>). One point per channel. The E8 has 47 visits per channel and the ESP32 20, so one ESP32 miss is 5%. Only the E8 drops on ch25 and ch133. Source: <code>results/hop/e8_control/summary.md</code>, <code>results/hop/esp_hop/runB_stats.txt</code>; <code>plot_hop.py</code>.</figcaption>
+</figure>
+<p>That is consistent with an E8 transmitter quirk on those channels, but it is not proof: different time, different packet content and a small count.</p>
+<p><strong>Two loose ends.</strong> The roughly 5% of fixed-channel misses from Section 5 were parked as a receiver or bench effect; the hopping runs (2.0–2.3% missing) did not reopen them. The E8 packet layout also puts the hop counter in byte 4 of the frame (the length byte is byte 0), which matters for the coming bind with stock Betaflight.</p>
+<p><strong>What this shows and does not show.</strong> On this bench the ESP32 hops through the full 47-channel table, with a continuous counter, and a CC2500 following the table receives about 98% of slots, at least as well as the E8. It does not show binding, a stock Betaflight receiver accepting it, range, or flight, and it does not show why the E8 is weak on two channels.</p>
+<p><strong>Next:</strong> bind to stock Betaflight. The bind exchange and the hop counter in byte 4 are the first things to get right. (Section 7 first skipped the bind by cloning the E8; Section 10 does the real one.)</p>
+<h3 id="driving-stock-betaflight-and-the-first-takeoff">7. Driving stock Betaflight, and the first takeoff</h3>
+<p>Everything so far used a diagnostic receiver. This section points the ESP32 at the drone itself, running <strong>stock Betaflight 4.2.11</strong> (restored and checked: <code>diff all</code> is byte-identical to <code>bench/cc2500-rxdiag/results/diff_all_final.txt</code>, <code>results/bf_link/link_check/</code>).</p>
+<p><strong>No bind.</strong> The drone’s config already stores the E8’s transmitter ID (66,178 = 0x42B2) and its hop table, so the ESP32 simply clones them. The receiver cannot tell it from the E8. (Section 10 replaces this clone with a real over-the-air bind to an identity of the ESP32’s own.)</p>
+<p><strong>Frequency.</strong> Betaflight stores <code>frsky_spi_offset = -32</code> (about -51 kHz), which was tuned to the E8. The E8 runs roughly 26 ppm (about 63 kHz) low, while the ESP32 lands within about 13 kHz of nominal. So a new <code>FOFS</code> command shifts every hop by -63 kHz, and I set it by comparing FREQEST against the E8 (mean difference 13 Hz; <code>results/bf_link/offset_tune/</code>). This offset only exists because of the clone; after a real bind the receiver tunes itself to the ESP32 and FOFS 0 is best (Section 10). The shift does not change the packet rate: with and without it the drone-side receiver got 96.6–97.5% of slots (four runs, <code>results/bf_link/ab_test/</code>). An earlier 85–92% session in the tune runs was a bad stretch that did not reproduce, not an effect of the offset.</p>
+<p><strong>Sticks.</strong> In the Betaflight Receiver tab the channels read <strong>T1200 A1400 E1600 R1800</strong> exactly, the values the host sent (owner’s screenshot; the sender log is <code>link_check/receiver_tab_fixed_sticks.csv</code>). Each of the four bars sat at a different, known place, so channel order and scaling are right.</p>
+<p><strong>Live sticks.</strong> A host sender issues <code>HOP 0</code> once (hop continuously) and then streams <code>S</code> stick updates at the 8.994 ms slot rate. The first sender slipped, because relative sleeps accumulate; it now keeps absolute deadlines (111 Hz). If the host goes silent for 300 ms the firmware unkeys. In a run with roll toggling every half second, roll edges reached Betaflight with a median 44.3 ms, p95 61.8 ms, maximum 181.5 ms. That includes the USB serial leg, waiting for the next slot, Betaflight’s RC smoothing and the MSP readback used to measure it, so it is an upper bound on the radio link’s share.</p>
+<figure>
+<a href="img/tx-evidence/live-roll-latency.png"><img loading="lazy" src="img/tx-evidence/live-roll-latency.png" alt="Commanded roll against roll read back from Betaflight over MSP, 1300/1700 µs square wave." /></a>
+<figcaption>Figure 12 (<a href="img/tx-evidence/live-roll-latency.svg">SVG</a>). Grey: roll commanded by the sender. Blue: roll read from Betaflight. Every edge arrives, delayed. Source: <code>results/bf_link/live_sticks/live_sender.csv</code>, <code>live_msp.csv</code>; <code>plot_latency.py</code>. The per-edge latencies are also in <code>latency.png</code> next to them.</figcaption>
+</figure>
+<p><strong>Arming.</strong> ARM is AUX3 (channel 7, 1700–2100 µs). The firmware forces channel 7 low unless an explicit <code>ARMOK</code> is sent before a <code>HOP</code>, and clears it after every <code>HOP</code>, so a stuck host cannot arm by accident. The first attempts failed for two reasons: my host sender also forced channel 7 low, and Betaflight holds <code>RX_FAILSAFE</code> for about 2.5 s after the link appears. After fixing the first and waiting out the second, MSP reported ARMED (<code>mode_flags</code> 3) from 3.8 s to 7.4 s.</p>
+<p><strong>First takeoff.</strong> Then arm, wait, full throttle for 0.5 s, then 1 s (<code>results/bf_link/motor_test/*.csv</code>). In the last 1 s run (<code>motor_test8</code>) channel 7 went high at 3.5 s, throttle to 2000 µs from 5.0 to 6.0 s, disarm at 7.5 s. On that run the quad took off.</p>
+<video controls preload="metadata" width="720" poster="media/esp32-first-takeoff-poster.jpg">
+<source src="media/esp32-first-takeoff.mp4" type="video/mp4">
+</video>
+<p><em>Video 1 (<a href="media/esp32-first-takeoff.mp4">mp4, 2.5 MB</a>). The takeoff, 34 s, recompressed to 720p from the owner’s phone recording.</em></p>
+<p><strong>What this does not show.</strong> It is a scripted open-loop 1 s throttle pulse from a bench script, not piloted flight. No range test was done. <strong>Failsafe</strong> was tested with props off: armed at idle, then the Mac stopped sending without a stop command, as if it had crashed. The ESP32 stopped transmitting 0.30 s later (<code>why=timeout</code>), Betaflight entered RX failsafe about 0.46 s after that, and it <strong>disarmed 1.25 s after the host died</strong> (<code>bench/d8-tx/results/bf_link/failsafe/</code>). A dead ESP32 or a lost radio link ends the same way, because Betaflight only sees the packets stop.</p>
+<h3 id="a-usable-controller-the-d8tx-stack">8. A usable controller: the d8tx stack</h3>
+<p>Section 7 was a bench script. To fly the same way repeatedly I built a small stack in <code>python/</code> + <code>app/</code> (usage in <a href="../../python/README.md"><code>python/README.md</code></a>). Four layers, each thin (Section 11 later replaced the Python backend and the WebSocket with a browser app that talks to both boards itself; the firmware protocol stayed):</p>
+<ul>
+<li><strong>Firmware protocol v1</strong> (<a href="../../protocol/PROTOCOL.md"><code>PROTOCOL.md</code></a>). ASCII lines at 921600 baud. <code>LINK &lt;pwr&gt; [timeout_ms]</code> starts continuous hopping; <code>S c1..c8</code> sets the eight channels in µs (no reply while linked); <code>STOP</code> ends it; <code>FOFS</code> sets a frequency offset; <code>ARMOK</code> permits channel 7 high for the next link only; <code>INFO</code> and <code>STAT</code> report. Every request gets one <code>OK</code> or <code>ERR &lt;code&gt;</code>; asynchronous <code>EV</code> lines report boot, a once-per-second link heartbeat and the reason the link ended (<code>stop</code>, <code>timeout</code>, <code>err</code>).</li>
+<li><strong>Python library</strong> <code>d8tx</code>. <code>D8Link</code> owns the serial port and a sender thread that writes one <code>S</code> per D8 slot (8.994 ms, <code>SLOT_S</code> in <code>protocol.py</code>), so the firmware never starves. <code>BetaflightMSP</code> reads RC channels, analog and arm status over the flight controller’s USB for readback.</li>
+<li><strong>FastAPI backend</strong> (<code>d8tx.server</code>). REST for status and link start/stop, a WebSocket for sticks in and telemetry out at 50 Hz. If the browser is silent for 250 ms the backend stops sending sticks; the firmware’s own timeout and Betaflight’s failsafe are behind that. The flight-controller MSP connection reconnects by itself after a replug.</li>
+<li><strong>React/Vite/Tailwind page.</strong> Mode 2: W/S raise and lower a non-centering throttle that starts at 0%, A/D yaw, arrow keys pitch and roll, hold R to arm, X to disarm, or drag the on-screen sticks. <code>?mock=1</code> runs it without a backend.</li>
+</ul>
+<figure>
+<a href="img/tx-evidence/d8tx-sticks-ui.png"><img loading="lazy" src="img/tx-evidence/d8tx-sticks-ui.png" alt="The Sticks page in mock mode: link off, throttle 0%, left stick (yaw, throttle) and right stick (roll, pitch)." /></a>
+<figcaption>Figure 13. The Sticks page with <code>?mock=1</code> (headless Chrome screenshot of <code>app</code>). It is a mock backend, so it shows the layout, not a flight.</figcaption>
+</figure>
+<p><strong>Safety, in layers.</strong> Any one of these is enough to keep channel 7 low or stop the link; they are independent so a bug in one is not the whole story.</p>
+<ol type="1">
+<li><strong>UI:</strong> arming needs R held for 1 s; X disarms; nothing arms by default.</li>
+<li><strong>Library:</strong> <code>allow_arm</code> defaults to false and then forces channel 7 low whatever the caller asks.</li>
+<li><strong>Firmware:</strong> channel 7 is forced low unless <code>ARMOK</code> was sent, and <code>ARMOK</code> is cleared when each <code>LINK</code> ends.</li>
+<li><strong>Host silence:</strong> the backend stops after 250 ms without browser input, and the firmware ends a link after <code>timeout_ms</code> (default 300) without <code>S</code>.</li>
+<li><strong>Betaflight:</strong> with no packets it enters RX failsafe and disarms 1.25 s after the host died (Section 7).</li>
+</ol>
+<p><strong>Lessons from using it on the bench.</strong></p>
+<ul>
+<li>Betaflight arms only if throttle is at minimum at the moment the arm switch goes high. If the arm is refused and the switch stays high, it stays refused (<code>ARM_SWITCH</code>) until the switch goes low. My first UI sent arm and hover throttle in the same packet and locked itself out. Fixes: the UI holds minimum throttle for 0.5 s after arming, and the library has an arm-edge guard that forces throttle to 1000 µs for 0.5 s after channel 7 rises (<code>ARM_THROTTLE_HOLD_S</code> in <code>link.py</code>), whatever the caller sends.</li>
+<li><code>RX_FAILSAFE</code> persists about 2.5 s after the link appears, so arm attempts in that window fail (also in Section 7).</li>
+<li>With props off, runaway-takeoff protection disarms within seconds of throttle. That is expected; the arm switch must go low to clear it.</li>
+<li>Several browser tabs fight over the sticks, because each sends its own state. Use one.</li>
+<li>A game-style “Fly” mode was tried and dropped in favour of real sticks.</li>
+<li>Keys are on/off, so each stick axis is eased toward its target: holding an arrow ramps the stick and releasing returns it to centre, roughly like a thumb on a gimbal. Raw key values were too twitchy to fly.</li>
+</ul>
+<p><strong>A scripted hop.</strong> <a href="../../python/examples/up_forward_land.py"><code>python/examples/up_forward_land.py</code></a> arms, climbs, tilts forward, descends and disarms from a fixed timeline, in Angle mode. It is open loop: there is no altitude sensor and the ESP32 gets no telemetry, so every number is a guess. The first attempts at hover throttle 1450 and 1550 µs did not lift off and slid forward along the ground. So the hover throttle is unknown but above 1550, and with throttle that high the forward tilt has to be small. The next step is Betaflight blackbox logging, to measure rather than guess.</p>
+<p><strong>Telemetry comes back.</strong> Betaflight’s D8 receiver replies. In <a href="https://github.com/betaflight/betaflight/blob/4.2.11/src/main/rx/cc2500_frsky_d.c"><code>cc2500_frsky_d.c</code></a>, after a packet with <code>packet[3] % 4 == 2</code> (line 237) it builds a telemetry frame (<code>buildTelemetryFrame</code>, line 239) and in <code>STATE_TELEMETRY</code> waits until 1380 µs after that packet (line 290) before switching to transmit. It has already stepped to the next hop channel (<code>nextChannel(1)</code> runs before <code>STATE_TELEMETRY</code>), so the reply comes on the <strong>next</strong> channel, not the trigger channel. The frame is 18 bytes (length byte 0x11, lines 135–147): bind ID, A1 (battery voltage), A2 (RSSI ADC), RSSI in dBm, a hub byte count and an echo of the packet’s ID, then FrSky hub bytes. In <a href="https://github.com/betaflight/betaflight/blob/4.2.11/src/main/telemetry/frsky_hub.c"><code>telemetry/frsky_hub.c</code></a> the hub cycle is 125 ms (<code>FRSKY_HUB_CYCLETIME_US</code>, line 86) and acceleration is sent once per cycle, so 8 Hz; gyro IDs are defined but nothing sends them in this version (4.2). Too slow and too coarse for control, but enough for battery and RSSI.</p>
+<p>I then tried it. After a trigger packet the ESP32 unkeys, retunes to the next channel and starts an I/Q capture 0.21–0.37 ms later, records 10.3 ms and ships the samples to the Mac, which decodes them with the RX project’s D8 decoder (<code>bench/d8-tx/host/tlm_listen.py</code>). On battery, arm channel low, a 20 s run caught a CRC-valid 18-byte reply with the drone’s ID in <strong>26 of 46 trigger slots</strong>, arriving 1.34–1.51 ms after the trigger packet, with A1/A2 and the drone’s RSSI byte (71–76) and the telemetry ID echoed correctly (<code>bench/d8-tx/results/telemetry/</code>). So the half-duplex turnaround on the hacked transmit path works. Open: no hub bytes arrived (count 0 in every frame, so no accelerometer yet), the catch rate is 57% with one long run of misses, and A1 is not yet converted to volts. For dense flight data the practical route is still blackbox on the flight controller, read afterwards.</p>
+<h3 id="telemetry-in-the-stack-a-richer-hub-and-blackbox">9. Telemetry in the stack, a richer hub, and blackbox</h3>
+<p>Section 8 ended with a bench script that caught 57% of replies and no hub data. This section makes the replies part of the controller, makes Betaflight send more useful hub fields, and tries blackbox logging over USB. All of it was done with the drone on USB power and <strong>no battery</strong> (CLI <code>status</code>: <code>Voltage: 1 * 0.01V (0S battery - NOT PRESENT)</code>), props off.</p>
+<p><strong>Getting to near 100% first.</strong> Three fixes came between Section 8 and the stack (<code>bench/d8-tx/results/telemetry/SUMMARY.md</code>). The old firmware stopped transmitting for about 0.22 s while it sent each 20 KB capture over the UART, so Betaflight spent most of a run in RX failsafe; capturing int8 and streaming it out between packets took a 60 s run from 56/139 (40%) to 121/139 (87%). Hub bytes were always 0 because the drone had <code>FEATURE_TELEMETRY</code> off; turning it on (the only config change) brought hub frames. And our carrier sat about 35 kHz above the drone’s receive frequency at FOFS -50 kHz, so the drone lost some trigger packets: FOFS <strong>-75 kHz</strong> got 97.8–100% of triggers answered, against 82% at -50 kHz back to back. (That is a property of the cloned E8 binding; once the drone was bound to the ESP32 itself, -75 kHz became the worse setting, Section 10.) The id rule also changed to Betaflight’s: the next telemetry id only after a reply echoed the last one, otherwise resend the same id.</p>
+<p><strong>Telemetry in d8tx.</strong> (The backend and Python library described here were later replaced by the browser app of Section 11, which reuses the same recipe and id rule.) <code>D8Link.start()</code> now turns telemetry on by default (<a href="../../protocol/PROTOCOL.md"><code>PROTOCOL.md</code></a>, “Telemetry in the library”): a trigger every 48 slots, a 9 ms capture streamed in int8, and FOFS -75000 Hz unless the caller sets one. A worker thread decodes each capture with a vendored copy of the RX decoder (about 5 ms each) and acks the id. The backend puts a <code>radio</code> object in <code>/api/status</code> and every WebSocket message: powered (reply within 3 s), link (within 1 s), catch rate over 10 s, reply age, RSSI, A1 battery voltage (<code>absent</code> below 2 V), hub fields and an inferred <code>armed</code>. The page’s “Drone (radio)” cell shows powered, link, battery and armed.</p>
+<p>A 60 s library run answered 138 of 138 triggers. A 10-minute run through the backend, with MSP readback and sticks at 20 Hz, answered <strong>1387 of 1395 (99.4%)</strong>, never below 97.2% in any minute (<code>bench/d8-tx/results/telemetry-stack/</code>). The sender held 111 Hz, 66,706 sends, none skipped, worst late 799 µs.</p>
+<figure>
+<a href="img/tx-evidence/tlm-catch-age.png"><img loading="lazy" src="img/tx-evidence/tlm-catch-age.png" alt="Left: replies per trigger for each minute of a 10-minute run, 97.2 to 100%. Right: histogram of reply age in the status messages, flat from 0 to about 430 ms." /></a>
+<figcaption>Figure 14 (<a href="img/tx-evidence/tlm-catch-age.svg">SVG</a>). The 10-minute backend run. Reply age p50 215 ms, p95 410 ms, maximum 849 ms: it is flat because a trigger comes every 48 slots (432 ms), so a missed reply doubles it. Source: <code>telemetry-stack/e2e/fc_10min_b.jsonl.gz</code>; <code>plot_telemetry.py</code>.</figcaption>
+</figure>
+<p>Three things went wrong on the way. WebSocket streams froze for minutes in two early runs; that was the Mac idle-sleeping, and the 10-minute run under <code>caffeinate</code> had no gap over 54 ms. Opening the ESP32’s port reboots it, so a link start posted right after the backend starts can get <code>no reply to 'FOFS -75000'</code>; waiting about 3 s works. And in the 10-minute run the hub fields <strong>stopped updating after 12.9 s</strong> while replies kept arriving; only the gyro of the patched fields (below) had appeared by then. The shorter 40 s and 60 s runs updated hub fields to the end. The cause is in Betaflight, not the library. The receiver builds a new hub cycle only when <code>cmpTimeUs(now, lastCycle) &gt;= 125 ms</code>, and that difference is a signed 32-bit count of microseconds. The drone’s last hub cycle had been at the end of the previous session, 60.7 minutes earlier, which is more than 2^31 µs (35.8 min), so the difference came out negative. Every request then got zero hub bytes, and that lasts until the gap passes 2^32 µs (71.6 min), about a minute after the run ended. A replay of Betaflight’s buffer logic through the library (<code>telemetry-stack/hub-stall/model.py</code>) gives the same frames reply by reply. 27 resends of a stale chunk with gyro Y and Z appear because the backend restart had reset our id, then ACC X and Y, then ACC Z, then nothing from reply 30. Any link that starts 36 to 72 minutes after the drone last sent hub data, or after it booted, gets no hub data until that window ends; the patched firmware could guard against it.</p>
+<p><strong>A patched Betaflight hub.</strong> Stock 4.2.11 sends ACC as <code>((int16_t)(acc in g)) * 1000</code>, so a drone sitting level reads 0 or 1000 milli-g, never 996, and it has no arm state at all. A patch to <code>frsky_hub.c</code> alone (<a href="../../tools/betaflight-patch/README.md"><code>bench/betaflight-patch/</code></a>) keeps every stock ID and adds:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Field</th>
+<th>Unit</th>
+<th>Rate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0x24–0x26</td>
+<td>ACC X/Y/Z</td>
+<td>true milli-g (was whole g × 1000)</td>
+<td>every 125 ms cycle</td>
+</tr>
+<tr>
+<td>0x46</td>
+<td>STATUS</td>
+<td>bit0 armed, bit1 ANGLE, bit2 HORIZON, bit3 failsafe, bit4 arming disabled, bit5 acro</td>
+<td>every cycle</td>
+</tr>
+<tr>
+<td>0x47</td>
+<td>ARMING_DISABLE</td>
+<td>low 16 bits of <code>armingDisableFlags</code></td>
+<td>every cycle</td>
+</tr>
+<tr>
+<td>0x40–0x42</td>
+<td>GYRO</td>
+<td>0.1 deg/s, filtered</td>
+<td>odd cycles (4 Hz)</td>
+</tr>
+<tr>
+<td>0x43–0x45</td>
+<td>ATT roll/pitch/yaw</td>
+<td>0.1 degree</td>
+<td>every 4th cycle (2 Hz)</td>
+</tr>
+</tbody>
+</table></div>
+<p>The worst cycle is 53 bytes, under the receiver’s 64-byte buffer (encoding in <a href="../../protocol/PROTOCOL.md"><code>protocol/PROTOCOL.md</code></a>, “Patched Betaflight hub fields”). The first image flashed fine and then reported <code>NO_GYRO</code>: the bare MATEKF411RX target only builds the MPU6000 driver and this Tinyhawk has an ICM20689, which the stock cloud build includes. A second patch adds that driver to the target. Image <code>a7c24987</code> (431,488 bytes) found the ICM20689, gyro at 8 kHz. Flashing needs no button: CLI <code>bl</code> reboots into the ROM DFU bootloader and <code>dfu-util</code> writes the image. The same command writes the stock 4.2.11 image back (<code>recovery/</code>, sha256 <code>bb32b85a…12fc5</code>). Flashing wipes the config, so the transmitter ID 66,178, hop table, offset -32, <code>feature TELEMETRY</code> and LEDs off were replayed and checked against <code>diff all</code> (<code>bench/d8-tx/results/betaflight-patch/</code>).</p>
+<p>Over the radio a 90 s run answered 207 of 208 triggers. The drone sitting level read <strong>ACC -28.1, -46.7, +1004.5 milli-g</strong> (Z 1003–1006), gyro within ±0.6 deg/s, attitude roll -2.7°, pitch +1.6°, yaw 359.3°, and STATUS mostly 2 (ANGLE). All stock fields still arrived. Field counts came out 4:2:1 (ACC 52, gyro 26, attitude 13), the ratio the patch intends, but the absolute rates are capped by one reply every 48 slots (about 19 hub bytes a second), not by the drone. Since the new fields share that budget, each stock field updates about 30% less often per trigger. The patch’s 8/4/2 Hz would need a trigger every ~10 slots; that was not measured.</p>
+<figure>
+<a href="img/tx-evidence/tlm-hub-acc-gyro.png"><img loading="lazy" src="img/tx-evidence/tlm-hub-acc-gyro.png" alt="Two panels over a 60 s run: ACC X and Y near -28 and -46 milli-g and Z near 1005 milli-g; gyro X, Y, Z between -0.1 and 0.2 deg/s." /></a>
+<figcaption>Figure 15 (<a href="img/tx-evidence/tlm-hub-acc-gyro.svg">SVG</a>). Patched ACC and gyro received over the radio by the backend, drone still on the bench, one point per hub update (137 in 60 s). Mean ACC -28.3, -45.9, +1005.7 milli-g. Source: <code>telemetry-stack/e2e/fc_idle.jsonl.gz</code>; <code>plot_telemetry.py</code>.</figcaption>
+</figure>
+<p><strong>Armed over the radio.</strong> STATUS bit 0 is Betaflight’s own armed flag, so the controller can show ARMED without a USB cable. In the arm test (allow arm, throttle low, channel 7 high for 10 s), MSP over USB saw the arm 0.15 s after the switch and the radio 0.63 s after it; disarm took 0.18 s and 1.01 s.</p>
+<figure>
+<a href="img/tx-evidence/tlm-armed-bit.png"><img loading="lazy" src="img/tx-evidence/tlm-armed-bit.png" alt="Three step traces: arm switch high from 14.0 to 24.0 s, MSP armed from 14.17 to 24.20 s, hub STATUS armed from 14.65 to 25.03 s." /></a>
+<figcaption>Figure 16 (<a href="img/tx-evidence/tlm-armed-bit.svg">SVG</a>). The arm switch sent, Betaflight’s armed flag read over USB, and STATUS bit 0 received over the radio. Source: <code>results/betaflight-patch/armtest_log.csv</code>, <code>armtest_events.json</code>; <code>plot_telemetry.py</code>.</figcaption>
+</figure>
+<p>Through the backend the radio lagged MSP by 0.73 s on arm and 0.37 s on disarm. With no USB at all (<code>nofc_arm</code>), it showed armed 1.26 s after the command and disarmed 1.9 s after, with <code>armed_source</code> “patched”. Replies come only every 432 ms, which probably accounts for most of the lag; it is good for an indicator, not for a safety interlock. With stock firmware the library falls back to inferring arm state from the RPM field, which in several cases can only answer <code>None</code> (<code>PROTOCOL.md</code> lists them).</p>
+<p><strong>Blackbox over USB.</strong> Section 8 ended with blackbox as the way to measure a hop. This flight controller has no flash chip and no SD card, so blackbox can only go to a serial port, and I used the USB VCP, shared with MSP (<code>bench/blackbox/README.md</code>). I enabled it there (<code>serial 20 129 … 2000000</code>, the only line of <code>diff all</code> that changed) and wrote a capture, decode and plot tool in <a href="../../tools/blackbox/"><code>bench/blackbox/</code></a>.</p>
+<p>One armed session worked, about 15 s of scripted roll, pitch and yaw sweeps. It decoded with Betaflight’s <code>blackbox_decode</code> to <strong>13,655 frames, 0 failed, at 954 Hz</strong> over 14.31 s (<code>bench/blackbox/results/bench/</code>). The start of the header was lost (see below), so <code>reconstruct_header.py</code> rebuilt it from Betaflight 4.2’s field rules for this config; that variant is the only one that decodes cleanly (variants without <code>rssi</code> or <code>axisD[2]</code> decode to 30 Hz of garbage), and the captured tail of the header matched it. rcCommand follows the script, ±300 on each axis in turn, except the first ~0.9 s: <code>rxSignalReceived</code> was 0 from 0.081 to 0.922 s, so the first roll ramp is missing.</p>
+<figure>
+<a href="img/tx-evidence/blackbox-session1.png"><img loading="lazy" src="img/tx-evidence/blackbox-session1.png" alt="Three panels over 14 s: rcCommand roll, pitch and yaw sweeping ±300 in turn; setpoint following at about ±170 deg/s; four motor outputs swinging between about 180 and 2047." /></a>
+<figcaption>Figure 17 (<a href="img/tx-evidence/blackbox-session1.svg">SVG</a>). The one good blackbox log. The gyro (not shown) stays within ±1 because the drone sat still. The motors swing to full with props off because nothing moves, so the I-term winds up under airmode; the ESCs were unpowered. Throttle rcCommand stays at 1000–1001 for throttle sent up to 1150 µs, which is the throttle curve of this rate profile (thr_mid 0, thr_expo 100). Source: <code>bench/blackbox/results/bench/bb_session1_reconstructed.01.csv</code>; <code>plot_telemetry.py</code>.</figcaption>
+</figure>
+<p><strong>The USB hang, still open.</strong> On this F4, Betaflight 4.2 reopens the VCP with <code>usbVcpOpen()</code> whenever the port changes owner: on arm, when blackbox takes it from MSP, and on disarm, when MSP gets it back. That pulls D+ low for 200 ms and reinitialises USB (<code>drivers/serial_usb_vcp.c:219</code>, <code>drivers/usb_io.c:69</code>). macOS does not re-enumerate, so the port goes silent. A host-side libusb reset (<code>usbreset.py</code>) brings it back; with one reset per arm the data flowed, but the start of the header was already gone, which is why it had to be rebuilt. A later two-session run reset the port on every 1.5 s of silence, and that wedged the flight controller: no USB and no radio telemetry (21 triggers, 0 replies); it needs a physical unplug and replug. That the repeated resets caused it is likely but not proven. So blackbox over the shared VCP is not a routine setup here. The options are a UART logger such as an OpenLager, or a Linux host, which might re-enumerate after the D+ pulse; neither is tested. The blackbox-on-VCP setting is still saved on the drone, and must be reverted (<code>bench/blackbox/results/NOTES.md</code>, “MORNING STEP”) before MSP or <code>d8tx.server</code> work normally again.</p>
+<p><strong>Fast attitude and gyro (patch 0003).</strong> Hub bytes were too slow: at one reply per 432 ms, gyro refreshed every ~3.5 s and attitude every ~7 s. Patch 0003 makes the drone’s reply carry a 10-byte block of roll/pitch/yaw and gyro x/y/z (<code>cnt</code> = 0x8A, format in <code>PROTOCOL.md</code>) in two of every three replies, and the stack now polls every 12 slots (about 8.5 replies/s). Flashed build <code>c3f351e4</code>, 60 s bench link, drone on USB, no battery:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th></th>
+<th>before (a7c24987, every 48 slots)</th>
+<th>after (c3f351e4, every 12 slots)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>replies/s</td>
+<td>2.3</td>
+<td>8.5</td>
+</tr>
+<tr>
+<td>gyro/attitude refresh</td>
+<td>0.29 / 0.14 Hz (3.5 s / 7 s)</td>
+<td>5.7 Hz (p50 0.12 s, p95 0.23 s)</td>
+</tr>
+<tr>
+<td>request-to-decoded latency</td>
+<td>0.31 s</td>
+<td>0.10 s</td>
+</tr>
+<tr>
+<td>ACC / STATUS refresh</td>
+<td>~1.7 s</td>
+<td>~1.5 s</td>
+</tr>
+<tr>
+<td>MSP RSSI, failsafe, ch8 lag p50</td>
+<td>0 failsafe, 0.02 s</td>
+<td>0 failsafe, 0.02 s (p95 0.04 s)</td>
+</tr>
+</tbody>
+</table></div>
+<p>The radio values agree with MSP_ATTITUDE (-1.8, 1.2 deg vs -18, 12 deci-deg) and gyro within noise. The same patch carries the hub-timer-stall guard, but the 36-minute idle condition was not re-tested. Evidence: <code>bench/d8-tx/results/fast-telemetry/e2e/</code>.</p>
+<p><strong>What this does not show.</strong> No flight with telemetry, and nothing on battery: the battery fields all read 0. The 8/4/2 Hz hub rates were not measured, only their ratio. The hub stall in the 10-minute run is explained by a model and by timing, but the reply byte counts were not logged and the fix (a guard in the patched firmware) is not built. The blackbox result is one 14 s log on the bench, with a rebuilt header, and the setup that produced it also hung the flight controller.</p>
+<h3 id="binding-over-the-air-with-an-identity-of-its-own">10. Binding over the air, with an identity of its own</h3>
+<p>Sections 7 to 9 never bound anything. The ESP32 sent the E8’s transmitter ID and hop table, which the drone had stored when it was bound to the real E8. That works for one drone, as long as nobody turns the E8 on, and it means every DevKit built from this repository would pretend to be the same E8. So each DevKit now has an identity of its own and binds the drone to it, the way a FrSky transmitter does.</p>
+<p><strong>Identity.</strong> On its first boot the firmware draws a random transmitter ID (two bytes, <code>txid</code>) and a hop-table start and step with <code>esp_random</code>, and stores the four bytes in NVS (namespace <code>d8tx</code>, key <code>ident</code>; <a href="../../protocol/PROTOCOL.md"><code>PROTOCOL.md</code></a>, “Bind”). The table is entry 0 = 0, the bind channel, then entry i = (start + step·i) mod 256 for i = 1..46. <code>ID</code> prints the identity, <code>ID new</code> draws another one, and <code>ID xxxx s t</code> loads a given one, which keeps the E8 clone possible (<code>ID 42b2 2 55</code>). <code>INFO</code> reports the txid, and the links match telemetry replies against it instead of the old constant 0x42B2.</p>
+<p><strong>What Betaflight expects.</strong> A D8 bind packet is the same 18-byte frame with a different layout: <code>11 03 01 txid0 txid1 idx h[idx] … h[idx+4] 00 … 01</code> plus the CRC, that is the transmitter ID and the five hop-table entries starting at <code>idx</code>. The firmware’s <code>BIND</code> command sends one per 8.994 ms slot on hop channel 0 (plus the current <code>FOFS</code>), with idx cycling 0, 5, …, 45, so the whole table goes out every 10 slots, about 90 ms. It does not hop, and it stops on <code>STOP</code> or after 30 s.</p>
+<p>On the drone, Betaflight 4.2’s bind state machine (<a href="https://github.com/betaflight/betaflight/blob/4.2.11/src/main/rx/cc2500_frsky_shared.c"><code>cc2500_frsky_shared.c</code></a>, <code>frSkySpiDataReceived</code>) goes bind requested → tuning → Bind1 → Bind2 → complete. Tuning listens on channel 0 with address filter 0x03, sweeps the CC2500’s frequency offset register (FSCTRL0) from −126 to +126 in steps of 5, one step every 50 ms, and keeps the first offset at which a bind packet arrives with a good CRC and LQI above 50. So the receiver tunes itself to whatever carrier the transmitter really has, and the FOFS correction of Section 7 should no longer be needed. Bind1 takes the idx-0 packet (txid and entries 0–4); Bind2 takes idx 5, 10, … strictly in order and ends at the first 0 at idx 45 or later, which gives a 47-entry list. Then it writes the result to EEPROM itself. Before any radio test, <code>firmware/test/test_packet.c</code> runs a C port of Betaflight’s <code>getBind1</code> and <code>getBind2</code> (<a href="../../firmware/test/bf_bind_port.c"><code>bf_bind_port.c</code></a>) over the firmware’s own bind frames, for the E8 identity and 200 generated ones, starting at every idx, and checks that it recovers the txid and the full hop list.</p>
+<p><strong>Hop tables that look like D8.</strong> The first rule for a generated table only asked for 46 distinct entries inside the LO range (2 to 246). That also accepts small steps: steps 1–5 and 251–255 pack all 47 hops into a narrow slice of the band. The identity the drone was first bound to on the bench (below) was one of these, step 254, every second channel from 115 to 205. A real D8 table spreads over the whole band, so that a narrowband interferer costs a few hops rather than most of them. Generated identities now follow the rules of the reference transmitter implementation, Multiprotocol’s FrSkyD: consecutive hops at least 30 channels (about 9 MHz) apart, no unused gap wider than 32 channels between channels 2 and 234, no entry above 234 or equal to 0x5a or 0xdc, and a first txid byte other than 0x00, 0x03 and 0xff. 142 of the 65,536 start and step pairs pass (steps 43, 65, 73, 84, 103 and 110 and their negatives). <code>ID xxxx s t</code> keeps the permissive rule, so clones like the E8 table still load.</p>
+<p><strong>The bench bind.</strong> All in <a href="../../experiments/15-ota-bind/data/SUMMARY.md"><code>bench/d8-tx/results/bind/SUMMARY.md</code></a>; props off, drone on USB power, arming disallowed in every link. The DevKit drew <code>txid=6ff3 start=205 step=254</code> on its first boot and still had it after a reset. With <code>BIND 30</code> running at FOFS 0, I typed <code>bind_rx</code> into the drone’s Betaflight CLI. Four seconds later <code>get frsky_spi</code> showed the new identity, saved by the receiver code without a <code>save</code>:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th></th>
+<th>before (E8)</th>
+<th>after (ESP32)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>frsky_spi_tx_id</code></td>
+<td>66,178</td>
+<td>111,243 (= 0x6f, 0xf3)</td>
+</tr>
+<tr>
+<td><code>frsky_spi_offset</code></td>
+<td>−32</td>
+<td>4 (3 in a second bind)</td>
+</tr>
+<tr>
+<td><code>frsky_spi_bind_hop_data</code></td>
+<td>E8 table</td>
+<td>0, 203, 201, …, 115, 113 = (205 + 254·i) mod 256</td>
+</tr>
+</tbody>
+</table></div>
+<p>Those three lines are the only difference between the <code>diff all</code> before and after. The receiver’s offset moved by +36 steps, about +57 kHz. That is the same correction the cloned binding had needed from the transmitter side, FOFS −50 to −75 kHz in Sections 7 and 9, now made by the receiver. The binding survives a reboot and also works without one: in the second bind, driven from the TypeScript link with the flight controller still sitting in the CLI, the link that followed got 90.9% of telemetry triggers answered.</p>
+<p><strong>FOFS 0 is now the right offset.</strong> Four 60 s links followed the first bind, telemetry on, fixed sticks read back over MSP:</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Power</th>
+<th>FOFS</th>
+<th>Triggers</th>
+<th>Replies</th>
+<th>Catch</th>
+<th>Drone RSSI</th>
+<th>RC readback</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>127</td>
+<td>0</td>
+<td>534</td>
+<td>507</td>
+<td><strong>94.9%</strong></td>
+<td>−67.6 dBm</td>
+<td>238/238 exact</td>
+</tr>
+<tr>
+<td>127</td>
+<td>−75 kHz</td>
+<td>619</td>
+<td>451</td>
+<td>72.9%</td>
+<td>−70.2 dBm</td>
+<td>238/238 exact</td>
+</tr>
+<tr>
+<td>30</td>
+<td>0</td>
+<td>662</td>
+<td>431</td>
+<td>65.1%</td>
+<td>−81.8 dBm</td>
+<td>235/235 exact</td>
+</tr>
+<tr>
+<td>30</td>
+<td>−75 kHz</td>
+<td>702</td>
+<td>371</td>
+<td>52.8%</td>
+<td>−86.2 dBm</td>
+<td>239/239 exact</td>
+</tr>
+</tbody>
+</table></div>
+<p>The −75 kHz offset that Section 9 needed for the cloned binding now costs packets at both powers. So the default offset in the libraries went back to 0, and <code>D8Link.bind()</code> sends <code>FOFS</code> before <code>BIND</code>: the receiver locks to whatever offset the bind packets had, so a bind at −75 kHz left over from an earlier link, followed by links at 0, would mis-tune it. In every run the sender held 111.18 Hz with no skipped slot, RX failsafe never came back after lock, and the drone never armed. Power 30 is near the receiver’s sensitivity edge on this bench, so comparisons use 127. One earlier power-30 run, not in the table because its log was overwritten, ended at about 52 s with <code>link_end why=err</code>: the torn UART line of Section 12.</p>
+<p><strong>One click.</strong> Typing <code>bind_rx</code> into a CLI was the last manual step. Betaflight also has an MSP v2 command, <code>MSP2_BETAFLIGHT_BIND</code> (0x3000), the one Betaflight Configurator’s “Bind receiver” button sends, and on this 4.2.11 build it puts the SPI receiver into bind mode with no CLI and no reboot. The app’s Bind button runs the rest (<code>bind()</code> in <a href="../../packages/core/src/worker/host.ts"><code>packages/core/src/worker/host.ts</code></a>): it pauses the link, sends <code>FOFS</code> and <code>BIND 40</code> to the DevKit, then <code>MSP2_BETAFLIGHT_BIND</code> to the drone over its USB, waits 6 s, stops the bind packets and starts a short link with arming disallowed. It reports the drone bound when a telemetry reply carrying the DevKit’s txid arrives within 5 s or, failing that, when the drone’s own MSP status shows its receiver out of failsafe. The bench notes record it working on 3 of 3 binds (<a href="../../.ru/memories/betaflight-drone-firmware.md"><code>.ru/memories/betaflight-drone-firmware.md</code></a>). The app runs of Section 13 used a newer identity, txid <code>3537</code>, and the drone answered it: telemetry is only decoded when the reply carries the DevKit’s own txid.</p>
+<figure>
+<a href="../diagrams/bind.svg"><img loading="lazy" src="../diagrams/bind.svg" alt="The one-click bind: the worker sends FOFS 0 and BIND 40 to the ESP32 and MSP2_BETAFLIGHT_BIND to Betaflight; the ESP32 keys bind packets on channel 0; the CC2500 sweeps its offset, locks, takes Bind1 and Bind2, saves; then a confirm link waits for a telemetry reply with this txid." /></a>
+<figcaption>Figure 18 (<a href="../diagrams/bind.excalidraw">source</a>). The one-click bind across the laptop, the DevKit and the drone, and the confirm link that follows it.</figcaption>
+</figure>
+<p><strong>What this does not show.</strong> One drone, one bench, and a handful of binds; I did not test binding at a distance, with a second drone, or with the drone’s physical bind button. The 6 s bind window is about the 2–5 s the receiver took, not a measured margin.</p>
+<h3 id="a-browser-app-with-no-backend">11. A browser app with no backend</h3>
+<p>Section 8’s controller needed Python on the laptop: a FastAPI server owned the serial port and the 9 ms sender, and the page talked to it over a WebSocket. That is one more program to install and keep running. Everything now runs in the browser instead, or in an Electron shell around the same build (<a href="../../ARCHITECTURE.md"><code>ARCHITECTURE.md</code></a>). The firmware protocol did not change.</p>
+<p><strong>The worker owns the cadence.</strong> Everything with a deadline runs in a Web Worker (<a href="../../packages/core/src/worker/host.ts"><code>packages/core/src/worker/host.ts</code></a>): <code>D8Link</code>, a TypeScript port of the Python link, writes one <code>S</code> line per 8.994 ms slot on absolute deadlines, triggers and decodes telemetry and acks its id, and a poller reads the flight controller over MSP. The React page only posts stick and settings intents and draws the state the worker posts back at 50 Hz. A stalled page does not stall the link, and if the page says nothing for 2.5 s the worker disarms and centres the sticks while the link stays up.</p>
+<p><strong>Both boards over Web Serial.</strong> Chrome and Edge reach serial ports directly. The worker tells the boards apart by USB vendor and product ID (<a href="../../packages/serial/src/web.ts"><code>packages/serial/src/web.ts</code></a>): the DevKit by its USB bridge (CP2102 10c4:ea60, or a CH340 or CH9102), the flight controller by the STM32 virtual COM port, 0483:5740. The same core runs in Node behind a serial adapter, which is what the Electron app, the bench scripts and the hardware tests use.</p>
+<p><strong>The demodulator in WebAssembly.</strong> The telemetry decoder was Python. For the browser it is now a small C demodulator, <a href="../../demod/src/d8demod.c"><code>demod/src/d8demod.c</code></a>, with no libc, built three ways: WebAssembly for the apps (it imports only <code>atan2f</code>, <code>sinf</code>, <code>cosf</code> and <code>floorf</code>), native for tests, and a compile check for the ESP32. <code>make -C demod check</code> runs the WebAssembly build in Node over the 14 I/Q captures in <a href="../../protocol/captures/"><code>protocol/captures/</code></a> (real int8 replies, the same replies requantized to int4, and noise) and compares with the Python decoder’s output: the same packet bytes from every capture, and carrier offsets that agree to the 0.1 Hz printed, <code>14 captures, 0 failures</code>.</p>
+<p><strong>One spec, shared vectors.</strong> <a href="../../protocol/PROTOCOL.md"><code>protocol/PROTOCOL.md</code></a> is the only description of the wire format, and the golden vectors next to it in <a href="../../protocol/vectors/"><code>protocol/vectors/</code></a> (commands, replies, telemetry headers, hub frames, MSP frames, the telemetry-id rule) are generated from the Python package. The firmware tests (<code>firmware/test/test_vectors.c</code>), the TypeScript tests (<code>packages/core/src/vectors.ts</code>) and the Python tests all read them, so an implementation that drifts from the others fails its own tests.</p>
+<p><strong>Auto link and persistence.</strong> The worker behaves like a radio: while the DevKit is connected it keeps a link running with the current settings. It starts the link on connect, restarts it when a setting changes (never under an armed drone: the change waits for disarm), and after a lost port or link it reconnects with backoff from 250 ms to 3 s. Every start or restart holds the arm channel low until the page sends a disarmed frame. Settings and the chosen ports are saved, so a reload or an app restart reconnects by itself.</p>
+<p><strong>Exclusive ports.</strong> Each serial port has one owner. Web Serial opens ports exclusively, and the Node adapter sets <code>TIOCEXCL</code> to behave the same way (<a href="../../packages/serial/src/node.ts"><code>packages/serial/src/node.ts</code></a>). A second tab or app that tries gets “in use by another app or tab” and retries every 2 s, so closing the first one hands the boards over.</p>
+<p><strong>Flashing from the app.</strong> The page also installs and updates the DevKit firmware, with esptool-js over the same Web Serial port (<a href="../../packages/ui/src/flash/"><code>packages/ui/src/flash/</code></a>). It writes only the bootloader, partition table and app, never erases the whole flash, refuses any image that would overlap NVS (0x9000–0xF000), and checks each image by MD5, so the identity of Section 10 survives an update and the drone stays bound. <code>INFO</code> reports a version with a source hash, and the button reads Install, Update or Reinstall accordingly. The bundled images are release builds, which leave out the single-channel and tone bench modes of Sections 1 to 5 (<a href="#regulatory-status">Regulatory status</a>).</p>
+<figure>
+<a href="../diagrams/overview-control.svg"><img loading="lazy" src="../diagrams/overview-control.svg" alt="The control path from a key press to the motors: React UI and the worker’s D8Link sender on the laptop, Web Serial and USB to the CP2102, the firmware’s line parser, packet and CRC, the Wi-Fi PHY’s tone generator and LO as a 2-FSK transmitter, then the drone’s CC2500, Betaflight and motors." /></a>
+<figcaption>Figure 19 (<a href="../diagrams/overview-control.excalidraw">source</a>). The control path, one packet every 8.994 ms. Blue runs in the browser, grey is the operating system and USB, green is firmware.</figcaption>
+</figure>
+<figure>
+<a href="../diagrams/timeline.svg"><img loading="lazy" src="../diagrams/timeline.svg" alt="Three slots to scale: the ESP32 sends a 6.70 ms trigger packet in slot k, skips slot k+1 and captures 9 ms on its channel while the drone replies 1.38 ms after the trigger ends, then sends normally in slot k+2." /></a>
+<figcaption>Figure 20 (<a href="../diagrams/timeline.excalidraw">source</a>). A telemetry trigger, to scale. Every 12 slots or more, the slot after a trigger is a listen slot.</figcaption>
+</figure>
+<figure>
+<a href="../diagrams/overview-telemetry.svg"><img loading="lazy" src="../diagrams/overview-telemetry.svg" alt="The telemetry path: the drone’s reply through the ESP32’s receive chain, boxcar decimation and int4 packing in the firmware, over the UART to the Web Worker, CRC-32 check, the WASM demodulator, and the reply fields to the React UI, with a TID ack back to the ESP32." /></a>
+<figcaption>Figure 21 (<a href="../diagrams/overview-telemetry.excalidraw">source</a>). The telemetry path back, about 8.5 replies a second, decoded in the browser.</figcaption>
+</figure>
+<h3 id="what-the-hardware-found">12. What the hardware found</h3>
+<p>The TypeScript core was tested against a simulated DevKit first. The real hardware turned up four problems the simulation did not have; the first two are now simulated too (<a href="../../packages/serial/src/mock.ts"><code>packages/serial/src/mock.ts</code></a>), so the tests cover them.</p>
+<p><strong>STAT goes unanswered while a capture ships.</strong> While linked, the firmware skips a <code>STAT</code> request without a reply if it is busy shipping a telemetry capture over the UART. With telemetry on, that was about 75% of them, so the status poll timed out most of the time. The host now resends an unanswered <code>STAT</code> after 120 ms (<code>STAT_RESEND_MS</code> in <a href="../../packages/core/src/link.ts"><code>packages/core/src/link.ts</code></a>) and when a capture ends (<a href="../../.ru/memories/d8tx-link-uart-limits.md"><code>.ru/memories/d8tx-link-uart-limits.md</code></a>).</p>
+<p><strong>A host stall overflows the UART FIFO.</strong> The firmware keys a packet, or listens for a reply, with interrupts off, for up to about 11.3 ms. During that time the only buffer for incoming bytes is the ESP32’s 128-byte hardware UART FIFO. A sender that falls behind (a busy laptop, a slow worker turn) and then catches up in a burst writes three <code>S</code> lines and a <code>TID</code> at once, 129 bytes. The last byte is lost, the firmware reads a torn line, answers <code>ERR unknown cmd</code>, and ends the link with <code>link_end why=err</code>. That is the power-30 run that died at 52 s in Section 10. The sender now never writes two <code>S</code> lines closer than 0.8 slot apart (<code>SENDER_MIN_SPACING</code>), so it catches up gradually; two <code>S</code> lines plus a <code>TID</code> and a <code>STAT</code> fit.</p>
+<p><strong>A link left running.</strong> Closing a tab or killing the app does not stop the DevKit, so the next session can find the firmware still linked from the previous one. While linked, any request other than <code>S</code>, <code>STOP</code> and <code>STAT</code> ends the link and gets <code>ERR busy</code>. The start sequence now treats that as expected: its first <code>FOFS</code> ends the old link, and the retry lands on an idle firmware. A timeout at that point is also retried, because opening the port can reset the ESP32 and it may still be booting.</p>
+<p><strong>Closing the port hung Node.</strong> In the desktop app and the Node tests, closing the DevKit’s port after a streaming session could block the whole main thread for a minute or more inside the macOS kernel, in <code>close</code> on the CP2102 driver. The cause was the way the port was configured: running <code>stty</code> as a child process on the port’s own file descriptor cleared its non-blocking flag, so a read could sit in the threadpool and pin the descriptor. The port is now configured through a second, short-lived descriptor, and closing stops issuing reads and writes, waits for the ones in flight, flushes both tty queues and only then closes (<a href="../../packages/serial/src/node.ts"><code>packages/serial/src/node.ts</code></a>).</p>
+<p>Two smaller findings from the validation runs: the firmware’s <code>slots</code> counter only counts keyed slots, so with telemetry on it reads about 90% of elapsed slots by definition, not because of loss; and a minimized Electron window still reports itself visible (with background throttling off), so the page’s “hidden tab disarms” rule never fires in the desktop app (<a href="../../experiments/14-app-validation/data/validation-report.md"><code>docs/validation/d8tx-web-desktop.md</code></a>).</p>
+<h3 id="validation-of-the-app">13. Validation of the app</h3>
+<p>The app was checked on the bench by a test harness that drives the real Electron app with Playwright (<a href="../../apps/desktop/e2e/run.mjs"><code>apps/desktop/e2e/run.mjs</code></a>) and clicks the same buttons a user would. A tap inside the worker observes, without changing, every line to and from the DevKit and every MSP reply from the drone. Drone on USB, props off, no battery (MSP reported 0 cells, 0.0 V). Write-up of the runs: <a href="../../experiments/14-app-validation/data/validation-report.md"><code>docs/validation/d8tx-web-desktop.md</code></a>; raw results: <a href="../../experiments/14-app-validation/data/e2e-results/"><code>apps/desktop/e2e/results/</code></a>.</p>
+<p><strong>Ten minutes, window minimized.</strong> Link at power 127, telemetry on, arming disallowed, window minimized 3 s after the start (<code>soak-2026-11-09T18-22-51-299Z.json</code>). This run was before the bind work, so it used the cloned E8 identity at FOFS −75 kHz.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th></th>
+<th>Measured</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>S</code> lines written</td>
+<td>64,409 (106.5 a second), longest gap 24.4 ms, none over 50 ms</td>
+</tr>
+<tr>
+<td>Keyed slots, firmware count</td>
+<td>61,921 against 61,716 expected from the elapsed time minus listen slots (ratio 1.003)</td>
+</tr>
+<tr>
+<td>Link lost</td>
+<td>0; the link ended with <code>why=stop</code> when the harness pressed Stop</td>
+</tr>
+<tr>
+<td>Telemetry</td>
+<td>5,100 replies to 5,312 triggers (96.0%), 506–512 a minute; reply age under 1 s in every 1 Hz sample</td>
+</tr>
+<tr>
+<td>Flight-controller attitude over MSP</td>
+<td>10.73 Hz</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Arm, throttle, disarm, port loss</strong> (<code>arm-2026-11-09T18-35-15-559Z.json</code>, window visible, max throttle set to 15%). Holding <code>R</code> for 1.2 s armed Betaflight; holding <code>W</code> took throttle to the 1150 µs cap in 1.0 s, and the drone’s MSP RC channels read 1150 and arm channel 2000 while the prop-less motors spun up. <code>X</code> disarmed within 309 ms (the MSP status poll interval) and the motors went back to 1000. Then, armed again, the harness made the DevKit’s port fail the way an unplug does (every read and write rejects). The worker reported the link lost 11 ms later, the page showed “Link lost: DevKit port closed” at 12 ms and DISARMED at 16 ms. With no more <code>S</code> lines the firmware stopped transmitting after its 300 ms timeout, and Betaflight went to failsafe at about 1.05 s, motors to 1000 at about 1.31 s and disarmed by about 1.57 s, its own failsafe timing.</p>
+<p><strong>Auto link</strong> (<code>autolink-2026-11-09T20-45-56-554Z.json</code>, after the bind, txid <code>3537</code>, FOFS 0, arming disallowed):</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Event</th>
+<th>Link up</th>
+<th>Telemetry flowing</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Connect the DevKit</td>
+<td>197 ms</td>
+<td>831 ms</td>
+</tr>
+<tr>
+<td>Power changed in Settings (incl. the page’s 600 ms debounce; <code>STOP</code>, <code>FOFS 0</code>, <code>LINK 100 300</code>)</td>
+<td>690 ms (down at 638 ms)</td>
+<td>5.6 s</td>
+</tr>
+<tr>
+<td>Simulated port loss (seen lost at 54 ms)</td>
+<td>565 ms</td>
+<td>3.6 s</td>
+</tr>
+<tr>
+<td>Page reload, settings kept</td>
+<td>337 ms</td>
+<td>1.3 s</td>
+</tr>
+<tr>
+<td>App quit (214 ms) and restart, settings kept, drone reconnected</td>
+<td>1.19 s</td>
+<td>1.66 s</td>
+</tr>
+</tbody>
+</table></div>
+<p>Times are from the action to the worker’s state. I did not break down why telemetry takes seconds longer than the link after a settings change or a port loss.</p>
+<p><strong>A second instance.</strong> With app A linked, a fresh app B tried to connect both boards. B showed “DevKit in use” after 91 ms and the drone’s USB in use after 118 ms, and kept retrying. Over the next 20 s, A’s link carried on undisturbed: 101.8 keyed slots and 6.7 telemetry replies a second, no link loss. When A was closed, B took both boards over and had the link up in 1.74 s and telemetry in 1.95 s.</p>
+<p><strong>With the ESP32’s own identity.</strong> A 2-minute minimized run after the bind (<code>soak-2026-11-09T20-47-17-909Z.json</code>, txid <code>3537</code>, FOFS 0) held the sender the same way (longest <code>S</code> gap 23.9 ms, no link loss), but answered only 946 of 1,292 triggers, <strong>73.2%</strong>, against 96.0% in the 10-minute run and 94.9% in Section 10’s bind tests. I have not found why. The identity, the drone’s position and the day’s interference all differ between those runs, and none of them was isolated.</p>
+<p><strong>What this does not show.</strong> No flight from the app: the owner’s piloted flight from Chrome and from the desktop app is not in these results. The Chrome build was not soaked in a background tab, only the Electron app. The port loss was simulated at the stream level; nobody pulled the cable. There is no results file for the in-app firmware flashing, only its tests (<code>packages/ui/src/flash/flash.test.ts</code>). And the battery was never connected.</p>
+<h2 id="regulatory-status">Regulatory status</h2>
+<p>Educational and research use. This is how the project reads under US FCC rules (47 CFR Part 15); it is not legal advice, and <strong>you are responsible for following the regulations where you are</strong> before building or using the transmit code.</p>
+<ul>
+<li><strong>Home-built device (§15.23).</strong> The ESP32 module’s FCC grant covers Wi-Fi and Bluetooth only, so this firmware makes it a home-built intentional radiator: one unit, personal use, not marketed or sold (no boards, kits or pre-flashed units). §15.23 asks for a good-faith engineering effort to meet Part 15 limits, not laboratory measurement.</li>
+<li><strong>All transmit modes are held to §15.249</strong>, the rule the FrSky-compatible EMAX E8 it replaces is certified under (FCC ID <a href="https://fccid.io/2AL7Y-EMAXE8">2AL7Y-EMAXE8</a>): 2400 to 2483.5 MHz, 50 mV/m (94 dBµV/m) average and 114 dBµV/m peak at 3 m, i.e. about -1.25 dBm average and +19 dBm peak EIRP. This covers LINK (hopping), BIND (one channel, at most 30 s) and the bench modes alike.</li>
+<li><strong>The ESP32’s output is estimated, not measured</strong>, by comparison with the E8 (below): about -25 dBm peak EIRP at full power, at least 16 dB under the limit in every run.</li>
+<li><strong>Harmonics and spurious emissions of the ESP32 were not measured</strong>; the design relies on the module’s certified RF output filter.</li>
+<li><strong>Tests were radiated, indoors, at bench range</strong>, with no conducted or lab measurements.</li>
+<li><strong>Release build.</strong> The single-channel and tone bench modes (TONE, ALT, RETUNE, PKT, HOP with <code>n_slots</code>, TCAP keying; Sections 2 to 5) compile only with <code>CONFIG_D8_BENCH=y</code> (default <code>n</code>), so a release build exposes LINK, BIND and housekeeping commands. <code>CONFIG_D8_PWR_MAX</code> caps the power setting, a raw PBUS code, not dBm; it is not calibrated.</li>
+</ul>
+<h3 id="eirp-estimate-from-cc2500-rssi">EIRP estimate from CC2500 RSSI</h3>
+<p>The E8’s certification test report (Shenzhen Tongzhou Testing, report TZ210902562-E, 2021, <a href="https://fccid.io/2AL7Y-EMAXE8/Test-Report/Test-Report-DXX-5536602">on fccid.io</a>, page 24) measured its D8 mode at 3 m: at most 87.15 dBµV/m average and 96.32 dBµV/m peak, which is -8.05 dBm average and about +1.1 dBm peak EIRP (internal antenna, 3 dBi max). Its harmonics were at least 8 dB under the limit.</p>
+<p>The same CC2500 receiver (the MATEK F411RX running <code>rxdiag</code>) reported the signal strength of the real E8 and of the ESP32, from CRC-valid packets in the saved logs (RSSI conversion in <a href="../../protocol/PROTOCOL.md"><code>protocol/PROTOCOL.md</code></a>):</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Mode, power</th>
+<th>Mean RSSI</th>
+<th>Log (under <code>bench/d8-tx/results/</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Real E8</td>
+<td>hopping, 2133 packets</td>
+<td>-32.3 dBm</td>
+<td><code>hop/e8_control/e8_hop_20s.txt</code></td>
+</tr>
+<tr>
+<td>ESP32</td>
+<td>hopping, <code>HOP 556 127</code></td>
+<td>-58.7 dBm (two runs, 510 and 472 packets)</td>
+<td><code>bf_link/offset_tune/runA.txt</code>, <code>runB.txt</code></td>
+</tr>
+<tr>
+<td>Real E8</td>
+<td>fixed 2421.032 MHz</td>
+<td>-32.8 to -36.2 dBm (three controls)</td>
+<td><code>packet/control_e8_2421032.txt</code>, <code>packet/reliability/control_e8*.txt</code></td>
+</tr>
+<tr>
+<td>ESP32</td>
+<td>fixed 2412.000 MHz, <code>PKT ... 127</code></td>
+<td>about -59.5 dBm in 12 batches; -54 in three; -65.9 in the first (7 packets)</td>
+<td><code>packet/reliability/batch*_stm.txt</code>, <code>packet/freqest/batch*_stm.txt</code>, <code>packet/batch1_2412000_stm.txt</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The ESP32 at power 127, the maximum, arrives about <strong>26 dB below</strong> the E8 (18 to 33 dB across all runs). The CC2500 reads power while a packet is on air, so the comparison is against the E8’s peak: the ESP32 is about <strong>-25 dBm peak EIRP</strong>, -32 to -17 dBm across runs. Even the highest run is about 16 dB under the -1.25 dBm average limit (a continuous tone’s average equals its peak) and far under the peak limit. The estimate is not a measurement: distance, orientation and antennas were not controlled, the RSSI is uncalibrated, the ESP32 level moved about 5 dB between sessions, and our E8 unit may not radiate exactly what the tested sample did. The margin is larger than these uncertainties are likely to be.</p>
+<h2 id="what-this-does-not-show">What this does not show</h2>
+<ul>
+<li><strong>Shown since:</strong> binding over the air (Section 10), control of stock Betaflight and a scripted takeoff (Section 7), telemetry (Sections 8 and 9), and the browser and desktop app (Sections 11 to 13). <strong>Still not shown:</strong> measured output power, range, piloted flight, or any drone and receiver other than this one Tinyhawk.</li>
+<li><strong>Sections 1–6: not binding, control or flight</strong> (Sections 7–10 cover those). Hopping works against the diagnostic receiver, which was given the hop table directly. No bind exchange and no stock Betaflight receiver were involved: the proof is that a CC2500 with the D8 settings and an independent CRC accepted the packets, not that a model aircraft would.</li>
+<li><strong>Not a calibrated transmitter.</strong> The ±1-step deviation (≈39 kHz) is 23% wider than the stock 31.7 kHz, there is no Gaussian shaping, and the power setting has no verified output level: output power is estimated from receiver RSSI, not measured (see <a href="#regulatory-status">Regulatory status</a>). The packet was radiated within bench range; there is no distance or attenuation information. Frequency accuracy rests on the 100 kHz-granularity scan and a coarse FREQEST. That the packet works says the receiver is tolerant, not that the ESP32 is accurate.</li>
+<li><strong>7/10 was one batch, and partly the receiver.</strong> Section 5 repeats the measurement with the fixed receiver (about 94%); the cause of the remaining misses is open.</li>
+<li><strong>The ESP32’s readback is not RF evidence.</strong> <code>late_bits=207</code> of 208, <code>max_late_ns=1266</code> is timing of the CPU loop. It is small compared with a bit time (~32 µs) but I did not verify it on air.</li>
+<li><strong>Not understood:</strong> why FREQEST at the step-0 tone swings by ±10 kHz, why 3 of 10 packets did not arrive intact, and what produced the single ncs=1 window in the first attempt.</li>
+<li><strong>Betaflight was restored</strong> before Section 7 (stock 4.2.11, config identical to the saved one). No comparison of other receivers was done.</li>
+<li><strong>A tooling bug was fixed after the bench run:</strong> the original <code>compare_p_to_vector</code> expected 20 bytes (including the CRC) and falsely rejected valid 18-byte CC2500 FIFO records. The current <a href="../../tools/d8-tx-host/bench_runner.py"><code>bench_runner.py</code></a> compares the 18-byte body plus the chip’s <code>crc_ok</code> flag; the independent raw-log audit used that criterion.</li>
+</ul>
+<h2 id="reproduce-the-figures">Reproduce the figures</h2>
+<pre class="sh"><code>python3 -m venv /tmp/mpl &amp;&amp; /tmp/mpl/bin/pip install matplotlib   # &gt;=3.5; the only dependency
+/tmp/mpl/bin/python bench/d8-tx/analysis/plot_tx.py               # writes docs/devkitv1/writeup/img/tx-evidence/*.{svg,png}
+/tmp/mpl/bin/python docs/devkitv1/writeup/plot_reliability.py     # Figures 5-7 and the Section 5 numbers
+/tmp/mpl/bin/python docs/devkitv1/writeup/plot_hop.py             # Figures 10-11
+/tmp/mpl/bin/python docs/devkitv1/writeup/plot_latency.py         # Figure 12
+/tmp/mpl/bin/python docs/devkitv1/writeup/plot_telemetry.py       # Figures 14-17 (--summary prints the Section 9 numbers)
+python3 bench/d8-tx/analysis/plot_tx.py --summary                 # numbers only, standard library</code></pre>
+<p>Offline firmware and host tests: <code>python3 -m unittest discover -s bench/d8-tx/tests</code>, <code>firmware/test/run.sh</code>. No RF hardware is needed for any of this. The script reads only files in this repo.</p>
+<p>For Sections 10 to 13: <code>make -C demod check</code> (the WebAssembly demodulator against the Python decoder’s output on <code>protocol/captures</code>), <code>pnpm -r test</code> (TypeScript core, serial adapters, UI). The hardware runs need the DevKit and the drone: <code>node packages/core/scripts/bind-check.ts</code> binds and verifies (<a href="../how-to/bind.md"><code>docs/how-to/bind.md</code></a>), and <code>cd apps/desktop &amp;&amp; node e2e/run.mjs soak 10</code>, <code>node e2e/run.mjs autolink</code> and <code>E2E_ALLOW_ARM=1 node e2e/run.mjs arm</code> (props off) repeat Section 13 (<a href="../../experiments/14-app-validation/data/validation-report.md"><code>docs/validation/d8tx-web-desktop.md</code></a>). To use the app rather than test it, see <a href="../getting-started.md">Getting started</a>.</p>
+<!-- END TX CHAPTER -->
+</main>
+</body>
+</html>

@@ -1,0 +1,49 @@
+set frsky_spi_offset = -20
+frsky_spi_offset set to -20
+# 
+bind_rx
+Binding...
+
+# 
+== DevKit /dev/cu.usbserial-0001, power 127, 30 s, fofs 0, telemetry on, arm disallowed, decoder: wasm
+PING (sync) { proto: 1 }
+INFO { proto: 1, fw: 'd8tx-v1', slot_us: 8994, channels: 47, pwr_max: 127, fofs_max_hz: 200000, timeout_max_ms: 1000, txid: '6ff3' } link.txid [ 111, 243 ]
+ID { txid: '6ff3', start: 205, step: 254 } link.txid [ 111, 243 ]
+bind started (power 127), binding=true; STAT { keyed: 0, link: 0, fofs: 0, armok: 0, bind: 1 }
+bind_end { name: 'bind_end', why: 'stop', slots: 891 }
+bind stopped, binding=false; STAT { keyed: 0, link: 0, fofs: 0, armok: 0, bind: 0 }
+t=5.0 hz=111.2 max_gap=16.1 sent=556 skipped=0 link=1 catch10s=0.889 rssi=-66.7
+t=10.0 hz=111.2 max_gap=16.1 sent=1112 skipped=0 link=1 catch10s=0.932 rssi=-69.3
+t=15.0 hz=111.2 max_gap=16.1 sent=1668 skipped=0 link=1 catch10s=0.923 rssi=-68.4
+t=20.0 hz=111.2 max_gap=16.1 sent=2224 skipped=0 link=1 catch10s=0.874 rssi=-66.7
+t=25.0 hz=111.2 max_gap=16.1 sent=2780 skipped=0 link=1 catch10s=0.892 rssi=-67.6
+t=30.0 hz=111.2 max_gap=16.1 sent=3336 skipped=0 link=1 catch10s=0.924 rssi=-66.7
+link_end { name: 'link_end', why: 'stop', slots: 3074, late_max_us: 453, retune_max_us: 388, gap_max_us: 188, gap50: 184, gap100: 9, gap200: 1, g2_min_us: -271, g2_max_us: 466, trig: 277, retry: 23 }
+STAT { keyed: 0, link: 1, fofs: 0, armok: 0, bind: 0 } events { bind_end: 1, tlm_drop: 23, link: 28, link_end: 1 }
+RESULT sender_hz=111.18 max_gap_ms=16.1 sent=3346 skipped=0 slots=2976 late_max_us=453
+RESULT stat_ok=127 stat_timeouts=0 stat_max_ms=62
+RESULT telemetry triggers=275 decoded_replies=250 tlm_events=0 catch_rate_10s=0.923 total_catch=0.909 rssi_dbm=-66.7 vbat=0
+DevKit PASS
+closing DevKit port
+port closed in 175 ms
+HW CHECK PASS
+get frsky_spi
+frsky_spi_autobind = OFF
+Allowed values: OFF, ON
+
+frsky_spi_tx_id = 111,243
+Array length: 2
+Default value: 0,0
+
+frsky_spi_offset = 3
+Allowed range: -127 - 127
+Default value: 0
+
+frsky_spi_bind_hop_data = 0,203,201,199,197,195,193,191,189,187,185,183,181,179,177,175,173,171,169,167,165,163,161,159,157,155,153,151,149,147,145,143,141,139,137,135,133,131,129,127,125,123,121,119,117,115,113,0,0,0
+Array length: 50
+Default value: 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+frsky_spi_a1_source = VBAT
+Allowed values: VBAT, EXTADC, CONST
+
+# 

@@ -1,8 +1,8 @@
 # d8tx (Python reference library)
 
-Reference implementation of the ESP32 D8 transmitter client, used by bench scripts and to generate the golden vectors in `../protocol/`. The app itself is now TypeScript (`../packages/*`, `../apps/web`, `../apps/desktop`); the FastAPI server (`d8tx.server`) has been removed. Private research code; see Section 8 of the [write-up](../docs/devkitv1/writeup/tx.md).
+Reference implementation of the ESP32 D8 transmitter client, used by bench scripts and to generate the golden vectors in `../protocol/`. The app itself is now TypeScript (`../packages/*`, `../apps/web`, `../apps/desktop`); the FastAPI server (`d8tx.server`) has been removed. Private research code; see Section 8 of the [write-up](../docs/lab-log/tx.md).
 
-> **Educational and research use; check your local regulations.** Transmitting is regulated. This firmware turns a Wi-Fi/Bluetooth-certified module into an intentional radiator outside its grant; transmit power is estimated from receiver RSSI, not measured, and harmonics were not measured. Read the [Regulatory status](../docs/devkitv1/writeup/tx.md#regulatory-status) before using any transmit code; you are responsible for compliance where you are. Default LINK power is a raw code of 127, clamped to the firmware's `pwr_max` (not dBm).
+> **Educational and research use; check your local regulations.** Transmitting is regulated. This firmware turns a Wi-Fi/Bluetooth-certified module into an intentional radiator outside its grant; transmit power is estimated from receiver RSSI, not measured, and harmonics were not measured. Read the [Regulatory status](../docs/lab-log/tx.md#regulatory-status) before using any transmit code; you are responsible for compliance where you are. Default LINK power is a raw code of 127, clamped to the firmware's `pwr_max` (not dBm).
 
 - `../protocol/PROTOCOL.md`: firmware protocol v1 (`LINK`, `S`, `STOP`, `FOFS`, `ARMOK`, `INFO`, `STAT`; replies `OK`/`ERR`, events `EV`).
 - `python/d8tx`: `D8Link` (slot-rate sender, arm gate), `BetaflightMSP`, telemetry decoding.
@@ -38,7 +38,7 @@ Channel 7 (ARM) is gated in the UI, in the library (`allow_arm`, default off) an
 ## Radio telemetry
 
 The ESP32 also listens for the drone's D8 telemetry replies; results and numbers are in Section 9 of the
-[write-up](../docs/devkitv1/writeup/tx.md).
+[write-up](../docs/lab-log/tx.md).
 
 **Turning it on.** `D8Link.start(telemetry=True)` is the default. It sends
 the `TLM` recipe (a trigger every 48 slots, about 2.3 replies/s; `protocol.TLM_RECIPE`) and, unless you pass `fofs_hz`,
@@ -68,12 +68,12 @@ The drone needs `feature TELEMETRY` on for any hub data (A1/RSSI come regardless
 
 ## Patched Betaflight and blackbox
 
-- [`bench/betaflight-patch/`](../bench/betaflight-patch/README.md): Betaflight 4.2.11 for the MATEKF411RX with true
+- [`tools/betaflight-patch/`](../tools/betaflight-patch/README.md): Betaflight 4.2.11 for the MATEKF411RX with true
   milli-g ACC, STATUS/arming flags, gyro and attitude in the hub (IDs in `protocol/PROTOCOL.md`), plus the ICM20689 gyro driver this
   Tinyhawk needs. `./build.sh`, flash with CLI `bl` + `dfu-util`, roll back with `recovery/betaflight_4.2.11_MATEKF411RX.bin`.
-  Flashing wipes the config: replay it per `bench/d8-tx/results/bf_link/RESTORE.md` (tx id 66,178, hop table, offset
-  -32, `feature TELEMETRY`, LEDs off). Bench evidence: `bench/d8-tx/results/betaflight-patch/NOTES.md`.
-- [`bench/blackbox/`](../bench/blackbox/README.md): capture, decode and plot Betaflight blackbox logs over the USB VCP.
+  Flashing wipes the config: replay it per `experiments/08-first-flight-cloned-e8/data/RESTORE.md` (tx id 66,178, hop table, offset
+  -32, `feature TELEMETRY`, LEDs off). Bench evidence: `experiments/10-hub-patch/data/betaflight-patch/NOTES.md`.
+- [`tools/blackbox/`](../tools/blackbox/README.md): capture, decode and plot Betaflight blackbox logs over the USB VCP.
   **Read `results/NOTES.md` first.** On this F4 the VCP re-initialises USB on every arm and disarm and macOS leaves the
   port silent; repeated host USB resets hung the FC. While blackbox-on-VCP is enabled, MSP and the app lose
   the FC after each arm. Revert with `config/revert_serial_vcp.txt` (steps in `NOTES.md`, "MORNING STEP").

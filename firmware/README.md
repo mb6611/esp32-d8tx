@@ -1,6 +1,6 @@
 # firmware
 
-ESP-IDF firmware for the ESP32 DevKit V1 (classic ESP32). It keys an FSK tone through the PHY calibration path to transmit FrSky D8 packets, hops 47 channels on a 8.994 ms slot, receives the drone's telemetry replies, and takes commands over USB serial (`LINK`, `S`, `BIND`, `ID`, `INFO`, `STAT`, ...). Protocol: [protocol/PROTOCOL.md](../protocol/PROTOCOL.md). How the transmit path works: [writeup](../docs/devkitv1/writeup/tx.md).
+ESP-IDF firmware for the ESP32 DevKit V1 (classic ESP32). It keys an FSK tone through the PHY calibration path to transmit FrSky D8 packets, hops 47 channels on a 8.994 ms slot, receives the drone's telemetry replies, and takes commands over USB serial (`LINK`, `S`, `BIND`, `ID`, `INFO`, `STAT`, ...). Protocol: [protocol/PROTOCOL.md](../protocol/PROTOCOL.md). How the transmit path works: [writeup](../docs/lab-log/tx.md).
 
 ## Build and test
 

@@ -1,5 +1,5 @@
-// Copies the writeup (docs/devkitv1/writeup, the only source) into dist/writeup so the app serves it at ./writeup/.
-// The hosted copy only has docs/devkitv1/writeup and docs/diagrams, so the copied index.html is rewritten:
+// Copies the writeup (docs/lab-log, the only source) into dist/writeup so the app serves it at ./writeup/.
+// The hosted copy only has docs/lab-log and docs/diagrams, so the copied index.html is rewritten:
 // diagram images point at ../diagrams/ (copied too), and links to other repo files go to GitHub.
 import { cpSync, rmSync, existsSync, readFileSync, writeFileSync, statSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -7,7 +7,7 @@ import path from 'node:path'
 
 const REPO = 'https://github.com/mb6611/esp32-d8tx/'
 const root = fileURLToPath(new URL('../../../', import.meta.url))
-const src = path.join(root, 'docs/devkitv1/writeup')
+const src = path.join(root, 'docs/lab-log')
 const dist = fileURLToPath(new URL('../dist/', import.meta.url))
 const dest = path.join(dist, 'writeup')
 if (!existsSync(src)) throw new Error('missing ' + src)
