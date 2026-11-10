@@ -23,7 +23,7 @@ ASCII lines at 921600 8N1. Lines end in `\n` (`\r\n` accepted), at most 95 chara
 ## Release and bench command sets
 Release build (`CONFIG_D8_BENCH=n`, the default; `INFO` shows `bench=0`): `LINK`, `S`, `STOP`/`U`, `FOFS`, `ARMOK`, `INFO`, `STAT`, `TLM`, `TLMX`, `PING`, `ID`, `TID`, `BIND`, `HOP 0 <pwr> [timeout_ms]` (continuous 47-channel hop) and receive-only `TCAP` (pwr −1). Every keying command in this set is the 47-channel hopping link or the bind transmission.
 
-Bench build (`CONFIG_D8_BENCH=y`, `INFO` shows `bench=1`) adds the fixed-channel and CW modes: `TONE`, `ALT`, `RETUNE`, `PKT`, `HOP <n_slots> [pwr]` (n_slots > 0) and keyed `TCAP`. `pwr` is optional there (default `pwr_max`). A release build answers them `ERR bench-only` (keyed `TCAP`: `ERR bench-only bench build required`). The bench commands are documented in `firmware/main/d8tone.c` and `docs/devkitv1/writeup/tx.md`; they are for bench experiments, not for flying.
+Bench build (`CONFIG_D8_BENCH=y`, `INFO` shows `bench=1`) adds the fixed-channel and CW modes: `TONE`, `ALT`, `RETUNE`, `PKT`, `HOP <n_slots> [pwr]` (n_slots > 0) and keyed `TCAP`. `pwr` is optional there (default `pwr_max`). A release build answers them `ERR bench-only` (keyed `TCAP`: `ERR bench-only bench build required`). The bench commands are documented in `firmware/main/d8tone.c` and `docs/lab-log/tx.md`; they are for bench experiments, not for flying.
 
 ## Identity
 TX ID and hop table are per ESP: the firmware stores `{txid, start, step}` in NVS, draws a random one on first boot, and `INFO`/`ID` report it (`txid=`, `start=`, `step=`). There is no build-time TXID or hop table. Hosts use the device's `txid` from `INFO`/`ID` (the TS and Python stacks both do; telemetry replies must carry it) and never a constant; see "Bind".
@@ -68,7 +68,7 @@ Reference TX (DIY-Multiprotocol-TX-Module, `Multiprotocol/FrSkyD_cc2500.ino`, `F
 `TONE`, `ALT`, `RETUNE`, `PKT`, `HOP`, `STICKS` still exist but are not part of the API, and only in `CONFIG_D8_BENCH` builds (a release build answers `ERR bench-only`; `HOP 0` stays in release). `pwr` stays optional (default `pwr_max`). They keep their old bare `ERR <why>` replies and `K,...` report lines. `HOP 0 <pwr> [timeout]` is the legacy twin of `LINK`. Changed vs. the earlier bench firmware: `PING` is `OK proto=1` (was `P,d8tone,1`), `STAT` is the v1 form (was `S,keyed=...`), boot line is `EV boot` (was `I,boot`), and the `I,ready` line is gone.
 
 ## Telemetry listen (experiment, off by default)
-Bench-only extension for listening to Betaflight's FrSky D8 telemetry reply. The d8tx library uses it (see "Telemetry in the library"); with `TLM 0` (the boot default) `LINK` behaves exactly as above. Host: `bench/d8-tx/host/tlm_listen.py`.
+Bench-only extension for listening to Betaflight's FrSky D8 telemetry reply. The d8tx library uses it (see "Telemetry in the library"); with `TLM 0` (the boot default) `LINK` behaves exactly as above. Host: `tools/d8-tx-host/tlm_listen.py`.
 
 | Command | Reply | Notes |
 |---|---|---|
@@ -78,7 +78,7 @@ Bench-only extension for listening to Betaflight's FrSky D8 telemetry reply. The
 | `TCAP <khz> [cap_us] [gain] [dec] [pwr]` | `EV tlm ...` + payload, then `OK` | one capture at khz (2404000..2478000) + FOFS, no link. pwr −1 (default) = no keying (receive-only, available in every build); 0..`pwr_max` = key one data packet (counter 0, current sticks) on that frequency first, then capture: exercises the same unkey→capture path. Keying is bench-only: a release build answers `ERR bench-only bench build required`. LO returns to 2412 MHz afterwards |
 
 With `TLM every>0`, slot k of a `LINK` is a trigger when k ≥ every and k % every == 0 (use an every that is not a multiple of 47, e.g. 48, so triggers walk the hop table):
-- The trigger packet has byte 3 = 2 (Betaflight replies when byte3 % 4 == 2) and byte 4 = telemetry id `tid` (0..31; ack=0: +1 per trigger; ack=1: set by the host with `TID`; starts at the idle `TID` value, default 0). All other packets keep byte 3 = 0 and byte 4 = the slot counter: Betaflight reads byte 4 only on trigger packets (it echoes it in the reply and acks hub data when it equals its expected id, last + 1), so data packets are accepted unchanged. With ack=0 a trigger the drone misses puts its hub ack id out of step for up to 32 triggers. With ack=1 the host advances only after a received reply, so it repeats a missed request and, starting out of step, walks into the drone's expected id within 32 received replies. Hub bytes only appear when the receiver has FEATURE_TELEMETRY on; with it off the hub count is always 0 (`bench/d8-tx/host/d8hub.py`).
+- The trigger packet has byte 3 = 2 (Betaflight replies when byte3 % 4 == 2) and byte 4 = telemetry id `tid` (0..31; ack=0: +1 per trigger; ack=1: set by the host with `TID`; starts at the idle `TID` value, default 0). All other packets keep byte 3 = 0 and byte 4 = the slot counter: Betaflight reads byte 4 only on trigger packets (it echoes it in the reply and acks hub data when it equals its expected id, last + 1), so data packets are accepted unchanged. With ack=0 a trigger the drone misses puts its hub ack id out of step for up to 32 triggers. With ack=1 the host advances only after a received reply, so it repeats a missed request and, starting out of step, walks into the drone's expected id within 32 received replies. Hub bytes only appear when the receiver has FEATURE_TELEMETRY on; with it off the hub count is always 0 (`tools/d8-tx-host/d8hub.py`).
 - stream=1: with `TLM every>0`, slot k is a trigger when k ≥ the previous trigger + every and the previous capture has gone out (and, with ack=1, its `TID` arrived), instead of k % every == 0.
 - Right after the trigger packet's last bit (same critical section) the radio is unkeyed, retuned to the listen channel (default: next table entry, because Betaflight calls `nextChannel(1)` before it transmits the reply ~1380 µs after the packet), the RX gain is set, and a 16 MS/s ring capture runs for cap_us, boxcar-decimated by dec on the CPU. Slot k+1 is never transmitted (the reply occupies it); after the capture the link resumes at the first future slot (≥ k+2) on the normal schedule, so a receiver keeps hopping in step (Betaflight waits up to 9 ms after starting its reply on k+1's channel, then moves to k+2's, ~0.6 ms before our k+2 packet). stream=0: slots that pass during the blocking dump are skipped (20 KB at dec 32 ≈ 0.22 s ≈ 24 slots; the receiver went into RX failsafe ~80% of the time with every=48). stream=1: no slot is skipped except k+1; the int8 conversion and the UART output run in the ~1.9 ms idle gaps between packets (≈9 KB at cap_us 9000 takes ≈27 slots), and no other text (status lines, `STAT` replies) is printed until it is out.
 - Each capture is reported as one line followed by binary payload:
@@ -89,7 +89,7 @@ With `TLM every>0`, slot k of a `LINK` is a trigger when k ≥ every and k % eve
 `D8Link.start(..., telemetry=True)` (default) sends `TID <next id>` and `TLM 12 9000 40 64 0 1 1 0 1 1000 4` (`protocol.TLM_RECIPE`: every 12 slots, dec 64, int4 payload from 1 ms on; older: every 48 slots,
 9 ms capture, dec 32, gain 40, next hop channel, stream=1, ack=1, retry=1) before `LINK`, and sets FOFS to `DEFAULT_FOFS_HZ = 0` when no
 `fofs_hz` is given. 0 is right for a receiver bound to this ESP over the air: bind tunes the receiver to our carrier (bench, Tinyhawk bound to the ESP:
-94.9% of triggers answered at FOFS 0 against 72.9% at -75 kHz, `bench/d8-tx/results/bind/SUMMARY.md`). The old default -75000 only suited the cloned E8
+94.9% of triggers answered at FOFS 0 against 72.9% at -75 kHz, `experiments/15-ota-bind/data/SUMMARY.md`). The old default -75000 only suited the cloned E8
 binding, whose receiver offset was tuned to the E8's carrier; pass it explicitly when you clone an identity instead of binding. The firmware keeps the recipe (RAM) across LINKs, so no firmware change was needed; the library keeps the id sequence across
 links so the drone's expected id stays locked. A firmware answering `ERR` to `TLM` leaves telemetry off and the link still starts; `telemetry=False`
 sends `TLM 0` if a recipe was sent before.
@@ -119,7 +119,7 @@ sends `TLM 0` if a recipe was sent before.
 
 ## Patched Betaflight hub fields
 
-Source: `bench/betaflight-patch/patches/0001-frsky-hub-telemetry.patch` (Betaflight 4.2.11, MATEKF411RX). Same hub framing
+Source: `tools/betaflight-patch/patches/0001-frsky-hub-telemetry.patch` (Betaflight 4.2.11, MATEKF411RX). Same hub framing
 as stock (`5E id lo hi`, int16 LE, 0x5E/0x5D byte-stuffed, one `5E` tail per cycle). All stock IDs keep their meaning
 except ACC.
 
@@ -136,12 +136,12 @@ gyro 48, attitude 24, tails 8 = 240 B/s, plus 1 s group ~28 and clock ~2). Worst
 under the 64 B `serialBuffer` of `cc2500_frsky_d.c`; the optional fields never share a cycle with the 1 s group.
 The receiver sends 10 hub bytes per D8 packet, so the link is not the limit. `d8hub.patched_state()` decodes these.
 
-## FAST block (patch 0003, `bench/betaflight-patch/patches/0003-frsky-d-fast-block.patch`)
+## FAST block (patch 0003, `tools/betaflight-patch/patches/0003-frsky-d-fast-block.patch`)
 
 Reply frame stays `11 txid0 txid1 A1 A2 RSSI cnt tid payload[10]`. `cnt` = 0x8A (bit 7 set, `FAST_FLAG`) means the 10 payload bytes are a FAST
 block, not hub bytes; otherwise `cnt` is the hub byte count (0..10) as before. The payload is one little-endian 80-bit integer, fields from bit 0:
 roll s12 (bits 0-11, deci-deg), pitch s12 (12-23), yaw u12 (24-35, 0..3599), gyro x/y/z s14 (36-49 / 50-63 / 64-77, 0.25 deg/s, filtered gyro,
-clamped +-8191), seq u2 (78-79, +1 per fast block). Decoder: `d8tx/telemetry.py` `parse_fast`; offline check `bench/betaflight-patch/check/fast_block_check.py`.
+clamped +-8191), seq u2 (78-79, +1 per fast block). Decoder: `d8tx/telemetry.py` `parse_fast`; offline check `tools/betaflight-patch/check/fast_block_check.py`.
 
 Scheduling (drone): every reply is fast except each `FAST_HUB_EVERY`-th (3) one, which is a hub reply (a hub slot with nothing pending is fast too).
 Fast replies never load, send or consume hub bytes; the `telemetryIdExpected` ack of the previous hub bytes is evaluated on every reply. The host ack
@@ -150,4 +150,4 @@ hub ids 0x40-0x45 are still sent. Patch 0003 also contains the hub-timer-stall g
 
 Host: `D8Link.telemetry()["fast"]` = `{attitude_deg [roll,pitch,yaw], gyro_dps [x,y,z], seq, age_ms, rate_hz}` (None until the first fast block;
 `rate_hz` over a rolling window). The backend publishes the same dict as `radio.fast` in `/api/status`. Bench (default recipe, 8.5 replies/s):
-fast 5.7 Hz (interval p50 0.12 s, p95 0.23 s), hub replies 2.85 Hz, seq gaps 0; see `bench/d8-tx/results/fast-telemetry/e2e/`.
+fast 5.7 Hz (interval p50 0.12 s, p95 0.23 s), hub replies 2.85 Hz, seq gaps 0; see `experiments/13-fast-attitude-telemetry/data/e2e/`.

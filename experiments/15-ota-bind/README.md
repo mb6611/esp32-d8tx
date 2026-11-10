@@ -23,7 +23,7 @@ Two things came after this session. Betaflight's MSP command `MSP2_BETAFLIGHT_BI
 
 So the ESP32 binds a stock Betaflight receiver to its own identity on the first try, and after binding no frequency offset is needed. This was one drone on one bench and a handful of binds. I didn't test binding at a distance, with a second drone, or with the drone's physical bind button.
 
-![The one-click bind: the laptop sends FOFS 0 and BIND 40 to the ESP32 and MSP2_BETAFLIGHT_BIND to Betaflight; the ESP32 keys bind packets on channel 0; the CC2500 sweeps its offset, locks, takes Bind1 and Bind2, saves; then a confirm link waits for a telemetry reply with this txid](../../docs/diagrams/bind.png)
+![The one-click bind: the laptop sends FOFS 0 and BIND 40 to the ESP32 and MSP2_BETAFLIGHT_BIND to Betaflight; the ESP32 keys bind packets on channel 0; the CC2500 sweeps its offset, locks, takes Bind1 and Bind2, saves; then a confirm link waits for a telemetry reply with this txid](../../docs/diagrams/bind.svg)
 
 *Figure: the one-click bind, across the laptop, the ESP32 and the drone, and the confirm link after it. The bench bind above used the CLI's `bind_rx` instead of the MSP command. Source: `docs/diagrams/bind.excalidraw`.*
 

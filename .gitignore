@@ -47,3 +47,6 @@ firmware/test/test_vectors
 .ru/specs
 .ru/plans
 docs/diagrams/*.png
+
+# Experiment logs are raw data: keep them tracked
+!experiments/*/data/**/*.log

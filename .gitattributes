@@ -1,4 +1,4 @@
 # Intel HEX artifacts contain CRLF; preserve exact checksummed bytes on every checkout.
-bench/cc2500-rxdiag/firmware/out/*/*.hex -text -diff
+tools/cc2500-rxdiag/firmware/out/*/*.hex -text -diff
 # Generated linker maps retain toolchain formatting; keep them out of whitespace review.
-bench/cc2500-rxdiag/firmware/out/*/*.map -diff
+tools/cc2500-rxdiag/firmware/out/*/*.map -diff

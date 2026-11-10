@@ -1,6 +1,6 @@
 # Architecture
 
-d8tx turns a browser tab and an ESP32 DevKit V1 into a FrSky D8 radio. This is the map; the measurements are in the [writeup](docs/devkitv1/writeup/tx.md), the wire format in [protocol/PROTOCOL.md](protocol/PROTOCOL.md).
+d8tx turns a browser tab and an ESP32 DevKit V1 into a FrSky D8 radio. This is the map; the measurements are in the [writeup](docs/lab-log/tx.md), the wire format in [protocol/PROTOCOL.md](protocol/PROTOCOL.md).
 
 ## Bird's-eye view
 
@@ -41,8 +41,9 @@ The firmware's per-slot loop and the telemetry trigger branch are drawn in [docs
 | `demod/` | telemetry demodulator: native, WASM and ESP32 builds |
 | `protocol/` | the spec, golden vectors and I/Q captures shared by every implementation's tests |
 | `python/` | reference library and vector generator |
-| `bench/` | bench runner, decoders, results, receiver diagnostics |
-| `docs/` | writeup, validation, guides, diagram sources (`docs/diagrams/`) |
+| `experiments/` | numbered experiments: raw data, analysis scripts, figures |
+| `tools/` | bench runner, decoders, receiver diagnostics, Betaflight patches, blackbox tools |
+| `docs/` | lab log (archived writeup), guides, diagram sources (`docs/diagrams/`) |
 
 ## Invariants
 

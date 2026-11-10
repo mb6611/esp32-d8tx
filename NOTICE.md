@@ -2,7 +2,7 @@
 
 This repository is licensed under the MIT License (see `LICENSE`), with these exceptions:
 
-- `bench/betaflight-patch/` and `bench/cc2500-rxdiag/` contain patches to, and
+- `tools/betaflight-patch/` and `tools/cc2500-rxdiag/` contain patches to, and
   binaries built from, Betaflight (<https://github.com/betaflight/betaflight>,
   GPL-3.0-or-later). They are derivative works of Betaflight and are licensed
   GPL-3.0-or-later; each directory carries a copy of the GPL in `LICENSE`.
@@ -10,7 +10,7 @@ This repository is licensed under the MIT License (see `LICENSE`), with these ex
   Betaflight `getBind1`/`getBind2` and are GPL-3.0-or-later (SPDX header in each).
   They are host-test-only; the ESP32 firmware does not include or link them.
 
-The RX chapters of `docs/devkitv1/writeup/` describe receive-only work done with the
+The RX chapters of `docs/lab-log/` describe receive-only work done with the
 ESPARGOS esp-sdr firmware (<https://github.com/ESPARGOS/esp-sdr>); that code lives in
 the public RX repository (<https://github.com/mb6611/esp32-d8rx>). No esp-sdr
 source code is in this repository or its history.
