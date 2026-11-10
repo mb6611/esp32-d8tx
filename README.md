@@ -2,9 +2,9 @@
 
 **An ESP32's Wi-Fi radio, hacked to speak FrSky D8. Plug it in, open a tab, fly.**
 
-[Live app](#try-it) · [How it works (writeup)](docs/devkitv1/writeup/tx.md) · [Demo (no hardware)](#try-it)
+[Technical writeup](docs/devkitv1/writeup/tx.md) · [Try it](#try-it)
 
-<!-- Live app, hosted writeup and demo links point to the deployed site once it exists; until then they are local. -->
+<!-- Add 'Live app' and 'Demo' links here once the controller is deployed. -->
 
 ![The d8tx controller: sticks, 3D drone, live telemetry](docs/media/hero.gif)
 
@@ -37,7 +37,45 @@ Then I built a UI for the controller (though any process on my computer could co
 
 ![The final setup: browser, USB, ESP32, drone](docs/diagrams/story-final.svg)
 
-Step by step, every layer: [docs/how-it-works.md](docs/how-it-works.md).
+## How it works, step by step
+
+### 1. Your sticks become a radio packet, every 9 ms
+
+The page reads your keyboard or touch sticks. A Web Worker turns them into a line of text, `S 1500 1500 …`, and sends it to the ESP32 over USB. The ESP32 builds a D8 packet from it and sends it by wiggling its Wi-Fi radio's frequency, on the next of 47 channels each time, the way a real FrSky radio hops. The drone receives it and flies.
+
+<details>
+<summary>Show every layer</summary>
+
+![Control path: key press to motor, through the browser, USB, the ESP32 and the drone](docs/diagrams/overview-control.svg)
+
+</details>
+
+### 2. Every 12th packet asks the drone to talk back
+
+That packet is marked as a telemetry request. The drone answers right away, on the next channel, so the ESP32 skips one packet and listens there instead.
+
+![Three slots to scale: the request, the ESP32 listening, the drone's reply](docs/diagrams/timeline.svg)
+
+### 3. The reply is decoded in your browser
+
+The ESP32 records the raw radio signal and streams it to the page. A decoder compiled to WebAssembly turns it back into the drone's message: battery, signal strength and more, shown live.
+
+<details>
+<summary>Show every layer</summary>
+
+![Telemetry path: the reply in the air, recorded by the ESP32, decoded in the browser](docs/diagrams/overview-telemetry.svg)
+
+</details>
+
+### Proof: the ESP32 hops like the real radio
+
+The same receiver logged which channel each packet arrived on, for the E8 and for the ESP32. The patterns match, and about 98% of the ESP32's packets arrived.
+
+| Real E8 | ESP32 |
+|---|---|
+| ![](docs/devkitv1/writeup/img/tx-evidence/hop-e8-map.png) | ![](docs/devkitv1/writeup/img/tx-evidence/hop-esp-runB-map.png) |
+
+How the ESP32 was made to do this, with every measurement, is in the [technical writeup](docs/devkitv1/writeup/tx.md). The code's design is in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## What I used
 
@@ -50,19 +88,7 @@ Step by step, every layer: [docs/how-it-works.md](docs/how-it-works.md).
 
 ## Try it
 
-Everything, including installing the ESP32 firmware and binding the drone, happens in the same page.
-
-**No hardware:** `pnpm install && pnpm --filter web dev`, then open the printed URL with `?mock=1` appended. Sticks, 3D drone and telemetry run against a simulated ESP32 and drone.
-
-**With hardware:** an ESP32 DevKit V1 (classic ESP32) and a D8 drone (the one used here: EMAX Tinyhawk III, Betaflight, CC2500). Use Chrome or Edge, which have Web Serial. Step by step: [docs/getting-started.md](docs/getting-started.md); recipes in [docs/how-to/](docs/how-to/).
-
-1. **Pairing** panel: plug in the ESP32, **Connect**.
-2. **Install firmware** (one click, over USB; it never erases the ESP32's identity).
-3. Plug the drone's USB in, **Connect** it, press **Bind**.
-4. Unplug the drone USB, connect the battery, **props on only when you mean to fly**.
-5. Hold **R** to arm, **X** to disarm.
-
-![The Pairing panel](docs/media/pairing.png)
+Use the hosted app (link coming), or run it locally: `pnpm install && pnpm --filter web dev` and open it in Chrome or Edge (Web Serial). Add `?mock=1` to try it with a simulated ESP32 and drone. Firmware install and bind happen in the same page; step by step in [docs/getting-started.md](docs/getting-started.md).
 
 ## Status
 
