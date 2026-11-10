@@ -10,7 +10,7 @@
 
 First takeoff with the ESP32 as the radio:
 
-https://github.com/mb6611/esp32-d8tx/raw/main/docs/devkitv1/writeup/media/esp32-first-takeoff.mp4
+https://github.com/user-attachments/assets/496075c1-7d02-483a-9e4e-a3d6ad7bda64
 
 > [!CAUTION]
 > **Educational and research use; check your local regulations.** Transmitting is regulated. This firmware turns a Wi-Fi/Bluetooth-certified module into an intentional radiator outside its grant. Output power is *estimated* (about -25 dBm peak EIRP, from receiver RSSI), not measured, and harmonics were not measured. You are responsible for compliance where you are. Full text: [REGULATORY.md](REGULATORY.md).
