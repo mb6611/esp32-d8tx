@@ -17,7 +17,7 @@ class S03A(Narrated, MovingCameraScene):
         sp = spoken(text)
         parts = re.split(r"<bookmark\s*mark\s*=\s*['\"](\w+)['\"]\s*/>", sp)
         clean, self._marks, n = "", {}, 0.0
-        weigh = lambda x: len(x) + 5 * sum(x.count(c) for c in ",:;.")
+        weigh = len     # exact word times from the voice: plain character offsets
         for k, part in enumerate(parts):
             if k % 2:
                 self._marks[part] = n
@@ -30,7 +30,7 @@ class S03A(Narrated, MovingCameraScene):
 
     def mark(self, name):
         tr = self.current_tracker
-        due = tr.start_t.__float__() + tr.duration * self._marks[name] / self._total if hasattr(tr, "start_t") else None
+        due = tr.start_t.__float__() + frac_to_seconds(tr, self._marks[name] / self._total) if hasattr(tr, "start_t") else None
         now = float(self.renderer.time)
         if due - now > 0.02:
             self.wait(due - now)

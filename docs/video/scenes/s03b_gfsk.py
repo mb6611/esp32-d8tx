@@ -127,7 +127,7 @@ class S03B(Narrated, MovingCameraScene):
 
     def until(self, name):
         tr = self.current_tracker
-        return tr.start_t + self._marks[name] * tr.duration - self.renderer.time
+        return tr.start_t + frac_to_seconds(tr, self._marks[name]) - self.renderer.time
 
     def wait_mark(self, name):
         t = self.until(name)

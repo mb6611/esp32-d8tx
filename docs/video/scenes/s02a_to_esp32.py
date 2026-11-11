@@ -32,20 +32,8 @@ class S02A(Narrated, MovingCameraScene):
         return wrap()
 
     def at(self, tr, mark):
-        """Wait until the word after <bookmark mark=...> is spoken. The service gives no word timings, so the time is measured:
-        `say` the text up to the mark (same voice and rate) and scale its length by the whole sentence's, to the real audio."""
-        import re, subprocess, tempfile
-        txt = tr.data["input_text"]
-        m = re.search(r"<bookmark\s*mark\s*=\s*['\"]%s['\"]\s*/>" % mark, txt)
-        def dur(t):
-            t = re.sub(r"<bookmark[^>]*/>", "", t).strip()
-            with tempfile.TemporaryDirectory() as d:
-                f = os.path.join(d, "x.aiff")
-                subprocess.run(["say", "-v", "Samantha", "-r", "165", "-o", f, t], check=True)
-                o = subprocess.run(["afinfo", f], capture_output=True, text=True).stdout
-                return float(re.search(r"estimated duration: ([\d.]+)", o).group(1))
-        t_mark = dur(txt[:m.start()]) / dur(txt) * tr.duration if m.start() > 0 else 0.0
-        w = tr.start_t + t_mark - self.renderer.time
+        """Wait until the word after <bookmark mark=...> is spoken (exact: KokoroService returns word boundaries)."""
+        w = tr.bookmark_times[mark] - self.renderer.time
         if w > 0.02:
             self.wait(w)
         print(f"[S02A bookmark {mark}] t={self.renderer.time:6.2f}", flush=True)
@@ -139,7 +127,7 @@ class S02A(Narrated, MovingCameraScene):
             self.at(tr, "a")
             self.play(FadeIn(esp_lab), run_time=0.4)
             self.play(LaggedStart(*[Indicate(b, color=INK, scale_factor=1.5) for b in blocks], lag_ratio=0.9),
-                      run_time=max(1.0, tr.duration - 0.2 - 0.6), rate_func=linear)
+                      run_time=max(1.0, tr.duration - 0.45 - 0.4 - 0.3), rate_func=linear)   # minus the wait for the word (~0.45 s) and the fade
 
         # ------------------------------------------------ 7 · the browser sends it, down the USB cable
         line = mono("S 1150 1500 1500 1500 1500 1500 2000 1500", 30).move_to(ORIGIN)

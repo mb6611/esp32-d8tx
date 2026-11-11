@@ -140,7 +140,7 @@ class S01(Narrated, MovingCameraScene):
 
         def until(mark_):
             c_ = cur[0]
-            dt = c_.t0 + marks[mark_] * c_.tr.duration - self.renderer.time
+            dt = c_.t0 + frac_to_seconds(c_.tr, marks[mark_]) - self.renderer.time
             if dt > 0.02:
                 self.wait(dt)
 

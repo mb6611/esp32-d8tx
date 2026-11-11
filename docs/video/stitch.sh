@@ -9,7 +9,8 @@ Q=${1:-480p15}
 LIST=$(mktemp)
 TMPD=$(mktemp -d)
 SILENT=0
-AUDIO="-c:a aac -b:a 192k"
+# narration comes out of Kokoro at about -30 LUFS; bring the joined track to -16 LUFS (web level), true peak -1.5 dB
+AUDIO="-af loudnorm=I=-16:TP=-1.5:LRA=11 -ar 48000 -c:a aac -b:a 192k"
 for pair in s00_intro:S00 s01_key_to_stick:S01 s02a_to_esp32:S02A s02b_packet:S02B s03a_fsk:S03A s03b_gfsk:S03B s03c_tones:S03C s04a_hopping:S04A s04b_binding:S04B s05_drone:S05 s06_recap:S06; do
   d=${pair%%:*}; c=${pair##*:}
   f="media/$d/videos/$d/$Q/$c.mp4"

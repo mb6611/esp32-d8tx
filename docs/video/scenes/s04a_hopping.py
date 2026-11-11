@@ -378,9 +378,12 @@ class S04A(Narrated, MovingCameraScene):
             a, _ = jump(4, 0)
             self.play(*a, FadeIn(cap14), run_time=0.4, rate_func=smooth)
             self.play(bar.animate(rate_func=there_and_back).set_fill(opacity=0.5), run_time=0.7)
-            self.at(t0, d, self.fr(14, "arrives"))
+            # packet 4 lands on "arrives" (word timestamp)
+            t_arr = t0 + frac_to_seconds(tr, self.fr(14, "arrives"))
+            dtw = t_arr - self.renderer.time
+            if dtw > 1 / 30:
+                self.wait(dtw)
             self.v = SLOT_W / 0.6
-            self.till(hp.pkts[4].get_left()[0])
             self.land(hp, 4, rt=0.15)
         # ================= 15 =================
         with self.say(15) as tr:
@@ -403,6 +406,7 @@ class S04A(Narrated, MovingCameraScene):
             self.till(13 * SLOT_W)
             self.v = 0.0
             now.set_x(13 * SLOT_W)
+            self.at(t0, d, 1.0 - 0.3 / d)   # keep the caption until the narration ends
             self.play(FadeOut(cap15), run_time=0.3)
         # ---- hand over to S04B: exactly the seam frame ----
         seam_out = seam_s04a_s04b()

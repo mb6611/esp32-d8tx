@@ -89,7 +89,7 @@ class S04B(Narrated, MovingCameraScene):
 
     def wait_until_bookmark(self, mark, off=0.0):
         dur = self.current_tracker.duration
-        d = self._t0 + self._bk[mark] * dur - self.renderer.time - off
+        d = self._t0 + frac_to_seconds(self.current_tracker, self._bk[mark]) - self.renderer.time - off
         if d > 0.05:
             self.wait(d)
 
@@ -146,7 +146,7 @@ class S04B(Narrated, MovingCameraScene):
             # dim the plot and give the list a clear backing first, then the numbers fly one at a time
             self.bring_to_front(*src)
             self.play(a.animate.set_value(DIM), FadeIn(panel), run_time=0.5)
-            cap_delay = max(0.0, self._t0 + self._bk["r"] * self.current_tracker.duration - self.renderer.time)
+            cap_delay = max(0.0, self._t0 + frac_to_seconds(self.current_tracker, self._bk["r"]) - self.renderer.time)
             self.play(LaggedStart(*[src[i].animate.move_to(mid[i]) for i in range(6)], lag_ratio=0.3),
                       FadeIn(mid[6]), Succession(Wait(cap_delay), FadeIn(cap1, run_time=0.4)), run_time=1.6)
             self.remove(*src)

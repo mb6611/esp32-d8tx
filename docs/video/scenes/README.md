@@ -34,8 +34,7 @@ except that `s05` builds its quad with `parts.quad3d()`.
 `class S0x(Narrated, MovingCameraScene)` (`ThreeDScene` for S05/S06), then
 `with self.voiceover(text="Written form, 6BD and 1150 µs.") as tr: self.play(..., run_time=tr.duration)`.
 `Narrated.voiceover` respells the text for the voice with `common.spoken()` (numbers, acronyms, units: 2-FSK, UART, 32 kHz, 1150 ->
-"eleven fifty", 15 % ...); write the **written** form in the call, the on-screen text keeps it. Voice: macOS `say` Samantha via
-`voice_service()` (offline). Extend `common._SPOKEN` (ask the orchestrator) if a word sounds wrong. Use `<bookmark mark='x'/>` in the
+"eleven fifty", 15 % ...); write the **written** form in the call, the on-screen text keeps it. Voice: local Kokoro-82M `am_michael` via `voice_service()` (free, offline, cached per line; the Kokoro model loads once per process; swap voice by editing that one function, a commented ElevenLabs "Chris" line is there). It returns word boundaries, so bookmarks are exact: call `frac_to_seconds(tr, fraction_of_spoken_chars)` (common.py) in a local cue helper, or use native `<bookmark/>` + `wait_until_bookmark`/`tr.bookmark_times`. Extend `common._SPOKEN` (ask the orchestrator) if a word sounds wrong (UART is "Yoo Art", Fourier "Foo-ree-ay"). Use `<bookmark mark='x'/>` in the
 text and `self.wait_until_bookmark('x')` to sync a picture to a word.
 
 ## Seams: `Seam` objects from `parts.py`

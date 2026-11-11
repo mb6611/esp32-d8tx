@@ -71,7 +71,7 @@ class S00(Narrated, MovingCameraScene):
 
     def wait_mark(self, name):
         tr = self.current_tracker
-        t = tr.start_t + self._marks[name] * tr.duration - self.renderer.time
+        t = tr.start_t + frac_to_seconds(tr, self._marks[name]) - self.renderer.time
         if t > 1e-3:
             self.wait(t)
 
@@ -209,6 +209,7 @@ class S00(Narrated, MovingCameraScene):
             self.play(ex.animate.set_value(1.0), FadeIn(lab_p), FadeIn(cap6), run_time=0.9)
             mark("k")
             self.play(bright.animate.set_value(1.0), glk.animate.shift(UP * 0.1 + LEFT * 0.08), grk.animate.shift(DOWN * 0.1 + RIGHT * 0.08), run_time=0.4)
+            mark("g")
             cap7 = caption_at(self.camera.frame, "about 2.4 GHz: the band Wi-Fi uses")
             self.play(ex.animate.set_value(0.0), FadeOut(lab_p), FadeOut(cap6), wa.animate.set_value(1.0),
                       glk.animate.shift(DOWN * 0.1 + RIGHT * 0.08), grk.animate.shift(UP * 0.1 + LEFT * 0.08),

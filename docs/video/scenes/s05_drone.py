@@ -61,7 +61,7 @@ class S05(Narrated, ThreeDScene):
         return _Timed(self, self.voiceover(text=re.sub(r"<bookmark mark='\w+'/>", "", text)))
 
     def wait_until_bookmark(self, mark, lead=0.0):
-        w = self._marks[mark] * self._tr.duration - lead - (self.renderer.time - self._t_start)
+        w = frac_to_seconds(self._tr, self._marks[mark]) - lead - (self.renderer.time - self._t_start)
         if w > 0.02:
             self.wait(w)
 

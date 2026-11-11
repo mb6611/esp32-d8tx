@@ -126,7 +126,7 @@ class S03C(Narrated, MovingCameraScene):
 
     def at(self, name):
         tr = self.current_tracker
-        d = tr.start_t + self._marks[name] * tr.duration - self.renderer.time
+        d = tr.start_t + frac_to_seconds(tr, self._marks[name]) - self.renderer.time
         if d > 1e-3:
             self.wait(d)
 
@@ -225,9 +225,12 @@ class S03C(Narrated, MovingCameraScene):
         cross = VGroup(Line(UL, DR), Line(UR, DL)).scale(0.14).set_stroke(ZERO, 4).move_to([(BXL + 0.5 + XL - 0.08) / 2, RY, 0])
         with self.vo("Copying the glide would take <bookmark mark='a'/>an arbitrary signal, <bookmark mark='m'/>any wave we choose, "
                                  "which is <bookmark mark='h'/>hard to get out of it.") as tr:
-            self.play(*[FadeOut(m) for m in e8_parts], FadeOut(tag_wifi), FadeOut(tag_bt), FadeIn(ghost), FadeIn(ghost_lab),
-                      *self.capin("an arbitrary signal: any wave we choose"), run_time=0.9)
-            self.at('m')
+            self.play(*[FadeOut(m) for m in e8_parts], FadeOut(tag_wifi), FadeOut(tag_bt), FadeIn(ghost), FadeIn(ghost_lab), run_time=0.9)
+            self.at('a')
+            self.play(*self.capin("an arbitrary signal: any wave we choose"), run_time=0.4)
+            d0 = tr.start_t + frac_to_seconds(tr, self._marks['m']) - self.renderer.time - 0.3
+            if d0 > 0.02:
+                self.wait(d0)
             self.play(shp.animate.set_value(1.0), run_time=0.6, rate_func=linear)
             self.play(shp.animate.set_value(2.0), run_time=0.6, rate_func=linear)
             self.play(shp.animate.set_value(3.0), run_time=0.6, rate_func=linear)
@@ -267,10 +270,10 @@ class S03C(Narrated, MovingCameraScene):
             self.play(*[Create(r) for r in rungs.values()], *[FadeIn(n) for n in nums.values()], run_time=0.9)
             self.at('s')
             for v in (1, 2, 1, 0, -1, 0):
-                self.play(lvl.animate.set_value(v), run_time=0.15, rate_func=smooth)
-                self.wait(0.2)
+                self.play(lvl.animate.set_value(v), run_time=0.12, rate_func=smooth)
+                self.wait(0.03)
             self.at('k')
-            self.play(FadeIn(brace), FadeIn(brace_lab), run_time=0.5)
+            self.play(FadeIn(brace), FadeIn(brace_lab), run_time=0.3)
             self.rest(tr)
 
         # =========== 7 ===========
@@ -491,9 +494,11 @@ class S03C(Narrated, MovingCameraScene):
             self.remove(*[m for m in self.mobjects if isinstance(m, ValueTracker)])
             ph.clear_updaters()
             gone = [m for m in self.mobjects if m is not strip and m is not self.camera.frame and m is not self.cur]
-            self.play(*[FadeOut(m) for m in gone], FadeOut(self.cur), run_time=0.6)
+            outs = [FadeOut(m) for m in gone] + [FadeOut(self.cur)]
             self.cur = None
-            self.play(Create(pk_bar), FadeIn(pk_ticks), *self.capin("the same pattern before every packet"), FadeIn(pk_brace), FadeIn(pk_lab), run_time=1.0)
+            self.play(AnimationGroup(AnimationGroup(*outs, run_time=0.5),
+                                     Succession(Wait(0.15), AnimationGroup(Create(pk_bar), FadeIn(pk_ticks), *self.capin("the same pattern before every packet"),
+                                                                           FadeIn(pk_brace), FadeIn(pk_lab), run_time=1.0))))
             self.at('p')
             self.play(FadeIn(pt_grp, shift=RIGHT * 1.0), FadeIn(pt_lab), run_time=0.9)
             self.at('f')
@@ -510,7 +515,7 @@ class S03C(Narrated, MovingCameraScene):
         blk = packet_block_big()
         with self.vo("One packet is one short burst of this wave, about <bookmark mark='m'/>7 ms long.") as tr:
             self.play(FadeOut(start_lab), *self.capin("one packet: one burst, about 7 ms"), run_time=0.8)
-            d0 = tr.start_t + self._marks['m'] * tr.duration - self.renderer.time - 0.2
+            d0 = tr.start_t + frac_to_seconds(tr, self._marks['m']) - self.renderer.time - 0.2
             if d0 > 0.02:
                 self.wait(d0)
             self.play(FadeIn(brace7), FadeIn(ms7), run_time=0.4)

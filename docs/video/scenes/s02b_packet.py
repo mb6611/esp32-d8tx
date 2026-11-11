@@ -63,7 +63,7 @@ class S02B(Narrated, MovingCameraScene):
         return _Timed(self, self.voiceover(text=re.sub(r"<bookmark mark='\w+'/>", "", text)))
 
     def at(self, tr, mark):
-        w = self._marks[mark] * tr.duration - (self.renderer.time - self._t_start)
+        w = frac_to_seconds(tr, self._marks[mark]) - (self.renderer.time - self._t_start)
         if w > 0.02:
             self.wait(w)
 
