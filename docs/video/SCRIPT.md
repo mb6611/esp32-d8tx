@@ -101,3 +101,5 @@ The flight controller runs firmware called Betaflight. It unpacks the throttle, 
 ## S06 · recap
 
 To recap: a key press becomes a number in the browser, then bytes in a D8 packet, then frequency shifts, sent by a Wi-Fi radio switching between two test tones. The drone's receiver reads the packet and acts on it.
+
+The code and the experiments behind this are on GitHub, at the address on screen. Thanks for watching.

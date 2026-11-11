@@ -71,7 +71,8 @@ class S06(Narrated, ThreeDScene):
             self.play(strip.open(), strip.go(K_KEY), FadeOut(quad, scale=0.3), run_time=1.2, rate_func=smooth)
             self.play(FadeIn(cap), run_time=0.4)
             self.play(cap[0].animate.set_stroke(YELLOW_A, opacity=1), run_time=0.3)
-            rest = tr.duration - 1.9 - 1.0
+            T = "To recap: a key press becomes a number in the browser,"
+            rest = frac_to_seconds(tr, T.index("number") / len(T)) - 0.2 - 1.9
             if rest > 0:
                 self.wait(rest)
             self.play(FadeOut(cap), FadeIn(hero), strip.go(K_APP), run_time=1.0)
@@ -80,13 +81,16 @@ class S06(Narrated, ThreeDScene):
         # 3: frequency shifts
         clause("then frequency shifts,", ([FadeOut(row_g), FadeIn(tone_wave)], 1.2))
         # 4: two test tones; the marker crosses the air
-        with self.voiceover(text="sent by a Wi-Fi radio switching between two test tones.") as tr:
+        T4 = "sent by a Wi-Fi radio switching between two test tones."
+        with self.voiceover(text=T4) as tr:
             self.play(strip.go(K_AIR), run_time=1.5)
-            rest = tr.duration - 1.5 - 0.7 - 0.6
+            rest = frac_to_seconds(tr, T4.index("two") / len(T4)) - 0.1 - 1.5
+            tail = tr.duration - 1.5 - max(rest, 0) - 0.7
             if rest > 0:
                 self.wait(rest)
             self.play(FadeIn(hi), FadeIn(lo), FadeIn(tag), run_time=0.7)
-            self.wait(0.6)
+            if tail > 0:
+                self.wait(tail)
         # 5: the receiver acts
         with self.voiceover(text="The drone's receiver reads the packet and acts on it.") as tr:
             self.play(FadeOut(hi), FadeOut(lo), FadeOut(tag), FadeOut(tone_wave), FadeIn(row_g), strip.go(K_RX), run_time=1.0)
@@ -98,5 +102,10 @@ class S06(Narrated, ThreeDScene):
             for b in blades:
                 b.add_updater(lambda m, dt: m.rotate(9 * dt, about_point=m.get_center()))
             self.play(FadeOut(hero), FadeIn(quad2), strip.go(K_MOT), run_time=1.0)
-        self.play(FadeIn(addr), run_time=0.8)
-        self.wait(3.0)
+        # 6: closing line; the address fades in as it is mentioned
+        T6 = "The code and the experiments behind this are on GitHub, at the address on screen. Thanks for watching."
+        with self.voiceover(text=T6) as tr:
+            self.play(FadeIn(addr), run_time=0.8)
+            if tr.duration > 0.8:
+                self.wait(tr.duration - 0.8)
+        self.wait(1.5)
