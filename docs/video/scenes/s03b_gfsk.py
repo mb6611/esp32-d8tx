@@ -111,7 +111,8 @@ class S03B(Narrated, MovingCameraScene):
     """"""
 
     # macOS `say` gives no word times: a bookmark sits at its share of the spoken characters (as in s00_intro.py)
-    def vo(self, text):
+    def vo(self, text, **kw):
+        """kw: next_text / seed for the speech service (see common.ElevenLabsService)."""
         tags = re.compile(r"<bookmark\s*mark\s*=\s*'(\w+)'\s*/>")
         sp = spoken(text)
         total = max(len(tags.sub("", sp)), 1)
@@ -123,7 +124,7 @@ class S03B(Narrated, MovingCameraScene):
             else:
                 pos += len(part)
         print(f"VOSTART {self.renderer.time:.2f} {tags.sub('', text)[:50]}", flush=True)
-        return self.voiceover(text=tags.sub("", text))
+        return self.voiceover(text=tags.sub("", text), **kw)
 
     def until(self, name):
         tr = self.current_tracker
@@ -234,7 +235,10 @@ class S03B(Narrated, MovingCameraScene):
         u = ValueTracker(0.0)
         dot.add_updater(lambda d: d.move_to([xl + u.get_value() * PITCH, BY + BDEV * lvl(u.get_value()), 0]))
         guides2 = slot_guides(BIT_Y - 0.45, BY - BDEV - 0.25)
-        with self.vo("It <bookmark mark='a'/>glides.") as tr:
+        # Chris (ElevenLabs) said this short line alone with a rising, question-like end (88 -> 143 Hz); with the next sentence
+        # as context and seed 2 it falls (114 -> 81 Hz). Takes and measurements: frames/v13/audio/.
+        with self.vo("It <bookmark mark='a'/>glides.", seed=2,
+                     next_text="The smoothing has a bell-curve shape, a Gaussian, so this is Gaussian FSK, or GFSK.") as tr:
             self.add(ghost)
             self.remove(guides)
             self.add(guides2)

@@ -190,12 +190,35 @@ from manim_voiceover import VoiceoverScene
 from manim_voiceover.helper import remove_bookmarks as _remove_bookmarks
 from manim_voiceover.services.base import SpeechService, initialize_speech_service, path_to_string
 
-_SPOKEN = [  # order matters: longer / more specific first
-    (r"\bCC2500\b", "C C twenty-five hundred"), (r"\bESP32\b", "E S P thirty-two"), (r"\b6BD\b", "six B D"),
-    (r"\bBD\b", "B D"), (r"\b1150\b", "eleven fifty"), (r"\b1725\b", "seventeen twenty-five"),
-    (r"\b2-FSK\b", "two F S K"), (r"\bGFSK\b", "G F S K"), (r"\bFSK\b", "F S K"),
-    (r"\bUART\b", "Yoo Art"), (r"\bFourier\b", "[Fourier](/fˈʊɹiˌA/)"), (r"\bTinyhawk\b", "Tiny hawk"), (r"\bFrSky\b", "F R Sky"), (r"\b[Cc]hecksums?\b", lambda m: "check " + ("sums" if m.group().endswith("s") else "sum")), (r"\bSPI\b", "S P I"), (r"\bUSB\b", "U S B"), (r"\bSDR\b", "S D R"), (r"\bID\b", "I D"),
-    (r"\bE8\b", "E eight"), (r"\bD8\b", "D eight"), (r"\bD 8\b", "D eight"), (r"\bBetaflight\b", "Beta flight"),
+import os as _os
+
+# Respellings. A voice has a STYLE ("kokoro" or "elevenlabs", see _VOICES below): the style's own rules run first (acronyms and
+# names, which each engine reads differently), then _SPOKEN_COMMON (numbers, units, signs), which every engine needs.
+# Order matters inside a list: longer / more specific first.
+_SPOKEN_STYLE = {
+    "kokoro": [
+        (r"\bCC2500\b", "C C twenty-five hundred"), (r"\bESP32\b", "E S P thirty-two"), (r"\b6BD\b", "six B D"),
+        (r"\bBD\b", "B D"),
+        (r"\b2-FSK\b", "two F S K"), (r"\bGFSK\b", "G F S K"), (r"\bFSK\b", "F S K"),
+        (r"\bUART\b", "Yoo Art"), (r"\bFourier\b", "[Fourier](/fˈʊɹiˌA/)"), (r"\bTinyhawk\b", "Tiny hawk"), (r"\bFrSky\b", "F R Sky"), (r"\b[Cc]hecksums?\b", lambda m: "check " + ("sums" if m.group().endswith("s") else "sum")), (r"\bSPI\b", "S P I"), (r"\bUSB\b", "U S B"), (r"\bSDR\b", "S D R"), (r"\bID\b", "I D"),
+        (r"\bE8\b", "E eight"), (r"\bD8\b", "D eight"), (r"\bD 8\b", "D eight"), (r"\bBetaflight\b", "Beta flight"),
+    ],
+    # ElevenLabs gets plain text: no phoneme markup (multilingual_v2 ignores it and would read it aloud), common acronyms
+    # (USB, ID, FSK, GFSK, SDR) and names (Fourier, GitHub, checksum) as written. Only what it could read as a word or as a
+    # long number is respelled.
+    "elevenlabs": [
+        (r"\bCC2500\b", "C C twenty-five hundred"), (r"\bESP32\b", "ESP thirty-two"), (r"\b6BD\b", "six B D"),
+        (r"\bBD\b", "B D"),
+        (r"\b2-FSK\b", "two FSK"),
+        (r"\bUART\b", "you-art"), (r"\bTinyhawk\b", "Tiny Hawk"), (r"\bFrSky\b", "F R Sky"), (r"\bSPI\b", "S-P-I"),
+        (r"\bE8\b", "E eight"), (r"\bD8\b", "D eight"), (r"\bD 8\b", "D eight"), (r"\bBetaflight\b", "Beta flight"),
+        # Chris read "Gaussian" as GAH-shun (/ɡɑːʃən/); the owner wants GOW-shun. "Gowshun" comes out /ɡaʊʃən/ (checked with a
+        # phoneme recogniser, frames/v13/audio/phones.py) and whisper still hears "Gaussian".
+        (r"\bGaussian\b", "Gowshun"),
+    ],
+}
+_SPOKEN_COMMON = [
+    (r"\b1150\b", "eleven fifty"), (r"\b1725\b", "seventeen twenty-five"),
     (r"\bkHz\b", "kilohertz"), (r"\bMHz\b", "megahertz"), (r"\bGHz\b", "gigahertz"),
     (r"(\d)\s*%", r"\1 percent"),
     (r"µs|μs", " microseconds"), (r"\bms\b", "milliseconds"), (r"−", "minus "), (r"±", "plus or minus "),
@@ -207,12 +230,22 @@ _SPOKEN = [  # order matters: longer / more specific first
 # all come back right. A sentence-initial "D eight" is transcribed "The 8" by whisper (its onset), fine mid-sentence.
 
 
-def spoken(text):
-    """Written form -> what the TTS should say. Leaves <bookmark mark='X'/> tags untouched. Extend _SPOKEN."""
+def voice_name():
+    """The narrator, chosen WITHOUT editing code: env var D8_VOICE=michael|chris (default michael)."""
+    v = _os.environ.get("D8_VOICE", "michael").strip().lower() or "michael"
+    if v not in _VOICES:
+        raise SystemExit(f"D8_VOICE={v!r}: unknown voice, choose one of {sorted(_VOICES)}")
+    return v
+
+
+def spoken(text, voice=None):
+    """Written form -> what the TTS should say, for the current voice (D8_VOICE) or `voice`. Leaves <bookmark mark='X'/>
+    tags untouched. Extend _SPOKEN_STYLE[style] (one engine) or _SPOKEN_COMMON (all)."""
+    rules = _SPOKEN_STYLE[_VOICES[voice or voice_name()][0]] + _SPOKEN_COMMON
     out = []
     for part in _re.split(r"(<bookmark\s*mark\s*=\s*['\"]\w*['\"]\s*/>)", text):
         if not part.startswith("<bookmark"):
-            for pat, rep in _SPOKEN:
+            for pat, rep in rules:
                 part = _re.sub(pat, rep, part)
             part = _re.sub(r"\s+", " ", part)
         out.append(part)
@@ -296,9 +329,226 @@ class KokoroService(SpeechService):
         return {"input_text": text, "input_data": input_data, "original_audio": audio_path, "word_boundaries": bounds}
 
 
+_TTS_DIR = _Path(__file__).resolve().parent / "media" / "_tts" / "elevenlabs"   # git-ignored, shared by all scenes
+_ENV_LOCAL = _Path(__file__).resolve().parents[2] / ".env.local"               # git-ignored; holds ELEVENLABS_API_KEY
+
+
+def _elevenlabs_key():
+    """The API key from the environment, else from the repo's git-ignored .env.local. Never printed or stored elsewhere."""
+    key = _os.environ.get("ELEVENLABS_API_KEY")
+    if not key and _ENV_LOCAL.exists():
+        from dotenv import dotenv_values
+        key = dotenv_values(_ENV_LOCAL).get("ELEVENLABS_API_KEY")
+    if not key:
+        raise SystemExit(f"ELEVENLABS_API_KEY is not set (environment or {_ENV_LOCAL})")
+    return key
+
+
+def elevenlabs_credits():
+    """(used, limit) characters of the ElevenLabs account this month, from GET /v1/user/subscription."""
+    import requests
+    r = requests.get("https://api.elevenlabs.io/v1/user/subscription", headers={"xi-api-key": _elevenlabs_key()}, timeout=30)
+    r.raise_for_status()
+    j = r.json()
+    return int(j["character_count"]), int(j["character_limit"])
+
+
+class ElevenLabsService(SpeechService):
+    """ElevenLabs over REST: POST /v1/text-to-speech/{voice_id}/with-timestamps, which returns the audio and the start time
+    of every character; those become WORD BOUNDARIES (text_offset = character offset in the bookmark-free spoken text), so
+    bookmarks and frac_to_seconds() are exact, as with KokoroService.
+
+    PAID (1 credit per character with eleven_multilingual_v2), so every answer is kept twice:
+      * media/_tts/elevenlabs/<sha256 of text+voice+model+settings+format>.json: the raw answer, shared by all scenes and
+        untouched by deleting a scene's media dir. A sentence whose text did not change is NEVER requested again.
+      * the scene's own manim-voiceover cache (media/<scene>/voiceovers/cache.json), as for the other services.
+    Do not delete media/_tts. Requests go out one at a time across all parallel renders (file lock; the free tier allows two
+    at once). Each billed request is appended to media/_tts/elevenlabs/ledger.jsonl. Before a request the account's remaining
+    credits are checked (read at most once a minute); the request is refused if it would leave fewer than D8_TTS_RESERVE (default 300).
+    D8_TTS_DRY=1: send nothing; write the text to media/_tts/elevenlabs/dry.jsonl and return silence (to count characters).
+    `previous_text` (the lines spoken before, in this scene) is sent as context for the intonation; it is not billed and is
+    not part of the cache key.
+    Per line, `self.voiceover(text, next_text="the sentence that follows", seed=3)` also sends `next_text` (context after the
+    line, not billed) and/or a `seed` (another take of the same words). Both ARE part of the cache key when given, so a line
+    without them keeps its old key and a changed one is a new, billed request. Use them when a line's melody is wrong, e.g. a
+    short sentence that ends rising like a question ("It glides." in S03B)."""
+
+    URL = "https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/with-timestamps"
+
+    def __init__(self, voice_id, voice_name="", model="eleven_multilingual_v2", settings=None,
+                 output_format="mp3_44100_128", tail=0.2, **kwargs):
+        initialize_speech_service(self, kwargs)
+        self.voice_id, self.voice_name, self.model, self.output_format, self.tail = voice_id, voice_name, model, output_format, tail
+        self.settings = settings or {"stability": 0.5, "similarity_boost": 0.75, "style": 0.0, "use_speaker_boost": True}
+        self.dry = _os.environ.get("D8_TTS_DRY") == "1"
+        self._said = []           # earlier lines of this scene, context for the next request
+
+    def _request_data(self, input_text, next_text=None, seed=None):
+        req = {"text": input_text, "voice_id": self.voice_id, "model": self.model, "settings": self.settings,
+               "output_format": self.output_format}
+        if next_text:
+            req["next_text"] = next_text
+        if seed is not None:
+            req["seed"] = int(seed)
+        return req
+
+    @staticmethod
+    def request_key(request_data):
+        import hashlib
+        import json
+        return hashlib.sha256(json.dumps(request_data, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
+
+    def _fetch(self, input_text, next_text=None, seed=None):
+        """The raw answer {audio_base64, alignment, ...} for this text: from media/_tts if there, else one billed request."""
+        import fcntl
+        import json
+        import time
+        req = self._request_data(input_text, next_text, seed)
+        f = _TTS_DIR / (self.request_key(req) + ".json")
+        if f.exists():
+            return json.loads(f.read_text())
+        _TTS_DIR.mkdir(parents=True, exist_ok=True)
+        with open(_TTS_DIR / ".lock", "w") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)       # one request at a time, across processes
+            if f.exists():                          # another render asked for the same line meanwhile
+                return json.loads(f.read_text())
+            if self.dry:
+                with open(_TTS_DIR / "dry.jsonl", "a") as d:
+                    d.write(json.dumps({"chars": len(input_text), "text": input_text, "voice": self.voice_name},
+                                       ensure_ascii=False) + "\n")
+                return None
+            import requests
+            used, limit = self._credits()
+            reserve = int(_os.environ.get("D8_TTS_RESERVE", "300"))
+            if len(input_text) > limit - used - reserve:
+                raise SystemExit(f"ElevenLabs: {len(input_text)} characters wanted, {limit - used} credits left "
+                                 f"(reserve {reserve}); not sent: {input_text!r}")
+            body = {"text": input_text, "model_id": self.model, "voice_settings": self.settings}
+            if self._said:
+                body["previous_text"] = " ".join(self._said)[-600:]
+            if next_text:
+                body["next_text"] = next_text
+            if seed is not None:
+                body["seed"] = int(seed)
+            for attempt in range(6):
+                r = requests.post(self.URL.format(voice_id=self.voice_id), params={"output_format": self.output_format},
+                                  headers={"xi-api-key": _elevenlabs_key()}, json=body, timeout=120)
+                if r.status_code in (429, 500, 502, 503) and attempt < 5:     # refused, so not billed: wait and retry
+                    time.sleep(3 * (attempt + 1))
+                    continue
+                break
+            if r.status_code != 200:
+                raise SystemExit(f"ElevenLabs HTTP {r.status_code}: {r.text[:300]}")
+            j = r.json()
+            ans = {"request": req, "audio_base64": j["audio_base64"], "alignment": j.get("alignment"),
+                   "normalized_alignment": j.get("normalized_alignment"),
+                   "character_cost": r.headers.get("character-cost"), "request_id": r.headers.get("request-id")}
+            tmp = f.with_suffix(".tmp%d" % _os.getpid())
+            tmp.write_text(json.dumps(ans, ensure_ascii=False))
+            _os.replace(tmp, f)
+            self._billed(len(input_text))
+            with open(_TTS_DIR / "ledger.jsonl", "a") as d:
+                d.write(json.dumps({"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "chars": len(input_text),
+                                    "character_cost": ans["character_cost"], "voice": self.voice_name, "model": self.model,
+                                    "key": f.stem, "text": input_text}, ensure_ascii=False) + "\n")
+            return ans
+
+    @staticmethod
+    def _credits():
+        """(used, limit), asked from the account at most once a minute (the endpoint is rate-limited: asking before every
+        request got HTTP 429); in between, the characters billed since are added from the ledger. Call under the lock."""
+        import json
+        import time
+        f = _TTS_DIR / "credits.json"
+        st = json.loads(f.read_text()) if f.exists() else None
+        if st is None or time.time() - st["t"] > 60:
+            for attempt in range(4):
+                try:
+                    used, limit = elevenlabs_credits()
+                    st = {"t": time.time(), "used": used, "limit": limit, "since": 0}
+                    break
+                except Exception:
+                    time.sleep(2 * (attempt + 1))
+            if st is None:
+                raise SystemExit("ElevenLabs: could not read the remaining credits; nothing sent")
+            f.write_text(json.dumps(st))
+        return st["used"] + st.get("since", 0), st["limit"]
+
+    @staticmethod
+    def _billed(n):
+        import json
+        f = _TTS_DIR / "credits.json"
+        st = json.loads(f.read_text())
+        st["since"] = st.get("since", 0) + n
+        f.write_text(json.dumps(st))
+
+    @staticmethod
+    def word_boundaries(input_text, alignment):
+        """ElevenLabs character alignment -> manim-voiceover word boundaries (+ the end mark KokoroService also adds)."""
+        chars, starts = alignment["characters"], alignment["character_start_times_seconds"]
+        ends = alignment["character_end_times_seconds"]
+        joined = "".join(chars)
+        index = None
+        if joined != input_text:      # multi-character entries or a normalised text: map string offsets to entries
+            index = [i for i, c in enumerate(chars) for _ in c]
+        bounds, cursor = [], 0
+        for m in _re.finditer(r"\S+", input_text):
+            if not any(ch.isalnum() for ch in m.group()):
+                continue
+            j = m.start() if index is None else joined.find(m.group(), cursor)
+            if j < 0:
+                continue
+            cursor = j + len(m.group())
+            k = j if index is None else index[j]
+            bounds.append({"audio_offset": int(starts[k] * 1e7), "text_offset": m.start(), "word_length": len(m.group()),
+                           "text": m.group(), "boundary_type": "Word"})
+        bounds.append({"audio_offset": int(ends[-1] * 1e7), "text_offset": len(input_text), "word_length": 1, "text": ".",
+                       "boundary_type": "Word"})
+        return bounds
+
+    def generate_from_text(self, text, cache_dir=None, path=None, next_text=None, seed=None, **kwargs):
+        import base64
+        cache_dir = cache_dir or self.cache_dir
+        input_text = _remove_bookmarks(text)
+        input_data = {"input_text": input_text, "service": "elevenlabs", "voice_id": self.voice_id, "model": self.model,
+                      "settings": self.settings, "output_format": self.output_format, "tail": self.tail, "v": 1}
+        if next_text:
+            input_data["next_text"] = next_text
+        if seed is not None:
+            input_data["seed"] = int(seed)
+        if self.dry:
+            input_data["dry"] = 2
+        cached = self.get_cached_result(input_data, cache_dir)
+        ans = None if (cached is not None and not self.dry) else self._fetch(input_text, next_text, seed)
+        self._said.append(input_text)
+        if cached is not None and (not self.dry or ans is None):
+            return cached
+        audio_path = path_to_string(path) if path else self.get_audio_basename(input_data) + ".mp3"
+        out = _Path(cache_dir) / audio_path
+        if ans is None:               # dry run: silence of a plausible length, linear bookmarks
+            dur = 0.4 + len(input_text) / 15
+            _sp.run(["ffmpeg", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "anullsrc=r=44100:cl=mono", "-t",
+                     f"{dur:.2f}", str(out)], check=True)
+            wb = [{"audio_offset": int(t * 1e7), "text_offset": x, "word_length": 1, "text": ".", "boundary_type": "Word"}
+                  for x, t in ((0, 0.0), (len(input_text), dur - 0.4))]
+            return {"input_text": text, "input_data": input_data, "original_audio": audio_path, "word_boundaries": wb}
+        raw = _Path(cache_dir) / (audio_path + ".raw.mp3")
+        raw.write_bytes(base64.b64decode(ans["audio_base64"]))
+        if self.tail > 0:             # the same pause after a line as KokoroService
+            _sp.run(["ffmpeg", "-loglevel", "error", "-y", "-i", str(raw), "-af", f"apad=pad_dur={self.tail}",
+                     "-b:a", "192k", str(out)], check=True)
+            raw.unlink()
+        else:
+            _os.replace(raw, out)
+        res = {"input_text": text, "input_data": input_data, "original_audio": audio_path}
+        if ans.get("alignment"):
+            res["word_boundaries"] = self.word_boundaries(input_text, ans["alignment"])
+        return res
+
+
 def frac_to_seconds(tr, frac):
     """Seconds from the voiceover start at which `frac` (0..1) of the spoken characters have been said. Exact (word timings)
-    with KokoroService, linear (frac * duration) with any service without word boundaries."""
+    with KokoroService and ElevenLabsService, linear (frac * duration) with any service without word boundaries."""
     wb = tr.data.get("word_boundaries") if hasattr(tr, "data") else None
     if not wb or len(wb) < 2:
         return frac * tr.duration
@@ -307,12 +557,20 @@ def frac_to_seconds(tr, frac):
     return float(__import__("numpy").interp(frac * xs[-1], xs, ys))
 
 
+# Narrator voices: name -> (respelling style, how to build the service). Pick one with the env var D8_VOICE (default michael):
+#     D8_VOICE=chris ./render.sh -qh --disable_caching -o S03B scenes/s03b_gfsk.py S03B
+# Each voice's audio is cached under its own key (service, voice, model, settings), so switching back and forth costs nothing.
+_VOICES = {
+    "michael": ("kokoro", lambda: KokoroService(voice="am_michael", speed=1.1)),                  # local, free
+    "chris": ("elevenlabs", lambda: ElevenLabsService(voice_id="iP95p4xoKVk53GoZ742B", voice_name="Chris",
+                                                       model="eleven_multilingual_v2")),         # paid, see the class
+    "say": ("kokoro", lambda: MacSayService(voice="Samantha", rate=165)),                         # offline fallback
+}
+
+
 def voice_service():
-    """THE ONE LINE TO CHANGE to swap the narrator voice."""
-    # from manim_voiceover.services.elevenlabs import ElevenLabsService
-    # return ElevenLabsService(voice_name="Chris", model="eleven_multilingual_v2")   # needs ELEVEN_API_KEY; paid
-    # return MacSayService(voice="Samantha", rate=165)
-    return KokoroService(voice="am_michael", speed=1.1)
+    """The speech service of the current voice (D8_VOICE)."""
+    return _VOICES[voice_name()][1]()
 
 
 class Narrated(VoiceoverScene):
@@ -323,4 +581,8 @@ class Narrated(VoiceoverScene):
         self.set_speech_service(voice_service(), create_subcaption=False)
 
     def voiceover(self, text=None, **kwargs):
+        """kwargs `next_text` (written form of the sentence that follows) and `seed` go to the speech service; only
+        ElevenLabsService uses them (see its docstring), the others ignore them."""
+        if kwargs.get("next_text"):
+            kwargs["next_text"] = _remove_bookmarks(spoken(kwargs["next_text"]))
         return super().voiceover(text=spoken(text), **kwargs)

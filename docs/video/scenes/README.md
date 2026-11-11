@@ -34,8 +34,23 @@ except that `s05` builds its quad with `parts.quad3d()`.
 `class S0x(Narrated, MovingCameraScene)` (`ThreeDScene` for S05/S06), then
 `with self.voiceover(text="Written form, 6BD and 1150 µs.") as tr: self.play(..., run_time=tr.duration)`.
 `Narrated.voiceover` respells the text for the voice with `common.spoken()` (numbers, acronyms, units: 2-FSK, UART, 32 kHz, 1150 ->
-"eleven fifty", 15 % ...); write the **written** form in the call, the on-screen text keeps it. Voice: local Kokoro-82M `am_michael` via `voice_service()` (free, offline, cached per line; the Kokoro model loads once per process; swap voice by editing that one function, a commented ElevenLabs "Chris" line is there). It returns word boundaries, so bookmarks are exact: call `frac_to_seconds(tr, fraction_of_spoken_chars)` (common.py) in a local cue helper, or use native `<bookmark/>` + `wait_until_bookmark`/`tr.bookmark_times`. Extend `common._SPOKEN` (ask the orchestrator) if a word sounds wrong (UART is "Yoo Art", Fourier "Foo-ree-ay"). Use `<bookmark mark='x'/>` in the
+"eleven fifty", 15 % ...); write the **written** form in the call, the on-screen text keeps it. Voice: chosen by the env var
+`D8_VOICE` (default `michael`), no code edit: `michael` = local Kokoro-82M `am_michael` speed 1.1 (free, offline), `chris` =
+ElevenLabs "Chris", model `eleven_multilingual_v2` (**paid**, 1 credit per character; key `ELEVENLABS_API_KEY` in the repo's
+git-ignored `.env.local`), e.g. `D8_VOICE=chris ./render.sh -qh --disable_caching -o S03B scenes/s03b_gfsk.py S03B`. Both are
+cached per line and per voice, so switching back and forth regenerates nothing. ElevenLabs answers are also kept in
+`media/_tts/elevenlabs/` (one json per text+voice+model+settings, plus `ledger.jsonl` of what was billed): **never delete that
+folder**, a line is billed again only if its spoken text changes. `D8_VOICE=chris D8_TTS_DRY=1 ./render.sh -ql --dry_run ...`
+sends nothing and lists the lines that would be billed in `media/_tts/elevenlabs/dry.jsonl`. A render writes
+`.../1080p60/<Class>.mp4` whatever the voice; the two finished sets are kept beside it in `1080p60-michael/` and `1080p60-chris/`
+(`./stitch.sh 1080p60-michael` joins one). Respellings are per engine: `common._SPOKEN_STYLE["kokoro" | "elevenlabs"]`, then
+`_SPOKEN_COMMON` (numbers, units). It returns word boundaries, so bookmarks are exact: call `frac_to_seconds(tr, fraction_of_spoken_chars)` (common.py) in a local cue helper, or use native `<bookmark/>` + `wait_until_bookmark`/`tr.bookmark_times`. Extend those lists (ask the orchestrator) if a word sounds wrong (UART is "Yoo Art", Fourier "Foo-ree-ay"). Use `<bookmark mark='x'/>` in the
 text and `self.wait_until_bookmark('x')` to sync a picture to a word.
+ElevenLabs only: `self.voiceover(text, next_text="the sentence that follows", seed=2)` sends the following sentence as context
+and/or asks for another take; both are part of the cache key, so only that line is billed again. Use it when a line's melody is
+wrong (S03B "It glides." alone ended rising like a question). Chris reads "Gaussian" as GAH-shun, so it is respelled "Gowshun"
+(owner wants GOW-shun). Check a respelling with `frames/v13/audio/phones.py` (phoneme recogniser) and the end pitch of a take with
+`frames/v13/audio/contour.py`; `gen.py` there makes one cached candidate clip. Whisper alone cannot tell these apart.
 
 ## Seams: `Seam` objects from `parts.py`
 `seam = seam_x_y(); strip = seam.enter(self)` adds the whole frame (camera set, `MapStrip`, mobjects, caption) and returns the
