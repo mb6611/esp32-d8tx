@@ -192,9 +192,18 @@ from manim_voiceover.services.base import SpeechService, initialize_speech_servi
 
 _SPOKEN = [  # order matters: longer / more specific first
     (r"\bCC2500\b", "C C twenty-five hundred"), (r"\bESP32\b", "E S P thirty-two"), (r"\b6BD\b", "six B D"),
-    (r"\bSPI\b", "S P I"), (r"\bkHz\b", "kilohertz"), (r"\bMHz\b", "megahertz"), (r"\bGHz\b", "gigahertz"),
+    (r"\bBD\b", "B D"), (r"\b1150\b", "eleven fifty"), (r"\b1725\b", "seventeen twenty-five"),
+    (r"\b2-FSK\b", "two F S K"), (r"\bGFSK\b", "G F S K"), (r"\bFSK\b", "F S K"),
+    (r"\bUART\b", "You Art"), (r"\bTinyhawk\b", "Tiny hawk"), (r"\bFrSky\b", "F R Sky"), (r"\b[Cc]hecksums?\b", lambda m: "check " + ("sums" if m.group().endswith("s") else "sum")), (r"\bSPI\b", "S P I"), (r"\bUSB\b", "U S B"), (r"\bSDR\b", "S D R"), (r"\bID\b", "I D"),
+    (r"\bE8\b", "E eight"), (r"\bD8\b", "D eight"), (r"\bD 8\b", "D eight"), (r"\bBetaflight\b", "Beta flight"),
+    (r"\bkHz\b", "kilohertz"), (r"\bMHz\b", "megahertz"), (r"\bGHz\b", "gigahertz"),
+    (r"(\d)\s*%", r"\1 percent"),
     (r"µs|μs", " microseconds"), (r"\bms\b", "milliseconds"), (r"−", "minus "), (r"±", "plus or minus "),
+    (r"×", " times "), (r"÷", " divided by "),
 ]
+# Checked against SCRIPT-draft.md by reading the respelling (not by ear): numbers say reads well unaided: 2.4, 32, 39, 9, 15,
+# 12, 20, 47, 160, 300, 1000, 2000, 1.5, 31,000, 60,000, 2.4 billion. Risk to listen for when the voice is played: "FrSky"
+# (say may read "fris-ky"), "Tinyhawk", "hex", "Gaussian", "pseudo" and "you-art" (UART). "Wi-Fi" is fine.
 
 
 def spoken(text):

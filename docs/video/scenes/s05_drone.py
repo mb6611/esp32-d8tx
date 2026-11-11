@@ -7,7 +7,7 @@ MATEKF411RX (STM32F411) flight controller and a CC2500 radio on SPI (3.375 MHz),
 checks the CRC; Betaflight reads throttle 1150 us and arm (AUX3) 2000; at 1150 us the motors spin; full throttle lifted
 the quad off the bench (08, test 8). Channel list order A E T R; only the throttle value is legible. Board names,
 Betaflight version, DShot and PID are deliberately not on screen."""
-import sys, os
+import sys, os, re
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from parts import *
 
@@ -15,6 +15,9 @@ DX = np.array([5.5, -0.35, 0])     # drone silhouette centre (2D part)
 WC5 = np.array([-1.4, 0.5, 0])    # wave centre on the drone side
 WW5, WA5 = 7.6, 0.6               # wave width / amplitude
 BITS_Y5 = 1.6
+TRACE_Y5 = 2.4
+ROW_Y8 = 0.55         # packet row while the SPI traces are shown
+CLK_Y, CLK_H = -2.65, 0.22
 ROW_C = np.array([-1.4, -1.55, 0])
 ROW_K = 0.8
 
@@ -24,60 +27,109 @@ def drone_2d():
     motors = VGroup(*[Circle(radius=0.32, color=PURPLE_A, stroke_width=SW).move_to(0.9 * d) for d in (UR, UL, DL, DR)])
     body = RoundedRectangle(corner_radius=0.08, width=0.9, height=0.6, color=PURPLE_A, stroke_width=SW, fill_color=BG, fill_opacity=1)
     rx = Rectangle(width=0.5, height=0.3, color=RED_A, stroke_width=SW).move_to(body)
-    rxl = label("CC2500", 14, RED_A).next_to(rx, DOWN, buff=0.35)
+    rxl = label("CC2500", 20, RED_A).next_to(rx, DOWN, buff=0.35)
     return VGroup(arms, motors, body, rx, rxl).scale(0.85).move_to(DX)
+
+
+class _Timed:
+    def __init__(self, scene, cm):
+        self.scene, self.cm = scene, cm
+
+    def __enter__(self):
+        tr = self.cm.__enter__()
+        self.scene._t_start = self.scene.renderer.time
+        self.scene._tr = tr
+        return tr
+
+    def __exit__(self, *a):
+        return self.cm.__exit__(*a)
 
 
 class S05(Narrated, ThreeDScene):
     def say(self, text):
-        print("VO %.2f %s" % (self.renderer.time, text), flush=True)
-        return self.voiceover(text=text)
+        """voiceover with bookmark marks resolved locally (this voice has no word timings): a mark waits until its share of the
+        spoken characters has played."""
+        pos, plain = {}, ""
+        for part in re.split(r"(<bookmark mark='\w+'/>)", text):
+            m = re.match(r"<bookmark mark='(\w+)'/>", part)
+            if m:
+                pos[m.group(1)] = len(spoken(plain))
+            else:
+                plain += part
+        self._marks = {k: v / max(1, len(spoken(plain))) for k, v in pos.items()}
+        print("VO %.2f %s" % (self.renderer.time, re.sub(r"<bookmark mark='\w+'/>", "", text)), flush=True)
+        return _Timed(self, self.voiceover(text=re.sub(r"<bookmark mark='\w+'/>", "", text)))
+
+    def wait_until_bookmark(self, mark, lead=0.0):
+        w = self._marks[mark] * self._tr.duration - lead - (self.renderer.time - self._t_start)
+        if w > 0.02:
+            self.wait(w)
 
     def cap(self, text, size=32):
         return caption(text, size)
+
+    def cin(self, c):
+        return FadeIn(c, rate_func=lambda t: smooth(min(1.0, max(0.0, (t - 0.4) / 0.6))))     # after the old caption has gone
+
+    def cout(self, c):
+        return FadeOut(c, rate_func=lambda t: smooth(min(1.0, t / 0.25)))
 
     def fix(self, *ms):
         self.add_fixed_in_frame_mobjects(*ms)
         return ms
 
     def construct(self):
+        # incoming frame = seam_s04b_s05("in"): same pieces, built here because Seam.enter needs a MovingCamera frame
         strip = MapStrip(K_AIR)
         blk, side = packet_stream_close()
         self.fix(strip, side, blk)
-        stream_caption = self.cap(STREAM_CAP).move_to(DOWN * (FH / 2 - 0.6))   # where S04's caption_at left it
+        stream_caption = self.cap(STREAM_CAP).move_to(DOWN * (FH / 2 - 0.6))
         self.fix(stream_caption)
         self.wait(0.7)
 
-        # ---- through the air into the drone's receiver (map marker air -> CC2500) ----
+        # ---- 1. the drone's radio chip ----
         drone = drone_2d()
         rx = drone[3]
-        c = self.cap("caught by the drone's CC2500 radio")
+        c = self.cap("the drone's radio chip: a CC2500")
         self.fix(drone, c)
         self.remove(drone, c)
-        with self.say("The drone's CC2500 radio catches the burst."):
+        with self.say("The drone's radio chip, a CC2500, is built for FSK."):
             self.play(FadeOut(stream_caption), strip.open(), blk.animate.scale(0.5 * STREAM_W / CLOSE_W).move_to(LEFT * 3.0),
-                      *[FadeOut(n, shift=d * 3.0) for n, d in zip(side, (LEFT, RIGHT))], FadeIn(drone, shift=LEFT * 0.3), run_time=0.8)
-            self.play(strip.go(K_RX), MoveAlongPath(blk, Line(LEFT * 3.0, rx.get_center())), blk.animate.scale(0.3), FadeIn(c),
-                      run_time=1.4, rate_func=linear)
-            self.play(strip.close(), Flash(rx, color=RED_A, line_length=0.2, flash_radius=0.4), run_time=0.6)
+                      *[FadeOut(n, shift=d * 3.0) for n, d in zip(side, (LEFT, RIGHT))], run_time=0.8)
+            self.play(strip.go(K_RX), self.cin(c), FadeIn(drone, shift=LEFT * 0.3), run_time=1.0)
+            self.wait_for_voiceover()
 
-        # ---- inverse of S03: the wave, read back into bits ----
+        # ---- 2. it catches the burst; the block opens back into the wave ----
         waves = [fsk_wave(8.0, lit=i, center=WC5, width=WW5, amp=WA5) for i in range(9)]
         wave = waves[0]
+        with self.say("It catches the burst,"):
+            self.play(MoveAlongPath(blk, Line(LEFT * 3.0, rx.get_center())), blk.animate.scale(0.3), run_time=0.9, rate_func=linear)
+            self.play(strip.close(), Flash(rx, color=RED_A, line_length=0.2, flash_radius=0.4), run_time=0.5)
+            self.wait_for_voiceover()
+
+        # ---- 3. the wave read back: trace + dots -> bit squares ----
         bits = bit_squares(side=0.5, size=28)
         for i, b in enumerate(bits):
             b.move_to([bit_x(i, WC5, WW5), BITS_Y5, 0])
+        tr5 = freq_trace(HERO_BITS, 0.0, 0.22, (WC5[0], TRACE_Y5), WW5, dots=True)
         c2 = self.cap("the wave, read back into bits")
-        self.fix(wave, bits, c2)
-        self.remove(wave, bits, c2)
-        with self.say("It reads the up and down nudges in the wave back as ones and zeros,"):
-            self.play(FadeOut(c), ReplacementTransform(blk, wave), run_time=1.0)
-            self.play(FadeIn(c2), run_time=0.4)
+        self.fix(wave, bits, c2, tr5)
+        self.remove(wave, bits, c2, tr5)
+        with self.say("reads the shifts back as ones and zeros,") as tr:
+            self.play(self.cout(c), ReplacementTransform(blk, wave), FadeIn(tr5.zero), run_time=0.7)
+            self.play(self.cin(c2), run_time=0.3)
+            step = max(0.22, (tr.duration - 1.0) / 8)
+            edges = [j + 1 for j in range(7) if HERO_BITS[j] != HERO_BITS[j + 1]]
+            riser_at = {e: k for k, e in enumerate(edges)}
             for i in range(8):
-                self.play(Transform(wave, waves[i + 1]), FadeIn(bits[i], shift=UP * 0.15), run_time=0.26, rate_func=linear)
+                self.play(Transform(wave, waves[i + 1]), Create(tr5.segs[i]),
+                          *([FadeIn(tr5.risers[riser_at[i]])] if i in riser_at else []),
+                          run_time=step * 0.55, rate_func=linear)
+                self.play(FadeIn(tr5.dots[i], scale=1.8), TransformFromCopy(tr5.dots[i], bits[i]), run_time=step * 0.45, rate_func=linear)
+            self.wait_for_voiceover()
 
-        # ---- inverse of S02: the bits regroup into the bracketed packet ----
-        row = packet_row(center=ROW_C, scale=ROW_K, hexsize=BHEX, lab_size=16)
+        # ---- 4. the bits regroup into the packet ----
+        row = packet_row(center=ROW_C, scale=ROW_K, hexsize=BHEX, lab_size=28)
         dim_row(row); light_throttle(row)
         cells = row["cells"]
         others = VGroup(*[cells[i] for i in range(20) if i != 6])
@@ -85,15 +137,19 @@ class S05(Narrated, ThreeDScene):
         self.fix(row, c3)
         self.remove(row, c3)
         with self.say("reassembles the packet,"):
-            self.play(FadeOut(c2), FadeOut(wave), ReplacementTransform(bits, cells[6]), FadeIn(others), FadeIn(row["braces"]),
-                      FadeIn(row["labels"]), FadeIn(c3), run_time=1.0)
+            self.play(self.cout(c2), FadeOut(wave), FadeOut(tr5), ReplacementTransform(bits, cells[6]), FadeIn(others),
+                      FadeIn(row["braces"]), FadeIn(row["labels"]), self.cin(c3), run_time=1.0)
+            self.wait_for_voiceover()
 
-        # ---- checksum ok ----
+        # ---- 5. checksum ----
         pulse = ShowPassingFlash(Line(cells[0].get_left(), cells[19].get_right(), color=YELLOW_A, stroke_width=SW_FLASH)
                                  .shift(DOWN * (BCELL * ROW_K / 2 + 0.06)), time_width=0.3, run_time=1.0)
         self.fix(pulse.mobject)
         with self.say("and checks the checksum."):
-            self.play(FadeOut(c3), pulse)
+            self.play(self.cout(c3), pulse)
+            self.wait_for_voiceover()
+
+        # ---- 6. ok ----
         tick = label("✓", 30, GREEN_A).next_to(cells[19], RIGHT, buff=0.2)
         c = self.cap("checksum ok")
         self.fix(tick, c)
@@ -101,96 +157,174 @@ class S05(Narrated, ThreeDScene):
         with self.say("Everything checks out."):
             self.play(cells[18][0].animate.set_stroke(GREEN_A, opacity=1), cells[19][0].animate.set_stroke(GREEN_A, opacity=1),
                       cells[18][1].animate.set_fill(GREEN_A, opacity=1), cells[19][1].animate.set_fill(GREEN_A, opacity=1),
-                      FadeIn(tick, scale=0.6), FadeIn(c), run_time=0.7)
+                      FadeIn(tick, scale=0.6), self.cin(c), run_time=0.7)
+            self.wait_for_voiceover()
 
-        # ---- stage b: over SPI to the flight controller (map strip) ----
+        # ---- 7. hand-off to the flight controller over SPI ----
         c2 = self.cap("over SPI to the flight controller")
-        self.fix(c2)
-        self.remove(c2)
-        # a small packet token rides the marker along the SPI wire; the packet row pulses as it feeds the wire
-        token = VGroup(RoundedRectangle(corner_radius=0.03, width=0.46, height=0.16, color=YELLOW_A, stroke_width=SW_LINE,
-                                        fill_color=BG, fill_opacity=1),
-                       *[Line(UP * 0.04, DOWN * 0.04, color=YELLOW_A, stroke_width=SW_THIN).move_to(RIGHT * (k - 2) * 0.07) for k in range(5)])
-        token.set_opacity(0)
-        token.add_updater(lambda m: m.move_to(strip.marker.get_center() + UP * 0.3))
-        flashes = [ShowPassingFlash(Line(cells[0].get_left(), cells[19].get_right(), color=YELLOW_A, stroke_width=SW_FLASH)
-                                    .shift(DOWN * (BCELL * ROW_K / 2 + 0.06)), time_width=0.3, run_time=1.2) for _ in range(3)]
-        self.fix(token, *[f.mobject for f in flashes])
-        self.remove(token, *[f.mobject for f in flashes])
-        with self.say("It passes the packet over SPI, a short wire, to the flight controller running Beta flight."):
-            self.play(FadeOut(c), FadeOut(tick), strip.open(), run_time=0.6)
-            self.add(token)
-            self.play(strip.go(K_FC), FadeIn(c2), token.animate.set_opacity(1), Succession(*flashes), run_time=4.4, rate_func=linear)
-            token.clear_updaters()
-            self.play(FadeOut(token), run_time=0.01)
-            self.play(strip.close(), FadeOut(c2), run_time=0.5)
+        mc = label("the drone's main computer", 18, MUTED)
+        mc.move_to([NODE_X[K_FC] * MAP_FOCUS_SCALE, MAP_FOCUS_Y - 0.55, 0])
+        self.fix(c2, mc)
+        self.remove(c2, mc)
+        with self.say("It hands the packet to the flight controller, <bookmark mark='mc'/>the drone's main computer, "
+                      "over a link on the board called SPI."):
+            self.play(self.cout(c), FadeOut(tick), strip.open(), run_time=0.6)
+            self.play(strip.go(K_SPI), self.cin(c2), run_time=1.2)
+            self.wait_until_bookmark("mc")
+            self.play(FadeIn(mc), run_time=0.5)
+            self.wait_for_voiceover()
 
-        # ---- 0x6bd lifts out of the throttle cells -> 1150 in the channel list ----
+        # ---- 8. like UART: bits on a wire ----
+        WC_X = -0.4
+        wt = wire_trace(HERO_BITS, 0.9, (WC_X, -1.2), idle=False, tag_l="CC2500", tag_r="flight ctrl")
+        data_lab = label("data", 20, MUTED).move_to([-6.2, -1.2, 0])
+        uart = label("UART: one wire, agreed speed", 20, MUTED).move_to([WC_X, -0.15, 0])
+        c4 = self.cap("SPI: bits on a wire again")
+        self.fix(wt, data_lab, uart, c4)
+        self.remove(wt, data_lab, uart, c4)
+        with self.say("Like <bookmark mark='u'/>UART, <bookmark mark='sb'/>SPI sends bits <bookmark mark='ow'/>over wires,"):
+            self.play(self.cout(c2), FadeOut(mc), FadeOut(row["braces"]), FadeOut(row["labels"]),
+                      row["cells"].animate.shift(UP * (ROW_Y8 - ROW_C[1])), run_time=0.8)
+            row["braces"].set_opacity(0)
+            row["labels"].set_opacity(0)
+            self.wait_until_bookmark("u")
+            self.play(FadeIn(uart), run_time=0.4)
+            self.wait_until_bookmark("sb")
+            wt.digits.set_opacity(0.0)
+            self.add(wt.digits)
+            self.play(*[FadeIn(wt.digits[i], shift=DOWN * 0.5) for i in range(8)],
+                      *[wt.digits[i].animate.set_opacity(1) for i in range(8)], run_time=0.8)
+            self.wait_until_bookmark("ow")
+            self.play(Create(wt.segs, lag_ratio=1.0, rate_func=linear), FadeIn(wt.risers, lag_ratio=1.0), FadeIn(wt.hi_lab), FadeIn(wt.lo_lab),
+                      FadeIn(wt.tag_l), FadeIn(wt.tag_r), FadeIn(data_lab), FadeIn(c4, rate_func=lambda t: smooth(min(1.0, t / 0.4))), run_time=1.2)
+            self.wait_for_voiceover()
+
+        # ---- 9. the clock ----
+        clk = clock_trace(8, 0.9, (WC_X, CLK_Y), idle=False, hl=CLK_H)
+        clk_lab = label("clock", 20, MUTED).move_to([-6.2, CLK_Y, 0])
+        clk_tag = label("flight ctrl", 18, MUTED).move_to([WC_X + 4.0 + 0.6, CLK_Y, 0])
+        x0 = WC_X - 4.0
+        gdots, gguides = VGroup(), VGroup()
+        for i, b in enumerate(HERO_BITS):
+            gx = x0 + i * 0.9 + 0.225
+            yd = -1.2 + (0.3 if b else -0.3)
+            gguides.add(DashedLine([gx, CLK_Y + CLK_H, 0], [gx, yd, 0], dash_length=0.06, stroke_color=GRID, stroke_width=SW_THIN))
+            gdots.add(Dot([gx, yd, 0], radius=0.07, color=ONE if b else ZERO))
+        c5 = self.cap("the clock says when to read")
+        self.fix(clk, clk_lab, clk_tag, gdots, gguides, c5)
+        self.remove(clk, clk_lab, clk_tag, gdots, gguides, c5)
+        with self.say("but an extra wire carries a clock <bookmark mark='w'/>that says when to read each bit."):
+            self.play(self.cout(c4), Create(clk, rate_func=linear), FadeIn(clk_lab), FadeIn(clk_tag), self.cin(c5), run_time=1.5)
+            self.wait_until_bookmark("w")
+            self.play(FadeOut(uart), run_time=0.3)
+            step = 0.4
+            for i in range(8):
+                self.play(Create(gguides[i]), FadeIn(gdots[i], scale=1.8), Indicate(wt.digits[i], color=YELLOW_A, scale_factor=1.4),
+                          run_time=step)
+            self.wait_for_voiceover()
+
+        # ---- 10. Betaflight; the traces fold back into the row ----
         names = ["roll", "pitch", "throttle", "yaw"]
-        rows = VGroup(*[label(n, 22, MUTED) for n in names]).arrange(DOWN, aligned_edge=LEFT, buff=0.28).move_to([-5.0, 1.3, 0])
+        rows = VGroup(*[label(n, 22, MUTED) for n in names]).arrange(DOWN, aligned_edge=LEFT, buff=0.28).move_to([-5.0, 1.0, 0])
         val = num("1150", 34, YELLOW_A).next_to(rows[2], RIGHT, buff=0.5)
         unit = label("µs", 20).next_to(val, RIGHT, buff=0.12, aligned_edge=DOWN)
-        fc = label("flight controller", 18).next_to(rows, UP, buff=0.3, aligned_edge=LEFT)
+        fc = label("flight controller", 26, INK)
+        bf = label("running Betaflight", 24, MUTED)
+        rows.arrange(DOWN, aligned_edge=LEFT, buff=0.16).move_to([-5.0, -0.4, 0])
+        val.next_to(rows[2], RIGHT, buff=0.5); unit.next_to(val, RIGHT, buff=0.12, aligned_edge=DOWN)
+        bf.next_to(rows, UP, buff=0.2, aligned_edge=LEFT); fc.next_to(bf, UP, buff=0.08, aligned_edge=LEFT)
+        fc2t = label("flight ctrl", 20, RED_A).move_to(drone[4])
+        fc2 = VGroup(Rectangle(width=fc2t.width + 0.2, height=fc2t.height + 0.14, stroke_width=0, fill_color=BG, fill_opacity=1).move_to(fc2t), fc2t)
         for r in rows:
             r.set_opacity(0.4)
         rows[2].set_opacity(1).set_color(INK)
-        hx = mono("0x6bd", 40, YELLOW_A).move_to([-1.0, 0.4, 0])
-        self.fix(hx, rows, val, unit, fc)
-        self.remove(hx, rows, val, unit, fc)
+        hx = mono("0x6bd", 40, YELLOW_A).move_to([-2.3, 0.4, 0])
+        eq = label("= 1725 ticks ÷ 1.5", 28, INK)
+        eq.next_to(hx, RIGHT, buff=0.3)
+        self.fix(hx, rows, val, unit, fc, bf, eq, fc2)
+        self.remove(hx, rows, val, unit, fc, bf, eq, fc2)
         c = self.cap("the flight controller reads throttle 1150")
         self.fix(c)
         self.remove(c)
-        with self.say("The flight controller unpacks the throttle, eleven fifty,"):
-            self.play(TransformFromCopy(throttle_glyphs(row), hx), FadeIn(fc), FadeIn(rows), run_time=1.2)
-            self.play(FadeTransform(hx, val), FadeIn(unit), FadeOut(row), run_time=1.0)
-            self.play(FadeIn(c), run_time=0.5)
+        with self.say("The flight controller runs firmware called <bookmark mark='bf'/>Betaflight."):
+            qf = lambda t: smooth(min(1.0, t / 0.3))     # traces and tags gone before the row slides over them
+            self.play(self.cout(c5), *[FadeOut(m_, rate_func=qf) for m_ in (wt, clk, gdots, gguides, data_lab, clk_lab, clk_tag)], row["cells"].animate.shift(DOWN * (ROW_Y8 - ROW_C[1])), strip.go(K_FC),
+                      FadeOut(drone[4], rate_func=qf), FadeIn(fc2, rate_func=lambda t: smooth(min(1.0, max(0.0, (t - 0.4) / 0.6)))),
+                      FadeIn(fc, rate_func=lambda t: smooth(min(1.0, t / 0.5))), run_time=1.0)
+            self.play(strip.close(), run_time=0.8)
+            self.wait_until_bookmark("bf", lead=0.1)
+            self.play(FadeIn(bf), run_time=0.4)
+            self.wait_for_voiceover()
 
-        # ---- 1150 splits into four motor commands (on the silhouette), then the quad in 3D ----
+        # ---- 11. unpacks the throttle: 0x6bd -> 1725 / 1.5 -> 1150 ----
+        with self.say("It <bookmark mark='un'/>unpacks the <bookmark mark='th'/>throttle, <bookmark mark='v'/>1150 again,"):
+            self.play(FadeIn(rows), Indicate(throttle_glyphs(row), color=YELLOW_A, scale_factor=1.0), FadeIn(hx, shift=UP * 0.3, rate_func=lambda t: smooth(min(1.0, max(0.0, (t - 0.3) / 0.7)))), run_time=0.6)
+            self.wait_until_bookmark("th", lead=0.3)
+            self.play(FadeIn(eq), run_time=0.4)
+            self.wait_until_bookmark("v", lead=0.5)
+            self.play(FadeOut(hx), FadeOut(eq), FadeIn(val), FadeIn(unit), FadeOut(row), self.cin(c), run_time=1.0)
+            self.wait_for_voiceover()
+
+        # ---- 12. four motor commands and level corrections ----
         motors2d = drone[1]
-        copies = VGroup(*[num("1150", 20, YELLOW_A).move_to(m.get_center()) for m in motors2d])
-        c2 = self.cap("mixed into 4 motors")
-        self.fix(copies, c2)
-        self.remove(copies, c2)
-        with self.say("and mixes it into commands for all four motors,"):
-            self.play(FadeOut(c), FadeOut(rows), FadeOut(fc), FadeOut(unit), run_time=0.5)
-            self.play(LaggedStart(*[TransformFromCopy(val, cp_, path_arc=-30 * DEGREES) for cp_ in copies], lag_ratio=0.1),
-                      strip.go(K_MOT), motors2d.animate.set_fill(PURPLE_A, 0.2), FadeIn(c2), run_time=2.5)
-        with self.say("along with the corrections that keep the drone level."):
-            self.play(LaggedStart(*[Indicate(cp_, color=YELLOW_A, scale_factor=1.3) for cp_ in copies], lag_ratio=0.25), run_time=2.5)
-        quad, props = self.make_quad()
-        quad.scale(1.5).shift(RIGHT * 1.0 + DOWN * 0.6)
-        with self.say("The motor drivers turn those commands into spin,"):
-            self.play(FadeOut(drone), FadeOut(copies), GrowFromCenter(quad), FadeOut(c2), val.animate.move_to([-4.6, 2.4, 0]).set_opacity(0.5),
-                      run_time=0.8)
-            self.move_camera(phi=62 * DEGREES, theta=-45 * DEGREES, zoom=1.0, run_time=1.4)
-            spun = [0.0]
+        BW, BH = 0.16, 0.7
+        base, after = [0.34, 0.34, 0.34, 0.34], [0.43, 0.27, 0.39, 0.30]   # level before / after the corrections
 
-            def spin(m, dt):
-                m.rotate(9 * dt, about_point=m.get_center())
-                if m is props[0]:
-                    spun[0] += 9 * dt
+        def bar_fill(m, lv):
+            r = Rectangle(width=BW, height=lv, stroke_width=0, fill_color=YELLOW_A, fill_opacity=0.9)
+            r.move_to(m[0].get_bottom() + UP * lv / 2)
+            return r
+        bars = VGroup()
+        for m, d in zip(motors2d, (RIGHT, LEFT, LEFT, RIGHT)):
+            tr_ = Rectangle(width=BW, height=BH, color=MUTED, stroke_width=SW_THIN)
+            tr_.move_to(m.get_center() + d * 0.62)
+            bars.add(VGroup(tr_))
+        fills0 = VGroup(*[bar_fill(b_[0], lv) for b_, lv in zip(bars, base)])
+        fills1 = VGroup(*[bar_fill(b_[0], lv) for b_, lv in zip(bars, after)])
+        marks = VGroup(*[label("+" if a_ > b_ else "−", 22, GREEN_A if a_ > b_ else RED_A).next_to(bx[0], UP, buff=0.08)
+                         for bx, a_, b_ in zip(bars, after, base)])
+        lvl = label("level corrections", 18, MUTED).next_to(drone, DOWN, buff=0.9)
+        c2 = self.cap("mixed into 4 motors")
+        self.fix(bars, fills0, fills1, marks, lvl, c2)
+        self.remove(bars, fills0, fills1, marks, lvl, c2)
+        with self.say("and mixes it into commands for the <bookmark mark='fm'/>four motors, along with the "
+                      "<bookmark mark='lv'/>corrections that keep the drone level."):
+            self.play(self.cout(c), FadeOut(rows), FadeOut(fc), FadeOut(bf), FadeOut(unit), run_time=0.4)
+            self.wait_until_bookmark("fm")
+            self.play(FadeOut(val, shift=RIGHT * 0.5), FadeIn(bars), FadeIn(fills0), motors2d.animate.set_fill(PURPLE_A, 0.2),
+                      self.cin(c2), run_time=1.2)
+            self.wait_until_bookmark("lv")
+            self.play(FadeIn(lvl), FadeIn(marks), Transform(fills0, fills1), run_time=1.0)
+            self.wait_for_voiceover()
+
+        # ---- 13. motors spin, 14. lifts ----
+        quad, props = quad3d()
+        quad.scale(QUAD_SCALE).shift(RIGHT * 1.0 + DOWN * 0.6)
+        spun = [0.0]
+
+        def spin(m, dt):
+            m.rotate(9 * dt, about_point=m.get_center())
+            if m is props[0]:
+                spun[0] += 9 * dt
+        with self.say("The motor drivers turn those into spin,"):
+            out_r = lambda t: smooth(min(1.0, t / 0.5))      # 2D quad and its labels fully gone by 0.4 s, then the 3D quad grows in
+            # drone[4] (the CC2500 label) already faded out at the FC stage; fading it again re-adds it on top of 'flight ctrl'
+            self.play(*[FadeOut(m_, rate_func=out_r) for m_ in (VGroup(*drone[:4]), fc2, fills0, bars, marks, lvl)],
+                      GrowFromCenter(quad, rate_func=lambda t: smooth(min(1.0, max(0.0, (t - 0.5) / 0.5)))), self.cout(c2), strip.go(K_MOT), run_time=0.8)
+            self.move_camera(phi=QUAD_PHI, theta=-45 * DEGREES, zoom=1.0, run_time=1.4)
             for p in props:
                 p.add_updater(spin)
+            self.wait_for_voiceover()
+        done = [0.0]
+
+        def lift(m, a):   # a shift by increments, so the spin updaters on the blades keep working (a .animate shift would overwrite them)
+            m.shift(OUT * 0.3 * (smooth(a) - done[0]))
+            done[0] = smooth(a)
         with self.say("and the drone lifts."):
-            self.begin_ambient_camera_rotation(rate=0.08 * 1.6 / 1.5)   # same total turn as before (0.128 rad)
-            self.play(quad.animate.shift(OUT * 0.3), run_time=1.5, rate_func=smooth)
-        self.stop_ambient_camera_rotation()
+            self.move_camera(phi=QUAD_PHI, theta=QUAD_THETA, added_anims=[UpdateFromAlphaFunc(quad, lift)], run_time=1.5, rate_func=smooth)
+            self.wait_for_voiceover()
         for p in props:
             p.clear_updaters()
-        for p in props:   # land on the same prop angle as before narration (old total spin time 3.4 s)
-            p.rotate(9 * 3.4 + 0.495 - spun[0], about_point=p.get_center())
+        for p in props:   # land on the S06 seam's blade angle
+            p.rotate(QUAD_PROP_ANGLE - spun[0], about_point=p.get_center())
         self.wait(0.5)
-
-    def make_quad(self):
-        # 3b1b 3D look: blue-family fills with a thin lighter outline, no greys; props are thin white lines
-        body = Prism(dimensions=[0.75, 0.75, 0.18]).set_fill(BLUE_E, 1).set_stroke(BLUE_A, SW_THIN, 0.8)
-        props = VGroup(); arms = VGroup(); motors = VGroup()
-        d = 1.25
-        for sx, sy in [(1, 1), (-1, 1), (-1, -1), (1, -1)]:
-            pos = np.array([sx * d, sy * d, 0.0])
-            arms.add(Line3D(ORIGIN, pos, color=BLUE_DK, thickness=0.025))
-            motors.add(Cylinder(radius=0.12, height=0.2, direction=OUT, checkerboard_colors=False, fill_color=BLUE_A, fill_opacity=1, stroke_width=0).move_to(pos + OUT * 0.1))
-            blade = VGroup(Line(LEFT * 0.55, RIGHT * 0.55, color=INK, stroke_width=SW_LINE),
-                           Line(UP * 0.55, DOWN * 0.55, color=INK, stroke_width=SW_LINE)).rotate(PI / 4).move_to(pos + OUT * 0.25)
-            props.add(blade)
-        return VGroup(body, arms, motors, props), list(props)
