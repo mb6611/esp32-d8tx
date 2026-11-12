@@ -7,7 +7,7 @@
 <table>
 <tr>
 <td align="center"><a href="https://youtu.be/bO-O4uNm4Co"><img src="docs/media/video-thumb.png" width="520" alt="Video: Flying a drone with an ESP32's Wi-Fi radio"></a></td>
-<td align="center"><video src="https://github.com/user-attachments/assets/496075c1-7d02-483a-9e4e-a3d6ad7bda64" width="165" controls></video></td>
+<td align="center" width="190"><video src="https://github.com/user-attachments/assets/496075c1-7d02-483a-9e4e-a3d6ad7bda64" controls></video></td>
 </tr>
 <tr>
 <td align="center">How it works, in a video (on YouTube)</td>
