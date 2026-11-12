@@ -2,13 +2,18 @@
 
 **An ESP32's Wi-Fi radio, hacked to speak FrSky D8. Plug it in, open a tab, fly.**
 
-[Live app](https://d8tx.mb6611.workers.dev) · [Demo, no hardware](https://d8tx.mb6611.workers.dev/?mock=1) · [Technical writeup](https://d8tx.mb6611.workers.dev/writeup/) · [Experiments](experiments/README.md) · [RX part: esp32-d8rx](https://github.com/mb6611/esp32-d8rx)
+[![Open the app](https://img.shields.io/badge/Open_the_app-d8tx.mb6611.workers.dev-2ea44f?style=for-the-badge)](https://d8tx.mb6611.workers.dev) [![Read the writeup](https://img.shields.io/badge/Read-the_writeup-1f6feb?style=for-the-badge)](https://d8tx.mb6611.workers.dev/writeup/) [![See the experiments](https://img.shields.io/badge/See-the_experiments-8250df?style=for-the-badge)](experiments/README.md)
 
-![The d8tx controller: sticks, 3D drone, live telemetry](docs/media/hero.gif)
-
-First takeoff with the ESP32 as the radio:
-
-https://github.com/user-attachments/assets/496075c1-7d02-483a-9e4e-a3d6ad7bda64
+<table>
+<tr>
+<td align="center"><a href="https://youtu.be/bO-O4uNm4Co"><img src="docs/media/video-thumb.png" width="520" alt="Video: Flying a drone with an ESP32's Wi-Fi radio"></a></td>
+<td align="center"><video src="https://github.com/user-attachments/assets/496075c1-7d02-483a-9e4e-a3d6ad7bda64" width="165" controls></video></td>
+</tr>
+<tr>
+<td align="center">How it works, in a video (on YouTube)</td>
+<td align="center">First takeoff</td>
+</tr>
+</table>
 
 > [!CAUTION]
 > **Educational and research use; check your local regulations.** Transmitting is regulated. This firmware turns a Wi-Fi/Bluetooth-certified module into an intentional radiator outside its grant. Output power is *estimated* (about -25 dBm peak EIRP, from receiver RSSI), not measured, and harmonics were not measured. You are responsible for compliance where you are. Full text: [REGULATORY.md](REGULATORY.md).
@@ -85,6 +90,8 @@ How the ESP32 was made to do this is in the [technical writeup](https://d8tx.mb6
 | Mac + Chrome / Electron | Runs the app over Web Serial |
 
 ## Try it
+
+![The d8tx controller: sticks, 3D drone, live telemetry](docs/media/hero.gif)
 
 Open the [live app](https://d8tx.mb6611.workers.dev) in Chrome or Edge (Web Serial), or the [demo](https://d8tx.mb6611.workers.dev/?mock=1) with a simulated ESP32 and drone. To run it locally: `pnpm install && pnpm --filter web dev`. Firmware install and bind happen in the same page; step by step in [docs/getting-started.md](docs/getting-started.md).
 
